@@ -159,6 +159,11 @@ export function LibraryScreen() {
       : [];
 
     return [
+      {
+        key: "present",
+        label: t.setlist.present,
+        onPress: () => router.push({ pathname: "/song/[songId]/present", params: { songId: song.id } }),
+      },
       ...additions,
       ...removal,
       { key: "delete", label: t.setlist.deleteSong, destructive: true, onPress: () => handleDeleteSong(song.id, song.name) },

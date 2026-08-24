@@ -59,6 +59,7 @@ export const en = {
   },
   presentation: {
     empty: "This setlist has no songs to present.",
+    emptySong: "This song could not be found.",
     exit: "Exit",
     searchPlaceholder: "Search song...",
     noMatch: "No matching song.",

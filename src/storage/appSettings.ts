@@ -13,6 +13,8 @@ export interface PersistedAppSettings {
   libraryOrder?: string[];
   /** Manually chosen language, overriding the device locale. Absent means "follow the device". */
   languageOverride?: Locale;
+  /** Presentation mode's all-caps lyrics toggle, remembered across sessions. */
+  presentationAllCaps?: boolean;
 }
 
 /**

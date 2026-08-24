@@ -1,5 +1,5 @@
-import { PresentationScreen } from "@/ui/screens/PresentationScreen";
+import { SetlistPresentationScreen } from "@/ui/screens/PresentationScreen";
 
-export default function PresentRoute() {
-  return <PresentationScreen />;
+export default function SetlistPresentRoute() {
+  return <SetlistPresentationScreen />;
 }

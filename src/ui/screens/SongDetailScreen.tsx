@@ -75,9 +75,17 @@ export function SongDetailScreen() {
 
           {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
 
-          <Button onPress={handleSave} disabled={!name.trim()}>
-            {t.common.save}
-          </Button>
+          <View style={styles.actionsRow}>
+            <Button onPress={handleSave} disabled={!name.trim()}>
+              {t.common.save}
+            </Button>
+            <Button
+              variant="secondary"
+              onPress={() => router.push({ pathname: "/song/[songId]/present", params: { songId: song.id } })}
+            >
+              {t.setlist.present}
+            </Button>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -127,5 +135,9 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontSize: 13,
     marginTop: spacing.md,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
   },
 });

@@ -61,6 +61,7 @@ export const ptBR: TranslationDictionary = {
   },
   presentation: {
     empty: "Este repertório não tem músicas para apresentar.",
+    emptySong: "Esta música não foi encontrada.",
     exit: "Sair",
     searchPlaceholder: "Buscar música...",
     noMatch: "Nenhuma música encontrada.",

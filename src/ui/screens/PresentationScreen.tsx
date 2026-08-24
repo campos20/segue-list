@@ -3,17 +3,19 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { persistPresentationAllCaps } from "@/store/persistSettings";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
+import type { SongManifest } from "@/types/song";
 import { colors, glow, radii, spacing } from "@/ui/theme";
 
 const AUTO_SCROLL_STEP_PX = 1;
 const AUTO_SCROLL_INTERVAL_MS = 50;
 
-export function PresentationScreen() {
+/** Presents every song in a setlist, in order, with quick switching between them. */
+export function SetlistPresentationScreen() {
   const { setlistId } = useLocalSearchParams<{ setlistId: string }>();
-  const router = useRouter();
   const { t } = useTranslation();
 
   const setlist = useAppSelector((state) => setlistsSelectors.selectById(state.setlists, setlistId));
@@ -22,7 +24,25 @@ export function PresentationScreen() {
   // than rendered as blanks - same as the Library tree.
   const songs = (setlist?.songs ?? [])
     .map((id) => songsSelectors.selectById(allSongs, id))
-    .filter((song): song is NonNullable<typeof song> => song !== undefined);
+    .filter((song): song is SongManifest => song !== undefined);
+
+  return <PresentationView songs={songs} emptyMessage={t.presentation.empty} />;
+}
+
+/** Presents a single song, outside the context of any setlist. */
+export function SongPresentationScreen() {
+  const { songId } = useLocalSearchParams<{ songId: string }>();
+  const { t } = useTranslation();
+
+  const song = useAppSelector((state) => songsSelectors.selectById(state.songs, songId));
+
+  return <PresentationView songs={song ? [song] : []} emptyMessage={t.presentation.emptySong} />;
+}
+
+function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; emptyMessage: string }) {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { t } = useTranslation();
 
   const [index, setIndex] = useState(0);
   const [played, setPlayed] = useState<Set<string>>(new Set());
@@ -31,7 +51,9 @@ export function PresentationScreen() {
   // for space. The ☰ button still opens it for quick switching.
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [panelQuery, setPanelQuery] = useState("");
-  const [allCaps, setAllCaps] = useState(false);
+  // Persisted across sessions - remembered how you last left it, not reset
+  // every time you enter presentation mode.
+  const allCaps = useAppSelector((state) => state.settings.presentationAllCaps);
   const [autoScroll, setAutoScroll] = useState(false);
   const lyricsScrollRef = useRef<ScrollView>(null);
   const lyricsOffsetRef = useRef(0);
@@ -50,10 +72,10 @@ export function PresentationScreen() {
     return () => clearInterval(interval);
   }, [autoScroll, index]);
 
-  if (!setlist || songs.length === 0) {
+  if (songs.length === 0) {
     return (
       <SafeAreaView style={styles.emptyContainer} edges={["top", "bottom"]}>
-        <Text style={styles.emptyText}>{t.presentation.empty}</Text>
+        <Text style={styles.emptyText}>{emptyMessage}</Text>
         <Pressable onPress={() => router.back()}>
           <Text style={styles.exitLink}>{t.presentation.exit}</Text>
         </Pressable>
@@ -62,6 +84,7 @@ export function PresentationScreen() {
   }
 
   const current = songs[Math.min(index, songs.length - 1)];
+  const multipleSongs = songs.length > 1;
 
   const trimmedQuery = panelQuery.trim().toLowerCase();
   const filteredSongs = trimmedQuery ? songs.filter((song) => song.name.toLowerCase().includes(trimmedQuery)) : songs;
@@ -81,16 +104,18 @@ export function PresentationScreen() {
       else next.add(current.id);
       return next;
     });
-    goNext();
+    if (multipleSongs) goNext();
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={[styles.rail, isPanelOpen && styles.railOpen]}>
-        <Pressable onPress={() => setIsPanelOpen((open) => !open)} style={styles.railButton}>
-          <Text style={styles.railGlyph}>{isPanelOpen ? "‹" : "☰"}</Text>
-        </Pressable>
-        <Pressable onPress={() => setAllCaps((v) => !v)} style={styles.railButton}>
+        {multipleSongs && (
+          <Pressable onPress={() => setIsPanelOpen((open) => !open)} style={styles.railButton}>
+            <Text style={styles.railGlyph}>{isPanelOpen ? "‹" : "☰"}</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={() => dispatch(persistPresentationAllCaps(!allCaps))} style={styles.railButton}>
           <Text style={[styles.railText, allCaps && styles.railActive]}>AA</Text>
         </Pressable>
         <Pressable onPress={() => setAutoScroll((v) => !v)} style={styles.railButton}>
@@ -100,7 +125,7 @@ export function PresentationScreen() {
           <Text style={styles.railGlyph}>✕</Text>
         </Pressable>
 
-        {isPanelOpen && (
+        {multipleSongs && isPanelOpen && (
           <View style={styles.panel}>
             <TextInput
               value={panelQuery}
@@ -157,9 +182,11 @@ export function PresentationScreen() {
               <Text style={styles.editButtonText}>{t.presentation.edit}</Text>
             </Pressable>
           </View>
-          <Text style={styles.songMeta}>
-            {index + 1} / {songs.length}
-          </Text>
+          {multipleSongs && (
+            <Text style={styles.songMeta}>
+              {index + 1} / {songs.length}
+            </Text>
+          )}
         </View>
 
         <ScrollView
@@ -179,28 +206,30 @@ export function PresentationScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dotsRow}>
-            {songs.map((song, i) => {
-              const isCurrent = i === index;
-              const isPlayed = played.has(song.id);
-              return (
-                <Pressable
-                  key={song.id}
-                  onPress={() => setIndex(i)}
-                  style={[styles.dot, isCurrent ? styles.dotCurrent : isPlayed && styles.dotPlayed]}
-                >
-                  <Text style={[styles.dotText, isCurrent ? styles.dotTextCurrent : isPlayed && styles.dotTextPlayed]}>
-                    {i + 1}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          {multipleSongs && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dotsRow}>
+              {songs.map((song, i) => {
+                const isCurrent = i === index;
+                const isPlayed = played.has(song.id);
+                return (
+                  <Pressable
+                    key={song.id}
+                    onPress={() => setIndex(i)}
+                    style={[styles.dot, isCurrent ? styles.dotCurrent : isPlayed && styles.dotPlayed]}
+                  >
+                    <Text style={[styles.dotText, isCurrent ? styles.dotTextCurrent : isPlayed && styles.dotTextPlayed]}>
+                      {i + 1}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
           <View style={styles.transportRow}>
             <Pressable
               onPress={goPrev}
-              disabled={index === 0}
-              style={[styles.transportButton, index === 0 && styles.transportDisabled]}
+              disabled={!multipleSongs || index === 0}
+              style={[styles.transportButton, (!multipleSongs || index === 0) && styles.transportDisabled]}
             >
               <Text style={styles.transportGlyph}>←</Text>
             </Pressable>
@@ -212,8 +241,8 @@ export function PresentationScreen() {
             </Pressable>
             <Pressable
               onPress={goNext}
-              disabled={index === songs.length - 1}
-              style={[styles.transportButtonPrimary, index === songs.length - 1 && styles.transportDisabled]}
+              disabled={!multipleSongs || index === songs.length - 1}
+              style={[styles.transportButtonPrimary, (!multipleSongs || index === songs.length - 1) && styles.transportDisabled]}
             >
               <Text style={styles.transportGlyphPrimary}>→</Text>
             </Pressable>
