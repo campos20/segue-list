@@ -1,10 +1,15 @@
+import { useKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { persistPresentationAllCaps } from "@/store/persistSettings";
+import {
+  persistPresentationAllCaps,
+  persistPresentationAutoScrollLevel,
+  persistPresentationFontSize,
+} from "@/store/persistSettings";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
@@ -12,6 +17,13 @@ import { colors, glow, radii, spacing } from "@/ui/theme";
 
 const AUTO_SCROLL_STEP_PX = 1;
 const AUTO_SCROLL_INTERVAL_MS = 50;
+const MAX_AUTO_SCROLL_LEVEL = 3;
+
+const MIN_FONT_SIZE = 14;
+const MAX_FONT_SIZE = 32;
+const FONT_SIZE_STEP = 2;
+/** Keeps line spacing proportional to size, matching the default 18/28 ratio. */
+const LYRICS_LINE_HEIGHT_RATIO = 28 / 18;
 
 /** Presents every song in a setlist, in order, with quick switching between them. */
 export function SetlistPresentationScreen() {
@@ -44,6 +56,13 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
 
+  // The screen must never lock mid-song - there's no "wake it back up and
+  // find your place" during a live show. `suppressDeactivateWarnings`
+  // swallows a harmless race on web, where deactivating on unmount can
+  // fire before the wake lock finishes activating if the screen is exited
+  // right after being entered.
+  useKeepAwake(undefined, { suppressDeactivateWarnings: true });
+
   const [index, setIndex] = useState(0);
   const [played, setPlayed] = useState<Set<string>>(new Set());
   // Collapsed by default: the lyrics of the current song should fill the
@@ -54,7 +73,8 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
   // Persisted across sessions - remembered how you last left it, not reset
   // every time you enter presentation mode.
   const allCaps = useAppSelector((state) => state.settings.presentationAllCaps);
-  const [autoScroll, setAutoScroll] = useState(false);
+  const fontSize = useAppSelector((state) => state.settings.presentationFontSize);
+  const autoScrollLevel = useAppSelector((state) => state.settings.presentationAutoScrollLevel);
   const lyricsScrollRef = useRef<ScrollView>(null);
   const lyricsOffsetRef = useRef(0);
 
@@ -64,13 +84,13 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
   }, [index]);
 
   useEffect(() => {
-    if (!autoScroll) return;
+    if (autoScrollLevel === 0) return;
     const interval = setInterval(() => {
-      lyricsOffsetRef.current += AUTO_SCROLL_STEP_PX;
+      lyricsOffsetRef.current += AUTO_SCROLL_STEP_PX * autoScrollLevel;
       lyricsScrollRef.current?.scrollTo({ y: lyricsOffsetRef.current, animated: false });
     }, AUTO_SCROLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [autoScroll, index]);
+  }, [autoScrollLevel, index]);
 
   if (songs.length === 0) {
     return (
@@ -118,8 +138,27 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
         <Pressable onPress={() => dispatch(persistPresentationAllCaps(!allCaps))} style={styles.railButton}>
           <Text style={[styles.railText, allCaps && styles.railActive]}>AA</Text>
         </Pressable>
-        <Pressable onPress={() => setAutoScroll((v) => !v)} style={styles.railButton}>
-          <Text style={[styles.railGlyph, autoScroll && styles.railActive]}>⇩</Text>
+        <Pressable
+          onPress={() => dispatch(persistPresentationFontSize(Math.min(fontSize + FONT_SIZE_STEP, MAX_FONT_SIZE)))}
+          disabled={fontSize >= MAX_FONT_SIZE}
+          style={styles.railButton}
+        >
+          <Text style={[styles.railText, fontSize >= MAX_FONT_SIZE && styles.railDisabled]}>A+</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => dispatch(persistPresentationFontSize(Math.max(fontSize - FONT_SIZE_STEP, MIN_FONT_SIZE)))}
+          disabled={fontSize <= MIN_FONT_SIZE}
+          style={styles.railButton}
+        >
+          <Text style={[styles.railText, fontSize <= MIN_FONT_SIZE && styles.railDisabled]}>A−</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => dispatch(persistPresentationAutoScrollLevel((autoScrollLevel + 1) % (MAX_AUTO_SCROLL_LEVEL + 1)))}
+          style={styles.railButton}
+        >
+          <Text style={[styles.railGlyph, autoScrollLevel > 0 && styles.railActive]}>
+            {autoScrollLevel > 0 ? `⇩${autoScrollLevel}` : "⇩"}
+          </Text>
         </Pressable>
         <Pressable onPress={() => router.back()} style={styles.railButton}>
           <Text style={styles.railGlyph}>✕</Text>
@@ -199,7 +238,15 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
           contentContainerStyle={styles.lyricsContent}
         >
           {current.lyrics ? (
-            <Text style={[styles.lyrics, allCaps && styles.lyricsUppercase]}>{current.lyrics}</Text>
+            <Text
+              style={[
+                styles.lyrics,
+                allCaps && styles.lyricsUppercase,
+                { fontSize, lineHeight: Math.round(fontSize * LYRICS_LINE_HEIGHT_RATIO) },
+              ]}
+            >
+              {current.lyrics}
+            </Text>
           ) : (
             <Text style={styles.lyricsEmpty}>{t.presentation.noLyrics}</Text>
           )}
@@ -301,6 +348,9 @@ const styles = StyleSheet.create({
   },
   railActive: {
     color: colors.accent,
+  },
+  railDisabled: {
+    opacity: 0.3,
   },
   panel: {
     flex: 1,

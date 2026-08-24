@@ -15,6 +15,7 @@ import {
   addSongToSetlist,
   createSetlist,
   deleteSetlist,
+  duplicateSetlist,
   moveSongInSetlist,
   removeSongFromSetlist,
   renameSetlist,
@@ -22,11 +23,12 @@ import {
 import { createSong, deleteSong } from "@/store/persistSongs";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
-import { buildLibraryTree } from "@/ui/libraryTree";
+import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
 import { KebabIcon, OverflowMenu, type OverflowMenuItem } from "@/ui/components/OverflowMenu";
 import { SetlistRow } from "@/ui/components/SetlistRow";
 import { SongRow } from "@/ui/components/SongRow";
+import { TextField } from "@/ui/components/TextField";
 import { colors, radii, spacing } from "@/ui/theme";
 
 export function LibraryScreen() {
@@ -43,12 +45,37 @@ export function LibraryScreen() {
   const [renamingSetlistId, setRenamingSetlistId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const items = useMemo(() => buildLibraryTree(songs, setlists, libraryOrder), [songs, setlists, libraryOrder]);
 
-  function handleMove(index: number, direction: "up" | "down") {
-    const keys = items.map((item) => item.key);
-    const reordered = moveItem(keys, index, direction);
+  const trimmedSearch = search.trim().toLowerCase();
+
+  /**
+   * While searching, a setlist stays visible if its own name matches (showing
+   * every song in it, same as browsing normally) or if any song inside it
+   * matches (showing just those). A song not in any matching setlist stays
+   * visible on its own name. Reordering during a search would be ambiguous
+   * about what "up"/"down" even means, so moves below always look the real
+   * position up in `items` rather than trusting the filtered list's index.
+   */
+  const displayedItems = useMemo((): LibraryItem[] => {
+    if (!trimmedSearch) return items;
+    return items.flatMap((item): LibraryItem[] => {
+      if (item.kind === "song") {
+        return item.song.name.toLowerCase().includes(trimmedSearch) ? [item] : [];
+      }
+      const nameMatches = item.setlist.name.toLowerCase().includes(trimmedSearch);
+      if (nameMatches) return [item];
+      const matchingSongs = item.songs.filter((song) => song.name.toLowerCase().includes(trimmedSearch));
+      return matchingSongs.length > 0 ? [{ ...item, songs: matchingSongs }] : [];
+    });
+  }, [items, trimmedSearch]);
+
+  function handleMove(item: LibraryItem, direction: "up" | "down") {
+    const keys = items.map((candidate) => candidate.key);
+    const realIndex = items.findIndex((candidate) => candidate.key === item.key);
+    const reordered = moveItem(keys, realIndex, direction);
     if (reordered !== keys) dispatch(persistLibraryOrder(reordered));
   }
 
@@ -67,6 +94,13 @@ export function LibraryScreen() {
     setRenamingSetlistId(null);
     const trimmed = name.trim();
     if (trimmed) dispatch(renameSetlist(setlistId, trimmed));
+  }
+
+  function handleDuplicateSetlist(id: string) {
+    const source = setlists.find((candidate) => candidate.id === id);
+    if (!source) return;
+    const copy = dispatch(duplicateSetlist(id, t.setlist.duplicateName(source.name)));
+    if (!copy) setError(t.library.couldNotDuplicateSetlist);
   }
 
   function handleDeleteSetlist(id: string, name: string, songCount: number) {
@@ -200,6 +234,10 @@ export function LibraryScreen() {
         </View>
       </View>
 
+      <View style={styles.searchRow}>
+        <TextField value={search} onChangeText={setSearch} placeholder={t.library.searchPlaceholder} />
+      </View>
+
       {status && <Text style={styles.status}>{status}</Text>}
       {error && <Text style={styles.error}>{error}</Text>}
 
@@ -211,14 +249,22 @@ export function LibraryScreen() {
             <Text style={styles.emptyTitle}>{t.library.emptyTitle}</Text>
             <Text style={styles.emptyMeta}>{t.library.emptyMeta}</Text>
           </View>
+        ) : displayedItems.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>{t.library.noResultsTitle}</Text>
+            <Text style={styles.emptyMeta}>{t.library.noResultsMeta}</Text>
+          </View>
         ) : (
-          items.map((item, index) => {
-            const canMoveUp = index > 0;
-            const canMoveDown = index < items.length - 1;
+          displayedItems.map((item) => {
+            const realIndex = items.findIndex((candidate) => candidate.key === item.key);
+            const canMoveUp = realIndex > 0;
+            const canMoveDown = realIndex < items.length - 1;
 
             if (item.kind === "setlist") {
               const { setlist, songs: setlistSongs } = item;
-              const expanded = !collapsed.includes(setlist.id);
+              // Forced open while searching, so a match inside a setlist you'd
+              // otherwise had collapsed isn't hidden from the results.
+              const expanded = trimmedSearch.length > 0 || !collapsed.includes(setlist.id);
               return (
                 <View key={item.key} style={styles.setlistGroup}>
                   <SetlistRow
@@ -240,6 +286,7 @@ export function LibraryScreen() {
                         label: t.setlist.present,
                         onPress: () => router.push({ pathname: "/setlist/[setlistId]/present", params: { setlistId: setlist.id } }),
                       },
+                      { key: "duplicate", label: t.setlist.duplicate, onPress: () => handleDuplicateSetlist(setlist.id) },
                       { key: "export", label: t.setlist.export, onPress: () => handleExportSetlist(setlist.id, setlist.name, setlistSongs) },
                       {
                         key: "delete",
@@ -254,8 +301,8 @@ export function LibraryScreen() {
                     onRenameCancel={() => setRenamingSetlistId(null)}
                     canMoveUp={canMoveUp}
                     canMoveDown={canMoveDown}
-                    onMoveUp={() => handleMove(index, "up")}
-                    onMoveDown={() => handleMove(index, "down")}
+                    onMoveUp={() => handleMove(item, "up")}
+                    onMoveDown={() => handleMove(item, "down")}
                     moveUpAccessibilityLabel={t.library.moveUp}
                     moveDownAccessibilityLabel={t.library.moveDown}
                   />
@@ -303,8 +350,8 @@ export function LibraryScreen() {
                 onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: song.id } })}
                 canMoveUp={canMoveUp}
                 canMoveDown={canMoveDown}
-                onMoveUp={() => handleMove(index, "up")}
-                onMoveDown={() => handleMove(index, "down")}
+                onMoveUp={() => handleMove(item, "up")}
+                onMoveDown={() => handleMove(item, "down")}
                 moveUpAccessibilityLabel={t.library.moveUp}
                 moveDownAccessibilityLabel={t.library.moveDown}
               />
@@ -335,6 +382,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+  },
+  searchRow: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
   eyebrow: {
     color: colors.textTertiary,

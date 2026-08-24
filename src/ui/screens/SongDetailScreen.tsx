@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -47,11 +47,25 @@ export function SongDetailScreen() {
     setSaved(true);
   }
 
+  const isDirty = name !== song.name || lyrics !== (song.lyrics ?? "");
+
+  /** Confirms before leaving an unsaved edit behind - a lyrics rewrite is the kind of thing you don't want to accidentally lose. */
+  function confirmDiscardIfDirty(proceed: () => void) {
+    if (!isDirty) {
+      proceed();
+      return;
+    }
+    Alert.alert(t.song.discardTitle, t.song.discardBody, [
+      { text: t.song.keepEditing, style: "cancel" },
+      { text: t.song.discardConfirm, style: "destructive", onPress: proceed },
+    ]);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Pressable onPress={() => confirmDiscardIfDirty(() => router.back())} hitSlop={8}>
             <Text style={styles.back}>{t.common.back}</Text>
           </Pressable>
 
@@ -81,7 +95,11 @@ export function SongDetailScreen() {
             </Button>
             <Button
               variant="secondary"
-              onPress={() => router.push({ pathname: "/song/[songId]/present", params: { songId: song.id } })}
+              onPress={() =>
+                confirmDiscardIfDirty(() =>
+                  router.push({ pathname: "/song/[songId]/present", params: { songId: song.id } }),
+                )
+              }
             >
               {t.setlist.present}
             </Button>

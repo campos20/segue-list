@@ -38,6 +38,31 @@ export function renameSetlist(id: string, name: string) {
   };
 }
 
+/**
+ * Copies a setlist under a new name, at the top of the Library. The copy
+ * references the same song ids as the source - songs aren't duplicated,
+ * only the grouping is, same as any other setlist membership.
+ */
+export function duplicateSetlist(id: string, name: string) {
+  return (dispatch: AppDispatch, getState: () => RootState): SetlistManifest | null => {
+    const source = selectSetlist(getState(), id);
+    if (!source) return null;
+
+    let setlist: SetlistManifest;
+    try {
+      setlist = createSetlistFile(name);
+      setlist = { ...setlist, songs: [...source.songs] };
+      writeSetlist(setlist);
+    } catch (error) {
+      console.warn("Failed to duplicate a setlist", error);
+      return null;
+    }
+    dispatch(setlistAdded(setlist));
+    dispatch(persistLibraryOrder([setlistKey(setlist.id), ...getState().settings.libraryOrder]));
+    return setlist;
+  };
+}
+
 /** Deletes a setlist. The songs it listed are untouched - they simply become loose again. */
 export function deleteSetlist(id: string) {
   return (dispatch: AppDispatch, getState: () => RootState) => {
