@@ -13,12 +13,16 @@ interface SettingsState {
   presentationAutoScrollLevel: number;
 }
 
+// Read once - `readAppSettings()` is a synchronous disk read, and each of
+// these fields would otherwise trigger its own at store-creation time.
+const persisted = readAppSettings();
+
 const initialState: SettingsState = {
-  libraryOrder: readAppSettings().libraryOrder ?? [],
-  languageOverride: readAppSettings().languageOverride ?? null,
-  presentationAllCaps: readAppSettings().presentationAllCaps ?? false,
-  presentationFontSize: readAppSettings().presentationFontSize ?? DEFAULT_PRESENTATION_FONT_SIZE,
-  presentationAutoScrollLevel: readAppSettings().presentationAutoScrollLevel ?? 0,
+  libraryOrder: persisted.libraryOrder ?? [],
+  languageOverride: persisted.languageOverride ?? null,
+  presentationAllCaps: persisted.presentationAllCaps ?? false,
+  presentationFontSize: persisted.presentationFontSize ?? DEFAULT_PRESENTATION_FONT_SIZE,
+  presentationAutoScrollLevel: persisted.presentationAutoScrollLevel ?? 0,
 };
 
 const settingsSlice = createSlice({

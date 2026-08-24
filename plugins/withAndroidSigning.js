@@ -12,20 +12,28 @@ const MARKER = '// segue-list release signing';
  * Gradle allows the `android { }` extension to be re-opened, so this adds a
  * release signing config without touching anything Expo wrote above it.
  *
- * It only takes effect when the signing properties are passed in. Without
- * them nothing changes and the build keeps Expo's default signing, so both
- * local builds and CI runs without a keystore configured still work.
+ * It only takes effect when all four signing properties are passed in.
+ * Without them nothing changes and the build keeps Expo's default signing,
+ * so both local builds and CI runs without a keystore configured still
+ * work. A *partial* set (e.g. the store file but not its password) fails
+ * loudly with a clear message instead of Gradle's opaque "unknown
+ * property" error the first time it tries to read a property that was
+ * never passed.
  */
+const SIGNING_PROPERTIES = ['SEGUELIST_STORE_FILE', 'SEGUELIST_STORE_PASSWORD', 'SEGUELIST_KEY_ALIAS', 'SEGUELIST_KEY_PASSWORD'];
+
 const SIGNING_SNIPPET = `
 ${MARKER}
-if (project.hasProperty('SEGUELIST_STORE_FILE')) {
+def seguelistSigningProps = ${JSON.stringify(SIGNING_PROPERTIES)}
+def seguelistSigningPropsPresent = seguelistSigningProps.findAll { project.hasProperty(it) }
+if (seguelistSigningPropsPresent.size() == seguelistSigningProps.size()) {
     android {
         signingConfigs {
             release {
-                storeFile file(SEGUELIST_STORE_FILE)
-                storePassword SEGUELIST_STORE_PASSWORD
-                keyAlias SEGUELIST_KEY_ALIAS
-                keyPassword SEGUELIST_KEY_PASSWORD
+                storeFile file(project.property('SEGUELIST_STORE_FILE'))
+                storePassword project.property('SEGUELIST_STORE_PASSWORD')
+                keyAlias project.property('SEGUELIST_KEY_ALIAS')
+                keyPassword project.property('SEGUELIST_KEY_PASSWORD')
             }
         }
         buildTypes {
@@ -34,6 +42,9 @@ if (project.hasProperty('SEGUELIST_STORE_FILE')) {
             }
         }
     }
+} else if (!seguelistSigningPropsPresent.isEmpty()) {
+    def missing = seguelistSigningProps - seguelistSigningPropsPresent
+    throw new GradleException("Partial release signing configuration: missing \${missing.join(', ')}. Provide all of \${seguelistSigningProps.join(', ')}, or none of them to build with Expo's default signing.")
 }
 `;
 

@@ -108,6 +108,9 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
 
   const trimmedQuery = panelQuery.trim().toLowerCase();
   const filteredSongs = trimmedQuery ? songs.filter((song) => song.name.toLowerCase().includes(trimmedQuery)) : songs;
+  // Computed once per render rather than with a `findIndex` inside the list
+  // below, which would re-scan `songs` for every row (O(n²) for the panel).
+  const songIndexById = new Map(songs.map((song, i) => [song.id, i]));
 
   function goNext() {
     setIndex((i) => Math.min(i + 1, songs.length - 1));
@@ -176,7 +179,7 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
             <ScrollView style={styles.panelList}>
               {filteredSongs.length === 0 && <Text style={styles.panelEmpty}>{t.presentation.noMatch}</Text>}
               {filteredSongs.map((song) => {
-                const songIndex = songs.findIndex((s) => s.id === song.id);
+                const songIndex = songIndexById.get(song.id)!;
                 const isCurrent = songIndex === index;
                 const isPlayed = played.has(song.id);
                 return (
