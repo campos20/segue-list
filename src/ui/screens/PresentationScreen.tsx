@@ -23,7 +23,10 @@ export function PresentationScreen() {
     .filter((song): song is NonNullable<typeof song> => song !== undefined);
 
   const [index, setIndex] = useState(0);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [played, setPlayed] = useState<Set<string>>(new Set());
+  // Open by default: every song in the set should be visible and one tap
+  // away the moment presentation mode starts, not hidden behind a toggle.
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [panelQuery, setPanelQuery] = useState("");
   const [allCaps, setAllCaps] = useState(false);
   const [autoScroll, setAutoScroll] = useState(false);
@@ -68,6 +71,16 @@ export function PresentationScreen() {
     setIndex((i) => Math.max(i - 1, 0));
   }
 
+  function togglePlayedAndAdvance() {
+    setPlayed((prev) => {
+      const next = new Set(prev);
+      if (next.has(current.id)) next.delete(current.id);
+      else next.add(current.id);
+      return next;
+    });
+    goNext();
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={[styles.rail, isPanelOpen && styles.railOpen]}>
@@ -98,6 +111,7 @@ export function PresentationScreen() {
               {filteredSongs.map((song) => {
                 const songIndex = songs.findIndex((s) => s.id === song.id);
                 const isCurrent = songIndex === index;
+                const isPlayed = played.has(song.id);
                 return (
                   <Pressable
                     key={song.id}
@@ -108,9 +122,16 @@ export function PresentationScreen() {
                     style={[styles.panelRow, isCurrent && styles.panelRowActive]}
                   >
                     <Text style={styles.panelPosition}>{songIndex + 1}</Text>
-                    <Text numberOfLines={1} style={[styles.panelSongName, isCurrent && styles.panelSongNameCurrent]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.panelSongName,
+                        isCurrent ? styles.panelSongNameCurrent : isPlayed && styles.panelSongNamePlayed,
+                      ]}
+                    >
                       {song.name}
                     </Text>
+                    {isPlayed && <Text style={styles.panelCheck}>✓</Text>}
                   </Pressable>
                 );
               })}
@@ -121,9 +142,18 @@ export function PresentationScreen() {
 
       <View style={styles.main}>
         <View style={styles.header}>
-          <Text numberOfLines={1} style={styles.songTitle}>
-            {current.name}
-          </Text>
+          <View style={styles.headerTitleRow}>
+            <Text numberOfLines={1} style={styles.songTitle}>
+              {current.name}
+            </Text>
+            <Pressable
+              onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: current.id } })}
+              hitSlop={8}
+              style={styles.editButton}
+            >
+              <Text style={styles.editButtonText}>Edit</Text>
+            </Pressable>
+          </View>
           <Text style={styles.songMeta}>
             {index + 1} / {songs.length}
           </Text>
@@ -149,23 +179,40 @@ export function PresentationScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dotsRow}>
             {songs.map((song, i) => {
               const isCurrent = i === index;
+              const isPlayed = played.has(song.id);
               return (
-                <Pressable key={song.id} onPress={() => setIndex(i)} style={[styles.dot, isCurrent && styles.dotCurrent]}>
-                  <Text style={[styles.dotText, isCurrent && styles.dotTextCurrent]}>{i + 1}</Text>
+                <Pressable
+                  key={song.id}
+                  onPress={() => setIndex(i)}
+                  style={[styles.dot, isCurrent ? styles.dotCurrent : isPlayed && styles.dotPlayed]}
+                >
+                  <Text style={[styles.dotText, isCurrent ? styles.dotTextCurrent : isPlayed && styles.dotTextPlayed]}>
+                    {i + 1}
+                  </Text>
                 </Pressable>
               );
             })}
           </ScrollView>
           <View style={styles.transportRow}>
-            <Pressable onPress={goPrev} disabled={index === 0} style={[styles.transportButton, index === 0 && styles.transportDisabled]}>
-              <Text style={styles.transportGlyph}>← Prev</Text>
+            <Pressable
+              onPress={goPrev}
+              disabled={index === 0}
+              style={[styles.transportButton, index === 0 && styles.transportDisabled]}
+            >
+              <Text style={styles.transportGlyph}>←</Text>
+            </Pressable>
+            <Pressable
+              onPress={togglePlayedAndAdvance}
+              style={[styles.transportButton, played.has(current.id) && styles.transportButtonPlayed]}
+            >
+              <Text style={[styles.transportGlyph, played.has(current.id) && styles.transportGlyphPlayed]}>✓</Text>
             </Pressable>
             <Pressable
               onPress={goNext}
               disabled={index === songs.length - 1}
               style={[styles.transportButtonPrimary, index === songs.length - 1 && styles.transportDisabled]}
             >
-              <Text style={styles.transportGlyphPrimary}>Next →</Text>
+              <Text style={styles.transportGlyphPrimary}>→</Text>
             </Pressable>
           </View>
         </View>
@@ -270,6 +317,13 @@ const styles = StyleSheet.create({
   panelSongNameCurrent: {
     color: colors.accent,
   },
+  panelSongNamePlayed: {
+    color: colors.success,
+  },
+  panelCheck: {
+    color: colors.success,
+    fontSize: 12,
+  },
   main: {
     flex: 1,
     minWidth: 0,
@@ -280,10 +334,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderLight,
   },
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
   songTitle: {
+    flex: 1,
+    minWidth: 0,
     color: colors.textPrimary,
     fontSize: 28,
     fontWeight: "800",
+  },
+  editButton: {
+    flexShrink: 0,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  editButtonText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
   },
   songMeta: {
     marginTop: spacing.xs,
@@ -334,6 +408,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     ...glow(colors.accent, 6),
   },
+  dotPlayed: {
+    backgroundColor: "rgba(52,211,153,0.18)",
+  },
   dotText: {
     fontSize: 12,
     fontWeight: "700",
@@ -342,6 +419,9 @@ const styles = StyleSheet.create({
   dotTextCurrent: {
     color: colors.accentText,
   },
+  dotTextPlayed: {
+    color: colors.success,
+  },
   transportRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -349,7 +429,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   transportButton: {
-    flex: 1,
+    width: 48,
     height: 48,
     borderRadius: radii.pill,
     borderWidth: StyleSheet.hairlineWidth,
@@ -357,8 +437,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  transportButtonPlayed: {
+    borderColor: "rgba(52,211,153,0.4)",
+    backgroundColor: "rgba(52,211,153,0.1)",
+  },
   transportButtonPrimary: {
-    flex: 1,
+    width: 48,
     height: 48,
     borderRadius: radii.pill,
     backgroundColor: colors.accent,
@@ -369,12 +453,14 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   transportGlyph: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 18,
     color: colors.textPrimary,
   },
+  transportGlyphPlayed: {
+    color: colors.success,
+  },
   transportGlyphPrimary: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: "700",
     color: colors.accentText,
   },
