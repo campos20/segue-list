@@ -1,56 +1,137 @@
-# Welcome to your Expo app 👋
+# Segue List
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A setlist app for musicians: write your songs' lyrics once, group them into
+setlists, and read them on a phone or tablet during a show. No account, no
+backend - everything lives on your device, and you back it up or hand it to
+another musician by exporting a file.
 
-## Get started
+## The name
 
-1. Install dependencies
+A *segue* is a smooth transition straight into the next song - no gap, no
+fumbling for a lyrics sheet. That's what Presentation mode is: tap through a
+setlist mid-set with the next song's lyrics one tap away.
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- **Songs and setlists.** A song is just a name and its lyrics. It can sit
+  loose in your library or belong to any number of setlists - the same song
+  can be in Sunday's setlist and Friday's without being copied.
+- **Presentation mode.** A fullscreen, high-contrast lyrics view for reading
+  on stage: adjustable text size, an optional all-caps mode, auto-scroll at
+  three speeds, a jump list to switch songs instantly, and the screen is kept
+  from locking for as long as you're in it.
+- **Search.** Find a song or a setlist by name, from anywhere in your
+  library, even one buried inside a collapsed setlist.
+- **Local-only storage.** Every song and setlist is a plain JSON file on your
+  device (see [Storage](#storage) below) - no server, no login, works with
+  the phone in airplane mode.
+- **Backup and sharing.** Export your whole library, or just one setlist, as
+  a single file and hand it off through the OS share sheet - Drive, AirDrop,
+  email, whatever. Importing merges it into your library without touching
+  anything you already have.
+- **English and Portuguese**, following the device's language by default,
+  overridable in About.
 
-   ```bash
-   npx expo start
-   ```
+## Architecture
 
-In the output, you'll find options to open the app in a
+- **State**: [Redux Toolkit](https://redux-toolkit.js.org/), one entity
+  adapter each for songs and setlists (`src/store/`). A write always goes to
+  disk first and only updates the store if that succeeded - the file is the
+  record, so the store must never claim a change that isn't actually saved
+  (see `store/persistSongs.ts` / `store/persistSetlists.ts`).
+- **Storage**: [`expo-file-system`](https://docs.expo.dev/versions/latest/sdk/filesystem/)
+  (`src/storage/`). Each song and each setlist is its own
+  `<id>.json` file under the app's document directory - a setlist's file
+  holds song *ids*, not the songs themselves, which is what lets one song
+  belong to several setlists without duplication. There is no database and
+  no sync; the filesystem is the source of truth, read once at launch.
+- **i18n**: `src/i18n/` - a plain object dictionary per locale, checked
+  against a shared TypeScript type so a missing translation is a compile
+  error. See [`AGENTS.md`](AGENTS.md) for why this project has no backend and
+  the invariants that keeps in place.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Backup and sharing
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Exporting (from the Library's overflow menu, or a single setlist's) writes a
+`.seguelist` file - plain JSON, not a proprietary binary format, so it stays
+readable even by hand. It contains the songs and setlists you exported, and
+nothing else - no account data, because there isn't any.
 
-## Get a fresh project
+Importing reads that file back in. A song or setlist whose id already exists
+locally is left untouched, so re-importing your own backup is a no-op instead
+of silently overwriting something you've since edited, and a file from
+another musician can never clobber one of yours that happens to share an id.
 
-When you're ready, run:
+## Running the app
+
+Every native module this app uses (`expo-file-system`, `expo-sharing`,
+`expo-document-picker`, `expo-localization`, `expo-keep-awake`) ships in
+**Expo Go** - no custom dev client build needed.
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Scan the QR code with Expo Go (Android) or the Camera app (iOS), or press
+`i` / `a` in the terminal for a simulator/emulator. The Library starts empty:
+tap **New song** to write your first lyrics, or **New setlist** to start
+grouping songs for a show.
 
-### Other setup steps
+## Downloading a release
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Tagged releases publish a signed APK to the
+[Releases page](https://github.com/campos20/segue-list/releases). Download
+the `.apk` and open it on your Android device.
 
-## Learn more
+### Verifying a download
 
-To learn more about developing your project with Expo, look at the following resources:
+**1. Confirm GitHub built it, from this repo, at that commit:**
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+gh attestation verify segue-list-<version>.apk --repo campos20/segue-list
+```
 
-## Join the community
+This checks a signed [provenance attestation](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds)
+recorded in a public transparency log when the release workflow ran. If the
+APK was modified or built anywhere else, this fails - it's the check that
+matters most, and it covers the other two.
 
-Join our community of developers creating universal apps.
+**2. Confirm the file wasn't altered after upload:**
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+sha256sum -c SHA256SUMS.txt
+```
+
+**3. Confirm the signing certificate**, printed in every release's notes:
+
+```bash
+apksigner verify --print-certs segue-list-<version>.apk
+```
+
+Releases are cut by pushing a `v*` tag, or via the "Release Android APK"
+workflow's manual dispatch - see
+[`.github/workflows/release.yaml`](.github/workflows/release.yaml).
+
+## Building a release APK (Android)
+
+There's no EAS Build config here - releases build locally with the same
+native Android toolchain `expo run:android` uses under the hood:
+
+```bash
+npx expo prebuild --platform android --clean
+cd android && ./gradlew assembleRelease
+```
+
+`android/` is gitignored and regenerated on demand, not committed. The APK
+lands at `android/app/build/outputs/apk/release/app-release.apk`. A local
+build like this signs with Expo's stock debug keystore - fine for your own
+devices, not for handing out. Published releases are signed with the
+project's real release key via
+[`plugins/withAndroidSigning.js`](plugins/withAndroidSigning.js), which only
+activates when the signing secrets are configured in the repo (see
+[`.github/workflows/release.yaml`](.github/workflows/release.yaml)).
+
+## License
+
+[GPL-3.0-or-later](LICENSE).
