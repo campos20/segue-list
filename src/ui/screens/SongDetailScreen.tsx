@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
@@ -32,9 +33,9 @@ export function SongDetailScreen() {
 
   if (!song) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <Text style={styles.notFound}>Song not found.</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -45,37 +46,39 @@ export function SongDetailScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>← Back</Text>
-        </Pressable>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Text style={styles.back}>← Back</Text>
+          </Pressable>
 
-        <View style={styles.section}>
-          <TextField label="Song name" value={name} onChangeText={setName} />
-        </View>
+          <View style={styles.section}>
+            <TextField label="Song name" value={name} onChangeText={setName} />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Lyrics</Text>
-          <TextInput
-            value={lyrics}
-            onChangeText={setLyrics}
-            multiline
-            numberOfLines={20}
-            textAlignVertical="top"
-            placeholder="Type or paste the lyrics..."
-            placeholderTextColor={colors.textTertiary}
-            style={styles.lyricsInput}
-          />
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Lyrics</Text>
+            <TextInput
+              value={lyrics}
+              onChangeText={setLyrics}
+              multiline
+              numberOfLines={20}
+              textAlignVertical="top"
+              placeholder="Type or paste the lyrics..."
+              placeholderTextColor={colors.textTertiary}
+              style={styles.lyricsInput}
+            />
+          </View>
 
-        {saved && <Text style={styles.savedText}>Saved.</Text>}
+          {saved && <Text style={styles.savedText}>Saved.</Text>}
 
-        <Button onPress={handleSave} disabled={!name.trim()}>
-          Save
-        </Button>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Button onPress={handleSave} disabled={!name.trim()}>
+            Save
+          </Button>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
