@@ -1,4 +1,5 @@
 import { File, Paths } from "expo-file-system";
+import type { Locale } from "@/i18n";
 import { isFileSystemAvailable } from "./paths";
 
 export interface PersistedAppSettings {
@@ -10,6 +11,8 @@ export interface PersistedAppSettings {
    * manifest, next to the membership it belongs to.
    */
   libraryOrder?: string[];
+  /** Manually chosen language, overriding the device locale. Absent means "follow the device". */
+  languageOverride?: Locale;
 }
 
 /**

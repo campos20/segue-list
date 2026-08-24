@@ -6,6 +6,8 @@ import { MoveColumn } from "./MoveColumn";
 interface SongRowProps {
   title: string;
   hasLyrics: boolean;
+  hasLyricsLabel: string;
+  noLyricsLabel: string;
   onPress: () => void;
   menuItems: OverflowMenuItem[];
   menuAccessibilityLabel: string;
@@ -25,6 +27,8 @@ interface SongRowProps {
 export function SongRow({
   title,
   hasLyrics,
+  hasLyricsLabel,
+  noLyricsLabel,
   onPress,
   menuItems,
   menuAccessibilityLabel,
@@ -46,7 +50,7 @@ export function SongRow({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          <Text style={styles.meta}>{hasLyrics ? "Has lyrics" : "No lyrics yet"}</Text>
+          <Text style={styles.meta}>{hasLyrics ? hasLyricsLabel : noLyricsLabel}</Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>

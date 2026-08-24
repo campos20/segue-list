@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "@/i18n";
 import type { SongManifest } from "@/types/song";
 import { shareBundle, writeBundleToCache } from "@/storage";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -31,6 +32,7 @@ import { colors, radii, spacing } from "@/ui/theme";
 export function LibraryScreen() {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const songs = useAppSelector((state) => songsSelectors.selectAll(state.songs));
   const setlists = useAppSelector((state) => setlistsSelectors.selectAll(state.setlists));
@@ -53,7 +55,7 @@ export function LibraryScreen() {
   function handleNewSetlist() {
     const setlist = dispatch(createSetlist());
     if (!setlist) {
-      setError("Couldn't create the setlist.");
+      setError(t.library.couldNotCreateSetlist);
       return;
     }
     // Straight into rename: a setlist called "New setlist" is never what the
@@ -68,29 +70,25 @@ export function LibraryScreen() {
   }
 
   function handleDeleteSetlist(id: string, name: string, songCount: number) {
-    Alert.alert(
-      "Delete setlist",
-      `Delete "${name}"${songCount > 0 ? ` (${songCount} song${songCount === 1 ? "" : "s"})` : ""}? Songs stay in your library.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => dispatch(deleteSetlist(id)) },
-      ],
-    );
+    Alert.alert(t.library.deleteSetlistTitle, t.library.deleteSetlistBody(name, songCount), [
+      { text: t.common.cancel, style: "cancel" },
+      { text: t.setlist.delete, style: "destructive", onPress: () => dispatch(deleteSetlist(id)) },
+    ]);
   }
 
   function handleNewSong() {
     const song = dispatch(createSong());
     if (!song) {
-      setError("Couldn't create the song.");
+      setError(t.library.couldNotCreateSong);
       return;
     }
     router.push({ pathname: "/song/[songId]", params: { songId: song.id } });
   }
 
   function handleDeleteSong(id: string, name: string) {
-    Alert.alert("Delete song", `Delete "${name}"? It will be removed from any setlist too.`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => dispatch(deleteSong(id)) },
+    Alert.alert(t.library.deleteSongTitle, t.library.deleteSongBody(name), [
+      { text: t.common.cancel, style: "cancel" },
+      { text: t.setlist.delete, style: "destructive", onPress: () => dispatch(deleteSong(id)) },
     ]);
   }
 
@@ -103,7 +101,7 @@ export function LibraryScreen() {
         name,
         Constants.expoConfig?.version,
       );
-      await shareBundle(bundle, "Export setlist");
+      await shareBundle(bundle, t.library.exportSetlist);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -113,7 +111,7 @@ export function LibraryScreen() {
     setError(null);
     try {
       const bundle = writeBundleToCache({ songs, setlists }, "segue-list-backup", Constants.expoConfig?.version);
-      await shareBundle(bundle, "Export backup");
+      await shareBundle(bundle, t.library.exportBackup);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -125,14 +123,14 @@ export function LibraryScreen() {
       const picked = await getDocumentAsync({ type: "*/*", copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets[0]) return;
 
-      setStatus("Importing...");
+      setStatus(t.library.importing);
       const result = await dispatch(importBundleIntoLibrary(new File(picked.assets[0].uri)));
       setStatus(null);
 
       const imported = result.songs.length + result.setlists.length;
       const skipped = result.skippedSongIds.length + result.skippedSetlistIds.length;
       if (imported === 0 && skipped > 0) {
-        setError("Everything in that backup is already in your library.");
+        setError(t.library.importAlreadyHere);
       }
     } catch (e) {
       setStatus(null);
@@ -146,7 +144,7 @@ export function LibraryScreen() {
       .filter((setlist) => !setlist.songs.includes(song.id))
       .map((setlist) => ({
         key: `add-${setlist.id}`,
-        label: `Add to "${setlist.name}"`,
+        label: t.setlist.addTo(setlist.name),
         onPress: () => dispatch(addSongToSetlist(setlist.id, song.id)),
       }));
 
@@ -154,7 +152,7 @@ export function LibraryScreen() {
       ? [
           {
             key: "remove",
-            label: "Remove from setlist",
+            label: t.setlist.removeFrom,
             onPress: () => dispatch(removeSongFromSetlist(containingSetlistId, song.id)),
           },
         ]
@@ -163,21 +161,22 @@ export function LibraryScreen() {
     return [
       ...additions,
       ...removal,
-      { key: "delete", label: "Delete song", destructive: true, onPress: () => handleDeleteSong(song.id, song.name) },
+      { key: "delete", label: t.setlist.deleteSong, destructive: true, onPress: () => handleDeleteSong(song.id, song.name) },
     ];
   }
 
   const libraryMenuItems: OverflowMenuItem[] = [
-    { key: "import", label: "Import backup", onPress: handleImport },
-    { key: "export", label: "Export full library", onPress: handleExportAll },
+    { key: "import", label: t.library.importBackup, onPress: handleImport },
+    { key: "export", label: t.library.exportFullLibrary, onPress: handleExportAll },
+    { key: "about", label: t.menu.about, onPress: () => router.push("/about") },
   ];
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.eyebrow}>SEGUE LIST</Text>
-          <Text style={styles.header}>Library</Text>
+          <Text style={styles.eyebrow}>{t.library.eyebrow}</Text>
+          <Text style={styles.header}>{t.library.title}</Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable
@@ -185,12 +184,12 @@ export function LibraryScreen() {
             hitSlop={8}
             style={({ pressed }) => [styles.newSetlistButton, pressed && styles.pressed]}
           >
-            <Text style={styles.newSetlistText}>New setlist</Text>
+            <Text style={styles.newSetlistText}>{t.library.newSetlist}</Text>
           </Pressable>
           <Pressable onPress={handleNewSong} hitSlop={8} style={({ pressed }) => [styles.newSongButton, pressed && styles.pressed]}>
-            <Text style={styles.newSongText}>New song</Text>
+            <Text style={styles.newSongText}>{t.library.newSong}</Text>
           </Pressable>
-          <OverflowMenu items={libraryMenuItems} accessibilityLabel="More options">
+          <OverflowMenu items={libraryMenuItems} accessibilityLabel={t.library.moreOptions}>
             <KebabIcon />
           </OverflowMenu>
         </View>
@@ -204,8 +203,8 @@ export function LibraryScreen() {
           <ActivityIndicator color={colors.accent} style={styles.loading} />
         ) : items.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Your library is empty</Text>
-            <Text style={styles.emptyMeta}>Add a song or start a setlist above.</Text>
+            <Text style={styles.emptyTitle}>{t.library.emptyTitle}</Text>
+            <Text style={styles.emptyMeta}>{t.library.emptyMeta}</Text>
           </View>
         ) : (
           items.map((item, index) => {
@@ -220,44 +219,44 @@ export function LibraryScreen() {
                   <SetlistRow
                     testID={`setlist-row-${setlist.id}`}
                     name={setlist.name}
-                    songsLabel={`${setlistSongs.length} song${setlistSongs.length === 1 ? "" : "s"}`}
+                    songsLabel={t.setlist.songsCount(setlistSongs.length)}
                     expanded={expanded}
                     onToggle={() =>
                       setCollapsed((current) =>
                         current.includes(setlist.id) ? current.filter((id) => id !== setlist.id) : [...current, setlist.id],
                       )
                     }
-                    expandAccessibilityLabel={expanded ? "Collapse" : "Expand"}
-                    menuAccessibilityLabel="Setlist options"
+                    expandAccessibilityLabel={expanded ? t.setlist.collapse : t.setlist.expand}
+                    menuAccessibilityLabel={t.setlist.setlistOptions}
                     menuItems={[
-                      { key: "rename", label: "Rename", onPress: () => setRenamingSetlistId(setlist.id) },
+                      { key: "rename", label: t.setlist.rename, onPress: () => setRenamingSetlistId(setlist.id) },
                       {
                         key: "present",
-                        label: "Present",
+                        label: t.setlist.present,
                         onPress: () => router.push({ pathname: "/setlist/[setlistId]/present", params: { setlistId: setlist.id } }),
                       },
-                      { key: "export", label: "Export", onPress: () => handleExportSetlist(setlist.id, setlist.name, setlistSongs) },
+                      { key: "export", label: t.setlist.export, onPress: () => handleExportSetlist(setlist.id, setlist.name, setlistSongs) },
                       {
                         key: "delete",
-                        label: "Delete",
+                        label: t.setlist.delete,
                         destructive: true,
                         onPress: () => handleDeleteSetlist(setlist.id, setlist.name, setlistSongs.length),
                       },
                     ]}
                     renaming={renamingSetlistId === setlist.id}
-                    renamePlaceholder="Setlist name"
+                    renamePlaceholder={t.setlist.renamePlaceholder}
                     onRenameSubmit={(name) => handleRenameSubmit(setlist.id, name)}
                     onRenameCancel={() => setRenamingSetlistId(null)}
                     canMoveUp={canMoveUp}
                     canMoveDown={canMoveDown}
                     onMoveUp={() => handleMove(index, "up")}
                     onMoveDown={() => handleMove(index, "down")}
-                    moveUpAccessibilityLabel="Move up"
-                    moveDownAccessibilityLabel="Move down"
+                    moveUpAccessibilityLabel={t.library.moveUp}
+                    moveDownAccessibilityLabel={t.library.moveDown}
                   />
                   {expanded &&
                     (setlistSongs.length === 0 ? (
-                      <Text style={styles.setlistEmpty}>No songs in this setlist yet.</Text>
+                      <Text style={styles.setlistEmpty}>{t.setlist.empty}</Text>
                     ) : (
                       setlistSongs.map((song, songIndex) => (
                         <SongRow
@@ -267,15 +266,17 @@ export function LibraryScreen() {
                           position={songIndex + 1}
                           title={song.name}
                           hasLyrics={Boolean(song.lyrics?.trim())}
-                          menuAccessibilityLabel="Song options"
+                          hasLyricsLabel={t.song.hasLyrics}
+                          noLyricsLabel={t.song.noLyricsYet}
+                          menuAccessibilityLabel={t.setlist.songOptions}
                           menuItems={songMenuItems(song, setlist.id)}
                           onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: song.id } })}
                           canMoveUp={songIndex > 0}
                           canMoveDown={songIndex < setlistSongs.length - 1}
                           onMoveUp={() => dispatch(moveSongInSetlist(setlist.id, songIndex, "up"))}
                           onMoveDown={() => dispatch(moveSongInSetlist(setlist.id, songIndex, "down"))}
-                          moveUpAccessibilityLabel="Move up"
-                          moveDownAccessibilityLabel="Move down"
+                          moveUpAccessibilityLabel={t.library.moveUp}
+                          moveDownAccessibilityLabel={t.library.moveDown}
                         />
                       ))
                     ))}
@@ -290,15 +291,17 @@ export function LibraryScreen() {
                 testID={`song-row-${song.id}`}
                 title={song.name}
                 hasLyrics={Boolean(song.lyrics?.trim())}
-                menuAccessibilityLabel="Song options"
+                hasLyricsLabel={t.song.hasLyrics}
+                noLyricsLabel={t.song.noLyricsYet}
+                menuAccessibilityLabel={t.setlist.songOptions}
                 menuItems={songMenuItems(song)}
                 onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: song.id } })}
                 canMoveUp={canMoveUp}
                 canMoveDown={canMoveDown}
                 onMoveUp={() => handleMove(index, "up")}
                 onMoveDown={() => handleMove(index, "down")}
-                moveUpAccessibilityLabel="Move up"
-                moveDownAccessibilityLabel="Move down"
+                moveUpAccessibilityLabel={t.library.moveUp}
+                moveDownAccessibilityLabel={t.library.moveDown}
               />
             );
           })

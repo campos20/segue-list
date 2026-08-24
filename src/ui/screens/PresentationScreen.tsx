@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "@/i18n";
 import { useAppSelector } from "@/store/hooks";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
@@ -13,6 +14,7 @@ const AUTO_SCROLL_INTERVAL_MS = 50;
 export function PresentationScreen() {
   const { setlistId } = useLocalSearchParams<{ setlistId: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const setlist = useAppSelector((state) => setlistsSelectors.selectById(state.setlists, setlistId));
   const allSongs = useAppSelector((state) => state.songs);
@@ -24,9 +26,10 @@ export function PresentationScreen() {
 
   const [index, setIndex] = useState(0);
   const [played, setPlayed] = useState<Set<string>>(new Set());
-  // Open by default: every song in the set should be visible and one tap
-  // away the moment presentation mode starts, not hidden behind a toggle.
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  // Collapsed by default: the lyrics of the current song should fill the
+  // screen when presentation mode starts, not compete with the track list
+  // for space. The ☰ button still opens it for quick switching.
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [panelQuery, setPanelQuery] = useState("");
   const [allCaps, setAllCaps] = useState(false);
   const [autoScroll, setAutoScroll] = useState(false);
@@ -50,9 +53,9 @@ export function PresentationScreen() {
   if (!setlist || songs.length === 0) {
     return (
       <SafeAreaView style={styles.emptyContainer} edges={["top", "bottom"]}>
-        <Text style={styles.emptyText}>This setlist has no songs to present.</Text>
+        <Text style={styles.emptyText}>{t.presentation.empty}</Text>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.exitLink}>Exit</Text>
+          <Text style={styles.exitLink}>{t.presentation.exit}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -102,12 +105,12 @@ export function PresentationScreen() {
             <TextInput
               value={panelQuery}
               onChangeText={setPanelQuery}
-              placeholder="Search song..."
+              placeholder={t.presentation.searchPlaceholder}
               placeholderTextColor={colors.textTertiary}
               style={styles.panelSearch}
             />
             <ScrollView style={styles.panelList}>
-              {filteredSongs.length === 0 && <Text style={styles.panelEmpty}>No matching song.</Text>}
+              {filteredSongs.length === 0 && <Text style={styles.panelEmpty}>{t.presentation.noMatch}</Text>}
               {filteredSongs.map((song) => {
                 const songIndex = songs.findIndex((s) => s.id === song.id);
                 const isCurrent = songIndex === index;
@@ -151,7 +154,7 @@ export function PresentationScreen() {
               hitSlop={8}
               style={styles.editButton}
             >
-              <Text style={styles.editButtonText}>Edit</Text>
+              <Text style={styles.editButtonText}>{t.presentation.edit}</Text>
             </Pressable>
           </View>
           <Text style={styles.songMeta}>
@@ -171,7 +174,7 @@ export function PresentationScreen() {
           {current.lyrics ? (
             <Text style={[styles.lyrics, allCaps && styles.lyricsUppercase]}>{current.lyrics}</Text>
           ) : (
-            <Text style={styles.lyricsEmpty}>No lyrics for this song.</Text>
+            <Text style={styles.lyricsEmpty}>{t.presentation.noLyrics}</Text>
           )}
         </ScrollView>
 
