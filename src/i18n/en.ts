@@ -19,11 +19,19 @@ export const en = {
     moveUp: "Move up",
     moveDown: "Move down",
     importBackup: "Import backup",
+    importLyricsFiles: "Import lyrics files",
     exportFullLibrary: "Export full library",
+    exportFullLibraryDocx: "Export full library as .docx",
     exportBackup: "Export backup",
     exportSetlist: "Export setlist",
     importing: "Importing...",
+    importingLyricsFiles: "Importing lyrics files...",
     importAlreadyHere: "Everything in that backup is already in your library.",
+    importLyricsFilesFailed: (fileNames: string[]) => {
+      const shown = fileNames.slice(0, 3).join(", ");
+      const remaining = fileNames.length - 3;
+      return `Couldn't import: ${shown}${remaining > 0 ? `, and ${remaining} more` : ""}.`;
+    },
     couldNotCreateSetlist: "Couldn't create the setlist.",
     couldNotCreateSong: "Couldn't create the song.",
     couldNotDuplicateSetlist: "Couldn't duplicate the setlist.",
@@ -44,6 +52,7 @@ export const en = {
     renamePlaceholder: "Setlist name",
     present: "Present",
     export: "Export",
+    exportDocx: "Export as .docx",
     duplicate: "Duplicate",
     duplicateName: (name: string) => `${name} copy`,
     delete: "Delete",

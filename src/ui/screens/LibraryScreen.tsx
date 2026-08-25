@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import type { SongManifest } from "@/types/song";
-import { shareBundle, writeBundleToCache } from "@/storage";
+import { shareBundle, shareDocx, writeBundleToCache, writeSongsAsDocxToCache } from "@/storage";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { importBundleIntoLibrary } from "@/store/persistBundle";
 import { persistLibraryOrder } from "@/store/persistLibrary";
@@ -20,7 +20,7 @@ import {
   removeSongFromSetlist,
   renameSetlist,
 } from "@/store/persistSetlists";
-import { createSong, deleteSong } from "@/store/persistSongs";
+import { createSong, deleteSong, importSongsFromLyricsFiles } from "@/store/persistSongs";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
@@ -151,6 +151,26 @@ export function LibraryScreen() {
     }
   }
 
+  async function handleExportSetlistDocx(name: string, setlistSongs: SongManifest[]) {
+    setError(null);
+    try {
+      const doc = writeSongsAsDocxToCache(setlistSongs, name, t.song.noLyricsYet);
+      await shareDocx(doc, t.library.exportSetlist);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleExportAllDocx() {
+    setError(null);
+    try {
+      const doc = writeSongsAsDocxToCache(songs, t.library.title, t.song.noLyricsYet);
+      await shareDocx(doc, t.library.exportFullLibraryDocx);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   async function handleImport() {
     setError(null);
     try {
@@ -165,6 +185,35 @@ export function LibraryScreen() {
       const skipped = result.skippedSongIds.length + result.skippedSetlistIds.length;
       if (imported === 0 && skipped > 0) {
         setError(t.library.importAlreadyHere);
+      }
+    } catch (e) {
+      setStatus(null);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleImportLyricsFiles() {
+    setError(null);
+    try {
+      const picked = await getDocumentAsync({
+        type: [
+          "text/plain",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.oasis.opendocument.text",
+        ],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled || picked.assets.length === 0) return;
+
+      setStatus(t.library.importingLyricsFiles);
+      const result = await dispatch(
+        importSongsFromLyricsFiles(picked.assets.map((asset) => ({ uri: asset.uri, fileName: asset.name }))),
+      );
+      setStatus(null);
+
+      if (result.failed.length > 0) {
+        setError(t.library.importLyricsFilesFailed(result.failed.map((failure) => failure.fileName)));
       }
     } catch (e) {
       setStatus(null);
@@ -206,7 +255,9 @@ export function LibraryScreen() {
 
   const libraryMenuItems: OverflowMenuItem[] = [
     { key: "import", label: t.library.importBackup, onPress: handleImport },
+    { key: "import-lyrics", label: t.library.importLyricsFiles, onPress: handleImportLyricsFiles },
     { key: "export", label: t.library.exportFullLibrary, onPress: handleExportAll },
+    { key: "export-docx", label: t.library.exportFullLibraryDocx, onPress: handleExportAllDocx },
     { key: "about", label: t.menu.about, onPress: () => router.push("/about") },
   ];
 
@@ -288,6 +339,11 @@ export function LibraryScreen() {
                       },
                       { key: "duplicate", label: t.setlist.duplicate, onPress: () => handleDuplicateSetlist(setlist.id) },
                       { key: "export", label: t.setlist.export, onPress: () => handleExportSetlist(setlist.id, setlist.name, setlistSongs) },
+                      {
+                        key: "export-docx",
+                        label: t.setlist.exportDocx,
+                        onPress: () => handleExportSetlistDocx(setlist.name, setlistSongs),
+                      },
                       {
                         key: "delete",
                         label: t.setlist.delete,

@@ -38,12 +38,12 @@ export function writeSong(manifest: SongManifest): void {
   songFile(manifest.id).write(JSON.stringify(manifest, null, 2));
 }
 
-export function createSong(name = DRAFT_SONG_NAME): SongManifest {
+export function createSong(name = DRAFT_SONG_NAME, lyrics: string | null = null): SongManifest {
   const now = new Date().toISOString();
   const manifest: SongManifest = {
     id: generateId(name),
     name,
-    lyrics: null,
+    lyrics,
     createdAt: now,
     updatedAt: now,
   };

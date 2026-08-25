@@ -21,11 +21,19 @@ export const ptBR: TranslationDictionary = {
     moveUp: "Mover para cima",
     moveDown: "Mover para baixo",
     importBackup: "Importar backup",
+    importLyricsFiles: "Importar arquivos de letra",
     exportFullLibrary: "Exportar biblioteca completa",
+    exportFullLibraryDocx: "Exportar biblioteca completa como .docx",
     exportBackup: "Exportar backup",
     exportSetlist: "Exportar repertório",
     importing: "Importando...",
+    importingLyricsFiles: "Importando arquivos de letra...",
     importAlreadyHere: "Tudo nesse backup já está na sua biblioteca.",
+    importLyricsFilesFailed: (fileNames: string[]) => {
+      const shown = fileNames.slice(0, 3).join(", ");
+      const remaining = fileNames.length - 3;
+      return `Não foi possível importar: ${shown}${remaining > 0 ? `, e mais ${remaining}` : ""}.`;
+    },
     couldNotCreateSetlist: "Não foi possível criar o repertório.",
     couldNotCreateSong: "Não foi possível criar a música.",
     couldNotDuplicateSetlist: "Não foi possível duplicar o repertório.",
@@ -46,6 +54,7 @@ export const ptBR: TranslationDictionary = {
     renamePlaceholder: "Nome do repertório",
     present: "Apresentar",
     export: "Exportar",
+    exportDocx: "Exportar como .docx",
     duplicate: "Duplicar",
     duplicateName: (name: string) => `${name} cópia`,
     delete: "Excluir",

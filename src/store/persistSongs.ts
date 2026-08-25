@@ -1,3 +1,5 @@
+import { File } from "expo-file-system";
+import { extractLyricsFromFile } from "@/storage/lyricsImport";
 import { createSong as createSongFile, deleteSong as deleteSongFile, writeSong } from "@/storage/songLibrary";
 import type { SongManifest } from "@/types/song";
 import { songKey } from "@/ui/libraryTree";
@@ -40,6 +42,48 @@ export function updateSong(id: string, changes: Partial<Omit<SongManifest, "id" 
       return;
     }
     dispatch(songUpdated({ id, changes: { ...changes, updatedAt: updated.updatedAt } }));
+  };
+}
+
+export interface LyricsFileImportFailure {
+  fileName: string;
+  error: string;
+}
+
+export interface LyricsFileImportResult {
+  imported: SongManifest[];
+  failed: LyricsFileImportFailure[];
+}
+
+/**
+ * Creates one song per picked .txt/.docx/.odt file, named from the filename
+ * with lyrics read out of it. Each file is isolated - one that fails to
+ * parse is reported and skipped rather than aborting the batch, since a
+ * bulk import of a folder of lyric sheets is exactly the case where one bad
+ * file shouldn't cost you the other eleven.
+ */
+export function importSongsFromLyricsFiles(files: { uri: string; fileName: string }[]) {
+  return async (dispatch: AppDispatch, getState: () => RootState): Promise<LyricsFileImportResult> => {
+    const imported: SongManifest[] = [];
+    const failed: LyricsFileImportFailure[] = [];
+
+    for (const { uri, fileName } of files) {
+      try {
+        const { name, lyrics } = await extractLyricsFromFile(new File(uri), fileName);
+        const song = createSongFile(name, lyrics || null);
+        dispatch(songAdded(song));
+        imported.push(song);
+      } catch (error) {
+        failed.push({ fileName, error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
+    if (imported.length > 0) {
+      const order = getState().settings.libraryOrder;
+      dispatch(persistLibraryOrder([...imported.map((song) => songKey(song.id)), ...order]));
+    }
+
+    return { imported, failed };
   };
 }
 
