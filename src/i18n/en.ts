@@ -27,8 +27,11 @@ export const en = {
     importing: "Importing...",
     importingLyricsFiles: "Importing lyrics files...",
     importAlreadyHere: "Everything in that backup is already in your library.",
-    importLyricsFilesFailed: (failedCount: number, totalCount: number) =>
-      `${failedCount} of ${totalCount} file${totalCount === 1 ? "" : "s"} couldn't be imported.`,
+    importLyricsFilesFailed: (fileNames: string[]) => {
+      const shown = fileNames.slice(0, 3).join(", ");
+      const remaining = fileNames.length - 3;
+      return `Couldn't import: ${shown}${remaining > 0 ? `, and ${remaining} more` : ""}.`;
+    },
     couldNotCreateSetlist: "Couldn't create the setlist.",
     couldNotCreateSong: "Couldn't create the song.",
     couldNotDuplicateSetlist: "Couldn't duplicate the setlist.",

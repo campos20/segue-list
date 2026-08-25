@@ -29,8 +29,11 @@ export const ptBR: TranslationDictionary = {
     importing: "Importando...",
     importingLyricsFiles: "Importando arquivos de letra...",
     importAlreadyHere: "Tudo nesse backup já está na sua biblioteca.",
-    importLyricsFilesFailed: (failedCount: number, totalCount: number) =>
-      `${failedCount} de ${totalCount} arquivo${totalCount === 1 ? "" : "s"} não puderam ser importados.`,
+    importLyricsFilesFailed: (fileNames: string[]) => {
+      const shown = fileNames.slice(0, 3).join(", ");
+      const remaining = fileNames.length - 3;
+      return `Não foi possível importar: ${shown}${remaining > 0 ? `, e mais ${remaining}` : ""}.`;
+    },
     couldNotCreateSetlist: "Não foi possível criar o repertório.",
     couldNotCreateSong: "Não foi possível criar a música.",
     couldNotDuplicateSetlist: "Não foi possível duplicar o repertório.",

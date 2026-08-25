@@ -151,7 +151,7 @@ export function LibraryScreen() {
     }
   }
 
-  async function handleExportSetlistDocx(setlistId: string, name: string, setlistSongs: SongManifest[]) {
+  async function handleExportSetlistDocx(name: string, setlistSongs: SongManifest[]) {
     setError(null);
     try {
       const doc = writeSongsAsDocxToCache(setlistSongs, name, t.song.noLyricsYet);
@@ -165,7 +165,7 @@ export function LibraryScreen() {
     setError(null);
     try {
       const doc = writeSongsAsDocxToCache(songs, t.library.title, t.song.noLyricsYet);
-      await shareDocx(doc, t.library.exportBackup);
+      await shareDocx(doc, t.library.exportFullLibraryDocx);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -213,7 +213,7 @@ export function LibraryScreen() {
       setStatus(null);
 
       if (result.failed.length > 0) {
-        setError(t.library.importLyricsFilesFailed(result.failed.length, picked.assets.length));
+        setError(t.library.importLyricsFilesFailed(result.failed.map((failure) => failure.fileName)));
       }
     } catch (e) {
       setStatus(null);
@@ -342,7 +342,7 @@ export function LibraryScreen() {
                       {
                         key: "export-docx",
                         label: t.setlist.exportDocx,
-                        onPress: () => handleExportSetlistDocx(setlist.id, setlist.name, setlistSongs),
+                        onPress: () => handleExportSetlistDocx(setlist.name, setlistSongs),
                       },
                       {
                         key: "delete",
