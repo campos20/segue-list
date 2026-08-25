@@ -20,7 +20,7 @@ import {
   removeSongFromSetlist,
   renameSetlist,
 } from "@/store/persistSetlists";
-import { createSong, deleteSong } from "@/store/persistSongs";
+import { createSong, deleteSong, importSongsFromLyricsFiles } from "@/store/persistSongs";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
@@ -172,6 +172,35 @@ export function LibraryScreen() {
     }
   }
 
+  async function handleImportLyricsFiles() {
+    setError(null);
+    try {
+      const picked = await getDocumentAsync({
+        type: [
+          "text/plain",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.oasis.opendocument.text",
+        ],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled || picked.assets.length === 0) return;
+
+      setStatus(t.library.importingLyricsFiles);
+      const result = await dispatch(
+        importSongsFromLyricsFiles(picked.assets.map((asset) => ({ uri: asset.uri, fileName: asset.name }))),
+      );
+      setStatus(null);
+
+      if (result.failed.length > 0) {
+        setError(t.library.importLyricsFilesFailed(result.failed.length, picked.assets.length));
+      }
+    } catch (e) {
+      setStatus(null);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   /** A song's menu: which setlists it can be added to, and - when it's shown inside one - a way back out. */
   function songMenuItems(song: SongManifest, containingSetlistId?: string): OverflowMenuItem[] {
     const additions: OverflowMenuItem[] = setlists
@@ -206,6 +235,7 @@ export function LibraryScreen() {
 
   const libraryMenuItems: OverflowMenuItem[] = [
     { key: "import", label: t.library.importBackup, onPress: handleImport },
+    { key: "import-lyrics", label: t.library.importLyricsFiles, onPress: handleImportLyricsFiles },
     { key: "export", label: t.library.exportFullLibrary, onPress: handleExportAll },
     { key: "about", label: t.menu.about, onPress: () => router.push("/about") },
   ];
