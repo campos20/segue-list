@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import type { SongManifest } from "@/types/song";
-import { shareBundle, writeBundleToCache } from "@/storage";
+import { shareBundle, shareDocx, writeBundleToCache, writeSongsAsDocxToCache } from "@/storage";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { importBundleIntoLibrary } from "@/store/persistBundle";
 import { persistLibraryOrder } from "@/store/persistLibrary";
@@ -151,6 +151,26 @@ export function LibraryScreen() {
     }
   }
 
+  async function handleExportSetlistDocx(setlistId: string, name: string, setlistSongs: SongManifest[]) {
+    setError(null);
+    try {
+      const doc = writeSongsAsDocxToCache(setlistSongs, name, t.song.noLyricsYet);
+      await shareDocx(doc, t.library.exportSetlist);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function handleExportAllDocx() {
+    setError(null);
+    try {
+      const doc = writeSongsAsDocxToCache(songs, t.library.title, t.song.noLyricsYet);
+      await shareDocx(doc, t.library.exportBackup);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   async function handleImport() {
     setError(null);
     try {
@@ -237,6 +257,7 @@ export function LibraryScreen() {
     { key: "import", label: t.library.importBackup, onPress: handleImport },
     { key: "import-lyrics", label: t.library.importLyricsFiles, onPress: handleImportLyricsFiles },
     { key: "export", label: t.library.exportFullLibrary, onPress: handleExportAll },
+    { key: "export-docx", label: t.library.exportFullLibraryDocx, onPress: handleExportAllDocx },
     { key: "about", label: t.menu.about, onPress: () => router.push("/about") },
   ];
 
@@ -318,6 +339,11 @@ export function LibraryScreen() {
                       },
                       { key: "duplicate", label: t.setlist.duplicate, onPress: () => handleDuplicateSetlist(setlist.id) },
                       { key: "export", label: t.setlist.export, onPress: () => handleExportSetlist(setlist.id, setlist.name, setlistSongs) },
+                      {
+                        key: "export-docx",
+                        label: t.setlist.exportDocx,
+                        onPress: () => handleExportSetlistDocx(setlist.id, setlist.name, setlistSongs),
+                      },
                       {
                         key: "delete",
                         label: t.setlist.delete,
