@@ -40,4 +40,4 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Lint
-        run: npx expo lint
+        run: npx prettier --check . && npx eslint . --max-warnings 0
