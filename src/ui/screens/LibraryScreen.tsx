@@ -378,7 +378,13 @@ export function LibraryScreen() {
                           noLyricsLabel={t.song.noLyricsYet}
                           menuAccessibilityLabel={t.setlist.songOptions}
                           menuItems={songMenuItems(song, setlist.id)}
-                          onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: song.id } })}
+                          onPress={() =>
+                            router.push(
+                              Boolean(song.lyrics?.trim())
+                                ? { pathname: "/song/[songId]/present", params: { songId: song.id } }
+                                : { pathname: "/song/[songId]", params: { songId: song.id } }
+                            )
+                          }
                           canMoveUp={songIndex > 0}
                           canMoveDown={songIndex < setlistSongs.length - 1}
                           onMoveUp={() => dispatch(moveSongInSetlist(setlist.id, songIndex, "up"))}
@@ -403,7 +409,13 @@ export function LibraryScreen() {
                 noLyricsLabel={t.song.noLyricsYet}
                 menuAccessibilityLabel={t.setlist.songOptions}
                 menuItems={songMenuItems(song)}
-                onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: song.id } })}
+                onPress={() =>
+                  router.push(
+                    Boolean(song.lyrics?.trim())
+                      ? { pathname: "/song/[songId]/present", params: { songId: song.id } }
+                      : { pathname: "/song/[songId]", params: { songId: song.id } }
+                  )
+                }
                 canMoveUp={canMoveUp}
                 canMoveDown={canMoveDown}
                 onMoveUp={() => handleMove(item, "up")}
