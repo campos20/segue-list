@@ -1,5 +1,12 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Dimensions,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { colors, elevation, radii, spacing } from "@/ui/theme";
 
 export interface OverflowMenuItem {
@@ -30,11 +37,19 @@ interface OverflowMenuProps {
  * without manual zIndex tuning. Position comes from `View.measureInWindow()`
  * - a long-standing core RN API, not a third-party popover library.
  */
-export function OverflowMenu({ items, children, align = "end", accessibilityLabel, testID }: OverflowMenuProps) {
+export function OverflowMenu({
+  items,
+  children,
+  align = "end",
+  accessibilityLabel,
+  testID,
+}: OverflowMenuProps) {
   const triggerRef = useRef<View>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [anchor, setAnchor] = useState<Anchor>(() =>
-    align === "end" ? { top: 80, right: spacing.lg } : { top: 80, left: spacing.lg },
+    align === "end"
+      ? { top: 80, right: spacing.lg }
+      : { top: 80, left: spacing.lg },
   );
 
   function open() {
@@ -42,7 +57,13 @@ export function OverflowMenu({ items, children, align = "end", accessibilityLabe
     triggerRef.current?.measureInWindow((x, y, width, height) => {
       setAnchor(
         align === "end"
-          ? { top: y + height + 6, right: Math.max(spacing.sm, Dimensions.get("window").width - (x + width)) }
+          ? {
+              top: y + height + 6,
+              right: Math.max(
+                spacing.sm,
+                Dimensions.get("window").width - (x + width),
+              ),
+            }
           : { top: y + height + 6, left: x },
       );
     });
@@ -71,7 +92,12 @@ export function OverflowMenu({ items, children, align = "end", accessibilityLabe
         {children}
       </Pressable>
 
-      <Modal visible={isOpen} transparent animationType="fade" onRequestClose={close}>
+      <Modal
+        visible={isOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={close}
+      >
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={close}
@@ -90,7 +116,14 @@ export function OverflowMenu({ items, children, align = "end", accessibilityLabe
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.itemText, item.destructive && styles.itemTextDestructive]}>{item.label}</Text>
+              <Text
+                style={[
+                  styles.itemText,
+                  item.destructive && styles.itemTextDestructive,
+                ]}
+              >
+                {item.label}
+              </Text>
             </Pressable>
           ))}
         </View>

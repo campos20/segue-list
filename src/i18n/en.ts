@@ -39,7 +39,8 @@ export const en = {
     deleteSetlistBody: (name: string, songCount: number) =>
       `Delete "${name}"${songCount > 0 ? ` (${songCount} song${songCount === 1 ? "" : "s"})` : ""}? Songs stay in your library.`,
     deleteSongTitle: "Delete song",
-    deleteSongBody: (name: string) => `Delete "${name}"? It will be removed from any setlist too.`,
+    deleteSongBody: (name: string) =>
+      `Delete "${name}"? It will be removed from any setlist too.`,
     searchPlaceholder: "Search songs and setlists...",
     noResultsTitle: "No matches",
     noResultsMeta: "Try a different search.",

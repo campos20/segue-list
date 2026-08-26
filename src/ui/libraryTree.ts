@@ -42,14 +42,20 @@ export function resolveLibraryOrder(settings: PersistedAppSettings): string[] {
  * setlist outlives the songs it points at (a song can be deleted from the
  * Library), and a setlist full of ghosts is worse than a short setlist.
  */
-export function buildLibraryTree(songs: SongManifest[], setlists: SetlistManifest[], order: string[] = []): LibraryItem[] {
+export function buildLibraryTree(
+  songs: SongManifest[],
+  setlists: SetlistManifest[],
+  order: string[] = [],
+): LibraryItem[] {
   const byId = new Map(songs.map((song) => [song.id, song]));
 
   const setlistItems: LibraryItem[] = setlists.map((setlist) => ({
     kind: "setlist",
     key: setlistKey(setlist.id),
     setlist,
-    songs: setlist.songs.map((id) => byId.get(id)).filter((song): song is SongManifest => song !== undefined),
+    songs: setlist.songs
+      .map((id) => byId.get(id))
+      .filter((song): song is SongManifest => song !== undefined),
   }));
 
   const filed = new Set(setlists.flatMap((setlist) => setlist.songs));
@@ -71,7 +77,9 @@ function applyOrder(items: LibraryItem[], order: string[]): LibraryItem[] {
   if (order.length === 0) return items;
 
   const byKey = new Map(items.map((item) => [item.key, item]));
-  const placed = order.map((key) => byKey.get(key)).filter((item): item is LibraryItem => item !== undefined);
+  const placed = order
+    .map((key) => byKey.get(key))
+    .filter((item): item is LibraryItem => item !== undefined);
   const placedKeys = new Set(placed.map((item) => item.key));
 
   return [...placed, ...items.filter((item) => !placedKeys.has(item.key))];

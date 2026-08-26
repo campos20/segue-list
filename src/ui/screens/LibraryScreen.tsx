@@ -3,11 +3,24 @@ import { getDocumentAsync } from "expo-document-picker";
 import { File } from "expo-file-system";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import type { SongManifest } from "@/types/song";
-import { shareBundle, shareDocx, writeBundleToCache, writeSongsAsDocxToCache } from "@/storage";
+import {
+  shareBundle,
+  shareDocx,
+  writeBundleToCache,
+  writeSongsAsDocxToCache,
+} from "@/storage";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { importBundleIntoLibrary } from "@/store/persistBundle";
 import { persistLibraryOrder } from "@/store/persistLibrary";
@@ -20,12 +33,20 @@ import {
   removeSongFromSetlist,
   renameSetlist,
 } from "@/store/persistSetlists";
-import { createSong, deleteSong, importSongsFromLyricsFiles } from "@/store/persistSongs";
+import {
+  createSong,
+  deleteSong,
+  importSongsFromLyricsFiles,
+} from "@/store/persistSongs";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
-import { KebabIcon, OverflowMenu, type OverflowMenuItem } from "@/ui/components/OverflowMenu";
+import {
+  KebabIcon,
+  OverflowMenu,
+  type OverflowMenuItem,
+} from "@/ui/components/OverflowMenu";
 import { SetlistRow } from "@/ui/components/SetlistRow";
 import { SongRow } from "@/ui/components/SongRow";
 import { TextField } from "@/ui/components/TextField";
@@ -36,18 +57,29 @@ export function LibraryScreen() {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const songs = useAppSelector((state) => songsSelectors.selectAll(state.songs));
-  const setlists = useAppSelector((state) => setlistsSelectors.selectAll(state.setlists));
+  const songs = useAppSelector((state) =>
+    songsSelectors.selectAll(state.songs),
+  );
+  const setlists = useAppSelector((state) =>
+    setlistsSelectors.selectAll(state.setlists),
+  );
   const libraryOrder = useAppSelector((state) => state.settings.libraryOrder);
-  const hydrated = useAppSelector((state) => state.songs.hydrated && state.setlists.hydrated);
+  const hydrated = useAppSelector(
+    (state) => state.songs.hydrated && state.setlists.hydrated,
+  );
 
   const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [renamingSetlistId, setRenamingSetlistId] = useState<string | null>(null);
+  const [renamingSetlistId, setRenamingSetlistId] = useState<string | null>(
+    null,
+  );
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const items = useMemo(() => buildLibraryTree(songs, setlists, libraryOrder), [songs, setlists, libraryOrder]);
+  const items = useMemo(
+    () => buildLibraryTree(songs, setlists, libraryOrder),
+    [songs, setlists, libraryOrder],
+  );
 
   const trimmedSearch = search.trim().toLowerCase();
 
@@ -63,18 +95,28 @@ export function LibraryScreen() {
     if (!trimmedSearch) return items;
     return items.flatMap((item): LibraryItem[] => {
       if (item.kind === "song") {
-        return item.song.name.toLowerCase().includes(trimmedSearch) ? [item] : [];
+        return item.song.name.toLowerCase().includes(trimmedSearch)
+          ? [item]
+          : [];
       }
-      const nameMatches = item.setlist.name.toLowerCase().includes(trimmedSearch);
+      const nameMatches = item.setlist.name
+        .toLowerCase()
+        .includes(trimmedSearch);
       if (nameMatches) return [item];
-      const matchingSongs = item.songs.filter((song) => song.name.toLowerCase().includes(trimmedSearch));
-      return matchingSongs.length > 0 ? [{ ...item, songs: matchingSongs }] : [];
+      const matchingSongs = item.songs.filter((song) =>
+        song.name.toLowerCase().includes(trimmedSearch),
+      );
+      return matchingSongs.length > 0
+        ? [{ ...item, songs: matchingSongs }]
+        : [];
     });
   }, [items, trimmedSearch]);
 
   function handleMove(item: LibraryItem, direction: "up" | "down") {
     const keys = items.map((candidate) => candidate.key);
-    const realIndex = items.findIndex((candidate) => candidate.key === item.key);
+    const realIndex = items.findIndex(
+      (candidate) => candidate.key === item.key,
+    );
     const reordered = moveItem(keys, realIndex, direction);
     if (reordered !== keys) dispatch(persistLibraryOrder(reordered));
   }
@@ -99,15 +141,25 @@ export function LibraryScreen() {
   function handleDuplicateSetlist(id: string) {
     const source = setlists.find((candidate) => candidate.id === id);
     if (!source) return;
-    const copy = dispatch(duplicateSetlist(id, t.setlist.duplicateName(source.name)));
+    const copy = dispatch(
+      duplicateSetlist(id, t.setlist.duplicateName(source.name)),
+    );
     if (!copy) setError(t.library.couldNotDuplicateSetlist);
   }
 
   function handleDeleteSetlist(id: string, name: string, songCount: number) {
-    Alert.alert(t.library.deleteSetlistTitle, t.library.deleteSetlistBody(name, songCount), [
-      { text: t.common.cancel, style: "cancel" },
-      { text: t.setlist.delete, style: "destructive", onPress: () => dispatch(deleteSetlist(id)) },
-    ]);
+    Alert.alert(
+      t.library.deleteSetlistTitle,
+      t.library.deleteSetlistBody(name, songCount),
+      [
+        { text: t.common.cancel, style: "cancel" },
+        {
+          text: t.setlist.delete,
+          style: "destructive",
+          onPress: () => dispatch(deleteSetlist(id)),
+        },
+      ],
+    );
   }
 
   function handleNewSong() {
@@ -122,11 +174,19 @@ export function LibraryScreen() {
   function handleDeleteSong(id: string, name: string) {
     Alert.alert(t.library.deleteSongTitle, t.library.deleteSongBody(name), [
       { text: t.common.cancel, style: "cancel" },
-      { text: t.setlist.delete, style: "destructive", onPress: () => dispatch(deleteSong(id)) },
+      {
+        text: t.setlist.delete,
+        style: "destructive",
+        onPress: () => dispatch(deleteSong(id)),
+      },
     ]);
   }
 
-  async function handleExportSetlist(setlistId: string, name: string, setlistSongs: SongManifest[]) {
+  async function handleExportSetlist(
+    setlistId: string,
+    name: string,
+    setlistSongs: SongManifest[],
+  ) {
     setError(null);
     try {
       const setlist = setlists.find((candidate) => candidate.id === setlistId);
@@ -144,17 +204,28 @@ export function LibraryScreen() {
   async function handleExportAll() {
     setError(null);
     try {
-      const bundle = writeBundleToCache({ songs, setlists }, "segue-list-backup", Constants.expoConfig?.version);
+      const bundle = writeBundleToCache(
+        { songs, setlists },
+        "segue-list-backup",
+        Constants.expoConfig?.version,
+      );
       await shareBundle(bundle, t.library.exportBackup);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   }
 
-  async function handleExportSetlistDocx(name: string, setlistSongs: SongManifest[]) {
+  async function handleExportSetlistDocx(
+    name: string,
+    setlistSongs: SongManifest[],
+  ) {
     setError(null);
     try {
-      const doc = writeSongsAsDocxToCache(setlistSongs, name, t.song.noLyricsYet);
+      const doc = writeSongsAsDocxToCache(
+        setlistSongs,
+        name,
+        t.song.noLyricsYet,
+      );
       await shareDocx(doc, t.library.exportSetlist);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -164,7 +235,11 @@ export function LibraryScreen() {
   async function handleExportAllDocx() {
     setError(null);
     try {
-      const doc = writeSongsAsDocxToCache(songs, t.library.title, t.song.noLyricsYet);
+      const doc = writeSongsAsDocxToCache(
+        songs,
+        t.library.title,
+        t.song.noLyricsYet,
+      );
       await shareDocx(doc, t.library.exportFullLibraryDocx);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -174,15 +249,21 @@ export function LibraryScreen() {
   async function handleImport() {
     setError(null);
     try {
-      const picked = await getDocumentAsync({ type: "*/*", copyToCacheDirectory: true });
+      const picked = await getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
       if (picked.canceled || !picked.assets[0]) return;
 
       setStatus(t.library.importing);
-      const result = await dispatch(importBundleIntoLibrary(new File(picked.assets[0].uri)));
+      const result = await dispatch(
+        importBundleIntoLibrary(new File(picked.assets[0].uri)),
+      );
       setStatus(null);
 
       const imported = result.songs.length + result.setlists.length;
-      const skipped = result.skippedSongIds.length + result.skippedSetlistIds.length;
+      const skipped =
+        result.skippedSongIds.length + result.skippedSetlistIds.length;
       if (imported === 0 && skipped > 0) {
         setError(t.library.importAlreadyHere);
       }
@@ -208,12 +289,21 @@ export function LibraryScreen() {
 
       setStatus(t.library.importingLyricsFiles);
       const result = await dispatch(
-        importSongsFromLyricsFiles(picked.assets.map((asset) => ({ uri: asset.uri, fileName: asset.name }))),
+        importSongsFromLyricsFiles(
+          picked.assets.map((asset) => ({
+            uri: asset.uri,
+            fileName: asset.name,
+          })),
+        ),
       );
       setStatus(null);
 
       if (result.failed.length > 0) {
-        setError(t.library.importLyricsFilesFailed(result.failed.map((failure) => failure.fileName)));
+        setError(
+          t.library.importLyricsFilesFailed(
+            result.failed.map((failure) => failure.fileName),
+          ),
+        );
       }
     } catch (e) {
       setStatus(null);
@@ -222,7 +312,10 @@ export function LibraryScreen() {
   }
 
   /** A song's menu: which setlists it can be added to, and - when it's shown inside one - a way back out. */
-  function songMenuItems(song: SongManifest, containingSetlistId?: string): OverflowMenuItem[] {
+  function songMenuItems(
+    song: SongManifest,
+    containingSetlistId?: string,
+  ): OverflowMenuItem[] {
     const additions: OverflowMenuItem[] = setlists
       .filter((setlist) => !setlist.songs.includes(song.id))
       .map((setlist) => ({
@@ -236,7 +329,8 @@ export function LibraryScreen() {
           {
             key: "remove",
             label: t.setlist.removeFrom,
-            onPress: () => dispatch(removeSongFromSetlist(containingSetlistId, song.id)),
+            onPress: () =>
+              dispatch(removeSongFromSetlist(containingSetlistId, song.id)),
           },
         ]
       : [];
@@ -245,19 +339,40 @@ export function LibraryScreen() {
       {
         key: "present",
         label: t.setlist.present,
-        onPress: () => router.push({ pathname: "/song/[songId]/present", params: { songId: song.id } }),
+        onPress: () =>
+          router.push({
+            pathname: "/song/[songId]/present",
+            params: { songId: song.id },
+          }),
       },
       ...additions,
       ...removal,
-      { key: "delete", label: t.setlist.deleteSong, destructive: true, onPress: () => handleDeleteSong(song.id, song.name) },
+      {
+        key: "delete",
+        label: t.setlist.deleteSong,
+        destructive: true,
+        onPress: () => handleDeleteSong(song.id, song.name),
+      },
     ];
   }
 
   const libraryMenuItems: OverflowMenuItem[] = [
     { key: "import", label: t.library.importBackup, onPress: handleImport },
-    { key: "import-lyrics", label: t.library.importLyricsFiles, onPress: handleImportLyricsFiles },
-    { key: "export", label: t.library.exportFullLibrary, onPress: handleExportAll },
-    { key: "export-docx", label: t.library.exportFullLibraryDocx, onPress: handleExportAllDocx },
+    {
+      key: "import-lyrics",
+      label: t.library.importLyricsFiles,
+      onPress: handleImportLyricsFiles,
+    },
+    {
+      key: "export",
+      label: t.library.exportFullLibrary,
+      onPress: handleExportAll,
+    },
+    {
+      key: "export-docx",
+      label: t.library.exportFullLibraryDocx,
+      onPress: handleExportAllDocx,
+    },
     { key: "about", label: t.menu.about, onPress: () => router.push("/about") },
   ];
 
@@ -272,21 +387,38 @@ export function LibraryScreen() {
           <Pressable
             onPress={handleNewSetlist}
             hitSlop={8}
-            style={({ pressed }) => [styles.newSetlistButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.newSetlistButton,
+              pressed && styles.pressed,
+            ]}
           >
             <Text style={styles.newSetlistText}>{t.library.newSetlist}</Text>
           </Pressable>
-          <Pressable onPress={handleNewSong} hitSlop={8} style={({ pressed }) => [styles.newSongButton, pressed && styles.pressed]}>
+          <Pressable
+            onPress={handleNewSong}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.newSongButton,
+              pressed && styles.pressed,
+            ]}
+          >
             <Text style={styles.newSongText}>{t.library.newSong}</Text>
           </Pressable>
-          <OverflowMenu items={libraryMenuItems} accessibilityLabel={t.library.moreOptions}>
+          <OverflowMenu
+            items={libraryMenuItems}
+            accessibilityLabel={t.library.moreOptions}
+          >
             <KebabIcon />
           </OverflowMenu>
         </View>
       </View>
 
       <View style={styles.searchRow}>
-        <TextField value={search} onChangeText={setSearch} placeholder={t.library.searchPlaceholder} />
+        <TextField
+          value={search}
+          onChangeText={setSearch}
+          placeholder={t.library.searchPlaceholder}
+        />
       </View>
 
       {status && <Text style={styles.status}>{status}</Text>}
@@ -307,7 +439,9 @@ export function LibraryScreen() {
           </View>
         ) : (
           displayedItems.map((item) => {
-            const realIndex = items.findIndex((candidate) => candidate.key === item.key);
+            const realIndex = items.findIndex(
+              (candidate) => candidate.key === item.key,
+            );
             const canMoveUp = realIndex > 0;
             const canMoveDown = realIndex < items.length - 1;
 
@@ -315,7 +449,8 @@ export function LibraryScreen() {
               const { setlist, songs: setlistSongs } = item;
               // Forced open while searching, so a match inside a setlist you'd
               // otherwise had collapsed isn't hidden from the results.
-              const expanded = trimmedSearch.length > 0 || !collapsed.includes(setlist.id);
+              const expanded =
+                trimmedSearch.length > 0 || !collapsed.includes(setlist.id);
               return (
                 <View key={item.key} style={styles.setlistGroup}>
                   <SetlistRow
@@ -325,35 +460,68 @@ export function LibraryScreen() {
                     expanded={expanded}
                     onToggle={() =>
                       setCollapsed((current) =>
-                        current.includes(setlist.id) ? current.filter((id) => id !== setlist.id) : [...current, setlist.id],
+                        current.includes(setlist.id)
+                          ? current.filter((id) => id !== setlist.id)
+                          : [...current, setlist.id],
                       )
                     }
-                    expandAccessibilityLabel={expanded ? t.setlist.collapse : t.setlist.expand}
+                    expandAccessibilityLabel={
+                      expanded ? t.setlist.collapse : t.setlist.expand
+                    }
                     menuAccessibilityLabel={t.setlist.setlistOptions}
                     menuItems={[
-                      { key: "rename", label: t.setlist.rename, onPress: () => setRenamingSetlistId(setlist.id) },
+                      {
+                        key: "rename",
+                        label: t.setlist.rename,
+                        onPress: () => setRenamingSetlistId(setlist.id),
+                      },
                       {
                         key: "present",
                         label: t.setlist.present,
-                        onPress: () => router.push({ pathname: "/setlist/[setlistId]/present", params: { setlistId: setlist.id } }),
+                        onPress: () =>
+                          router.push({
+                            pathname: "/setlist/[setlistId]/present",
+                            params: { setlistId: setlist.id },
+                          }),
                       },
-                      { key: "duplicate", label: t.setlist.duplicate, onPress: () => handleDuplicateSetlist(setlist.id) },
-                      { key: "export", label: t.setlist.export, onPress: () => handleExportSetlist(setlist.id, setlist.name, setlistSongs) },
+                      {
+                        key: "duplicate",
+                        label: t.setlist.duplicate,
+                        onPress: () => handleDuplicateSetlist(setlist.id),
+                      },
+                      {
+                        key: "export",
+                        label: t.setlist.export,
+                        onPress: () =>
+                          handleExportSetlist(
+                            setlist.id,
+                            setlist.name,
+                            setlistSongs,
+                          ),
+                      },
                       {
                         key: "export-docx",
                         label: t.setlist.exportDocx,
-                        onPress: () => handleExportSetlistDocx(setlist.name, setlistSongs),
+                        onPress: () =>
+                          handleExportSetlistDocx(setlist.name, setlistSongs),
                       },
                       {
                         key: "delete",
                         label: t.setlist.delete,
                         destructive: true,
-                        onPress: () => handleDeleteSetlist(setlist.id, setlist.name, setlistSongs.length),
+                        onPress: () =>
+                          handleDeleteSetlist(
+                            setlist.id,
+                            setlist.name,
+                            setlistSongs.length,
+                          ),
                       },
                     ]}
                     renaming={renamingSetlistId === setlist.id}
                     renamePlaceholder={t.setlist.renamePlaceholder}
-                    onRenameSubmit={(name) => handleRenameSubmit(setlist.id, name)}
+                    onRenameSubmit={(name) =>
+                      handleRenameSubmit(setlist.id, name)
+                    }
                     onRenameCancel={() => setRenamingSetlistId(null)}
                     canMoveUp={canMoveUp}
                     canMoveDown={canMoveDown}
@@ -378,11 +546,24 @@ export function LibraryScreen() {
                           noLyricsLabel={t.song.noLyricsYet}
                           menuAccessibilityLabel={t.setlist.songOptions}
                           menuItems={songMenuItems(song, setlist.id)}
-                          onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: song.id } })}
+                          onPress={() =>
+                            router.push({
+                              pathname: "/song/[songId]",
+                              params: { songId: song.id },
+                            })
+                          }
                           canMoveUp={songIndex > 0}
                           canMoveDown={songIndex < setlistSongs.length - 1}
-                          onMoveUp={() => dispatch(moveSongInSetlist(setlist.id, songIndex, "up"))}
-                          onMoveDown={() => dispatch(moveSongInSetlist(setlist.id, songIndex, "down"))}
+                          onMoveUp={() =>
+                            dispatch(
+                              moveSongInSetlist(setlist.id, songIndex, "up"),
+                            )
+                          }
+                          onMoveDown={() =>
+                            dispatch(
+                              moveSongInSetlist(setlist.id, songIndex, "down"),
+                            )
+                          }
                           moveUpAccessibilityLabel={t.library.moveUp}
                           moveDownAccessibilityLabel={t.library.moveDown}
                         />
@@ -403,7 +584,12 @@ export function LibraryScreen() {
                 noLyricsLabel={t.song.noLyricsYet}
                 menuAccessibilityLabel={t.setlist.songOptions}
                 menuItems={songMenuItems(song)}
-                onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: song.id } })}
+                onPress={() =>
+                  router.push({
+                    pathname: "/song/[songId]",
+                    params: { songId: song.id },
+                  })
+                }
                 canMoveUp={canMoveUp}
                 canMoveDown={canMoveDown}
                 onMoveUp={() => handleMove(item, "up")}

@@ -1,4 +1,8 @@
-import { createEntityAdapter, createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import {
+  createEntityAdapter,
+  createSlice,
+  type PayloadAction,
+} from "@reduxjs/toolkit";
 import type { SongManifest } from "@/types/song";
 
 const songsAdapter = createEntityAdapter<SongManifest>();
@@ -14,12 +18,19 @@ const songsSlice = createSlice({
     },
     songAdded: songsAdapter.addOne,
     songRemoved: songsAdapter.removeOne,
-    songUpdated(state, action: PayloadAction<{ id: string; changes: Partial<SongManifest> }>) {
-      songsAdapter.updateOne(state, { id: action.payload.id, changes: action.payload.changes });
+    songUpdated(
+      state,
+      action: PayloadAction<{ id: string; changes: Partial<SongManifest> }>,
+    ) {
+      songsAdapter.updateOne(state, {
+        id: action.payload.id,
+        changes: action.payload.changes,
+      });
     },
   },
 });
 
-export const { songsHydrated, songAdded, songRemoved, songUpdated } = songsSlice.actions;
+export const { songsHydrated, songAdded, songRemoved, songUpdated } =
+  songsSlice.actions;
 export const songsSelectors = songsAdapter.getSelectors();
 export default songsSlice.reducer;
