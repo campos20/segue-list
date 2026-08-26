@@ -21,7 +21,8 @@ const initialState: SettingsState = {
   libraryOrder: persisted.libraryOrder ?? [],
   languageOverride: persisted.languageOverride ?? null,
   presentationAllCaps: persisted.presentationAllCaps ?? false,
-  presentationFontSize: persisted.presentationFontSize ?? DEFAULT_PRESENTATION_FONT_SIZE,
+  presentationFontSize:
+    persisted.presentationFontSize ?? DEFAULT_PRESENTATION_FONT_SIZE,
   presentationAutoScrollLevel: persisted.presentationAutoScrollLevel ?? 0,
 };
 

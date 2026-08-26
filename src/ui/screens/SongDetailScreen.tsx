@@ -1,6 +1,16 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -16,7 +26,9 @@ export function SongDetailScreen() {
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
 
-  const song = useAppSelector((state) => songsSelectors.selectById(state.songs, songId));
+  const song = useAppSelector((state) =>
+    songsSelectors.selectById(state.songs, songId),
+  );
 
   const [name, setName] = useState("");
   const [lyrics, setLyrics] = useState("");
@@ -26,7 +38,9 @@ export function SongDetailScreen() {
   // the song first becomes available (hydration can land after this screen
   // mounts) or when navigating to a different one, without clobbering an
   // in-progress edit on an unrelated store update.
-  const [syncedSongId, setSyncedSongId] = useState<string | undefined>(undefined);
+  const [syncedSongId, setSyncedSongId] = useState<string | undefined>(
+    undefined,
+  );
   if (song && song.id !== syncedSongId) {
     setSyncedSongId(song.id);
     setName(song.name);
@@ -43,7 +57,9 @@ export function SongDetailScreen() {
 
   function handleSave() {
     if (!song || !name.trim()) return;
-    dispatch(updateSong(song.id, { name: name.trim(), lyrics: lyrics.trim() || null }));
+    dispatch(
+      updateSong(song.id, { name: name.trim(), lyrics: lyrics.trim() || null }),
+    );
     setSaved(true);
   }
 
@@ -63,14 +79,24 @@ export function SongDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView contentContainerStyle={styles.scroll}>
-          <Pressable onPress={() => confirmDiscardIfDirty(() => router.back())} hitSlop={8}>
+          <Pressable
+            onPress={() => confirmDiscardIfDirty(() => router.back())}
+            hitSlop={8}
+          >
             <Text style={styles.back}>{t.common.back}</Text>
           </Pressable>
 
           <View style={styles.section}>
-            <TextField label={t.song.nameLabel} value={name} onChangeText={setName} />
+            <TextField
+              label={t.song.nameLabel}
+              value={name}
+              onChangeText={setName}
+            />
           </View>
 
           <View style={styles.section}>
@@ -97,7 +123,10 @@ export function SongDetailScreen() {
               variant="secondary"
               onPress={() =>
                 confirmDiscardIfDirty(() =>
-                  router.push({ pathname: "/song/[songId]/present", params: { songId: song.id } }),
+                  router.push({
+                    pathname: "/song/[songId]/present",
+                    params: { songId: song.id },
+                  }),
                 )
               }
             >
@@ -147,7 +176,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    fontFamily: Platform.select({
+      ios: "Menlo",
+      android: "monospace",
+      default: "monospace",
+    }),
   },
   savedText: {
     color: colors.success,

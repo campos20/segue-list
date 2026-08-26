@@ -13,12 +13,12 @@
  *
  * Usage: node scripts/sync-app-version.mjs <version> <versionCode>
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from "node:fs";
 
 const [, , version, versionCode] = process.argv;
 
 if (!version || !versionCode) {
-  console.error('Usage: sync-app-version.mjs <version> <versionCode>');
+  console.error("Usage: sync-app-version.mjs <version> <versionCode>");
   process.exit(1);
 }
 
@@ -27,8 +27,8 @@ if (!/^\d+$/.test(versionCode)) {
   process.exit(1);
 }
 
-const path = new URL('../app.json', import.meta.url);
-const app = JSON.parse(readFileSync(path, 'utf8'));
+const path = new URL("../app.json", import.meta.url);
+const app = JSON.parse(readFileSync(path, "utf8"));
 
 app.expo.version = version;
 app.expo.android = { ...app.expo.android, versionCode: Number(versionCode) };

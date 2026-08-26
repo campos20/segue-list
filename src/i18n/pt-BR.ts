@@ -41,13 +41,15 @@ export const ptBR: TranslationDictionary = {
     deleteSetlistBody: (name: string, songCount: number) =>
       `Excluir "${name}"${songCount > 0 ? ` (${songCount} ${songCount === 1 ? "música" : "músicas"})` : ""}? As músicas continuam na sua biblioteca.`,
     deleteSongTitle: "Excluir música",
-    deleteSongBody: (name: string) => `Excluir "${name}"? Ela também será removida de qualquer repertório.`,
+    deleteSongBody: (name: string) =>
+      `Excluir "${name}"? Ela também será removida de qualquer repertório.`,
     searchPlaceholder: "Buscar músicas e repertórios...",
     noResultsTitle: "Nada encontrado",
     noResultsMeta: "Tente outra busca.",
   },
   setlist: {
-    songsCount: (count: number) => `${count} ${count === 1 ? "música" : "músicas"}`,
+    songsCount: (count: number) =>
+      `${count} ${count === 1 ? "música" : "músicas"}`,
     expand: "Expandir",
     collapse: "Recolher",
     rename: "Renomear",

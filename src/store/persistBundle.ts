@@ -1,5 +1,8 @@
 import type { File } from "expo-file-system";
-import { importBundle as importBundleFile, type ImportedBundle } from "@/storage/bundle";
+import {
+  importBundle as importBundleFile,
+  type ImportedBundle,
+} from "@/storage/bundle";
 import type { AppDispatch, RootState } from "./index";
 import { setlistAdded, setlistsSelectors } from "./setlistsSlice";
 import { songAdded, songsSelectors } from "./songsSlice";

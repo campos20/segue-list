@@ -1,6 +1,6 @@
-const { withAppBuildGradle } = require('@expo/config-plugins');
+const { withAppBuildGradle } = require("@expo/config-plugins");
 
-const MARKER = '// segue-list release signing';
+const MARKER = "// segue-list release signing";
 
 /**
  * Appended to the end of android/app/build.gradle rather than patched into
@@ -20,7 +20,12 @@ const MARKER = '// segue-list release signing';
  * property" error the first time it tries to read a property that was
  * never passed.
  */
-const SIGNING_PROPERTIES = ['SEGUELIST_STORE_FILE', 'SEGUELIST_STORE_PASSWORD', 'SEGUELIST_KEY_ALIAS', 'SEGUELIST_KEY_PASSWORD'];
+const SIGNING_PROPERTIES = [
+  "SEGUELIST_STORE_FILE",
+  "SEGUELIST_STORE_PASSWORD",
+  "SEGUELIST_KEY_ALIAS",
+  "SEGUELIST_KEY_PASSWORD",
+];
 
 const SIGNING_SNIPPET = `
 ${MARKER}

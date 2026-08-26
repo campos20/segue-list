@@ -10,18 +10,29 @@ import { isAvailableAsync, shareAsync } from "expo-sharing";
  * way needs nothing at all - a backup someone shares from their Drive
  * arrives through the ordinary file picker.
  */
-async function share(file: File, dialogTitle: string, mimeType: string, UTI: string): Promise<void> {
+async function share(
+  file: File,
+  dialogTitle: string,
+  mimeType: string,
+  UTI: string,
+): Promise<void> {
   if (!(await isAvailableAsync())) {
     throw new Error("Sharing is not available on this device.");
   }
   await shareAsync(file.uri, { dialogTitle, mimeType, UTI });
 }
 
-export async function shareBundle(file: File, dialogTitle: string): Promise<void> {
+export async function shareBundle(
+  file: File,
+  dialogTitle: string,
+): Promise<void> {
   await share(file, dialogTitle, "application/json", "public.json");
 }
 
-export async function shareDocx(file: File, dialogTitle: string): Promise<void> {
+export async function shareDocx(
+  file: File,
+  dialogTitle: string,
+): Promise<void> {
   await share(
     file,
     dialogTitle,

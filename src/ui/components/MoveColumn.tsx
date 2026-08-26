@@ -35,7 +35,10 @@ export function MoveColumn({
         accessibilityRole="button"
         accessibilityLabel={moveUpAccessibilityLabel}
         testID={testID ? `${testID}-move-up` : undefined}
-        style={({ pressed }) => [styles.button, pressed && canMoveUp && styles.pressed]}
+        style={({ pressed }) => [
+          styles.button,
+          pressed && canMoveUp && styles.pressed,
+        ]}
       >
         <View style={[styles.arrowUp, !canMoveUp && styles.arrowDisabled]} />
       </Pressable>
@@ -46,9 +49,14 @@ export function MoveColumn({
         accessibilityRole="button"
         accessibilityLabel={moveDownAccessibilityLabel}
         testID={testID ? `${testID}-move-down` : undefined}
-        style={({ pressed }) => [styles.button, pressed && canMoveDown && styles.pressed]}
+        style={({ pressed }) => [
+          styles.button,
+          pressed && canMoveDown && styles.pressed,
+        ]}
       >
-        <View style={[styles.arrowDown, !canMoveDown && styles.arrowDisabled]} />
+        <View
+          style={[styles.arrowDown, !canMoveDown && styles.arrowDisabled]}
+        />
       </Pressable>
     </View>
   );
