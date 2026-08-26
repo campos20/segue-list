@@ -1,10 +1,19 @@
-import { createSetlist as createSetlistFile, deleteSetlist as deleteSetlistFile, writeSetlist } from "@/storage/setlistLibrary";
+import {
+  createSetlist as createSetlistFile,
+  deleteSetlist as deleteSetlistFile,
+  writeSetlist,
+} from "@/storage/setlistLibrary";
 import type { SetlistManifest } from "@/types/setlist";
 import { moveItem } from "@/ui/reorder";
 import { setlistKey } from "@/ui/libraryTree";
 import type { AppDispatch, RootState } from "./index";
 import { persistLibraryOrder } from "./persistLibrary";
-import { setlistAdded, setlistRemoved, setlistUpdated, setlistsSelectors } from "./setlistsSlice";
+import {
+  setlistAdded,
+  setlistRemoved,
+  setlistUpdated,
+  setlistsSelectors,
+} from "./setlistsSlice";
 
 /**
  * Setlist writes. Each one writes the file first and updates the store only
@@ -18,7 +27,10 @@ import { setlistAdded, setlistRemoved, setlistUpdated, setlistsSelectors } from 
 
 /** Creates a setlist and places it at the top of the Library, so it's visible immediately. */
 export function createSetlist(name?: string) {
-  return (dispatch: AppDispatch, getState: () => RootState): SetlistManifest | null => {
+  return (
+    dispatch: AppDispatch,
+    getState: () => RootState,
+  ): SetlistManifest | null => {
     let setlist: SetlistManifest;
     try {
       setlist = createSetlistFile(name);
@@ -27,7 +39,12 @@ export function createSetlist(name?: string) {
       return null;
     }
     dispatch(setlistAdded(setlist));
-    dispatch(persistLibraryOrder([setlistKey(setlist.id), ...getState().settings.libraryOrder]));
+    dispatch(
+      persistLibraryOrder([
+        setlistKey(setlist.id),
+        ...getState().settings.libraryOrder,
+      ]),
+    );
     return setlist;
   };
 }
@@ -44,7 +61,10 @@ export function renameSetlist(id: string, name: string) {
  * only the grouping is, same as any other setlist membership.
  */
 export function duplicateSetlist(id: string, name: string) {
-  return (dispatch: AppDispatch, getState: () => RootState): SetlistManifest | null => {
+  return (
+    dispatch: AppDispatch,
+    getState: () => RootState,
+  ): SetlistManifest | null => {
     const source = selectSetlist(getState(), id);
     if (!source) return null;
 
@@ -58,7 +78,12 @@ export function duplicateSetlist(id: string, name: string) {
       return null;
     }
     dispatch(setlistAdded(setlist));
-    dispatch(persistLibraryOrder([setlistKey(setlist.id), ...getState().settings.libraryOrder]));
+    dispatch(
+      persistLibraryOrder([
+        setlistKey(setlist.id),
+        ...getState().settings.libraryOrder,
+      ]),
+    );
     return setlist;
   };
 }
@@ -76,7 +101,8 @@ export function deleteSetlist(id: string) {
 
     const key = setlistKey(id);
     const order = getState().settings.libraryOrder;
-    if (order.includes(key)) dispatch(persistLibraryOrder(order.filter((entry) => entry !== key)));
+    if (order.includes(key))
+      dispatch(persistLibraryOrder(order.filter((entry) => entry !== key)));
   };
 }
 
@@ -93,31 +119,45 @@ export function removeSongFromSetlist(setlistId: string, songId: string) {
   return (dispatch: AppDispatch, getState: () => RootState) => {
     const setlist = selectSetlist(getState(), setlistId);
     if (!setlist) return;
-    patch(dispatch, getState, setlistId, { songs: setlist.songs.filter((id) => id !== songId) });
+    patch(dispatch, getState, setlistId, {
+      songs: setlist.songs.filter((id) => id !== songId),
+    });
   };
 }
 
-export function moveSongInSetlist(setlistId: string, index: number, direction: "up" | "down") {
+export function moveSongInSetlist(
+  setlistId: string,
+  index: number,
+  direction: "up" | "down",
+) {
   return (dispatch: AppDispatch, getState: () => RootState) => {
     const setlist = selectSetlist(getState(), setlistId);
     if (!setlist) return;
     const songs = moveItem(setlist.songs, index, direction);
-    if (songs !== setlist.songs) patch(dispatch, getState, setlistId, { songs });
+    if (songs !== setlist.songs)
+      patch(dispatch, getState, setlistId, { songs });
   };
 }
 
 /** Drops a deleted song from every setlist that listed it - see persistSongs.ts's deleteSong. */
 export function removeSongFromAllSetlists(songId: string) {
   return (dispatch: AppDispatch, getState: () => RootState) => {
-    const setlists = setlistsSelectors.selectAll(getState().setlists).filter((setlist) => setlist.songs.includes(songId));
+    const setlists = setlistsSelectors
+      .selectAll(getState().setlists)
+      .filter((setlist) => setlist.songs.includes(songId));
 
     for (const setlist of setlists) {
-      patch(dispatch, getState, setlist.id, { songs: setlist.songs.filter((id) => id !== songId) });
+      patch(dispatch, getState, setlist.id, {
+        songs: setlist.songs.filter((id) => id !== songId),
+      });
     }
   };
 }
 
-function selectSetlist(state: RootState, id: string): SetlistManifest | undefined {
+function selectSetlist(
+  state: RootState,
+  id: string,
+): SetlistManifest | undefined {
   return setlistsSelectors.selectById(state.setlists, id);
 }
 
@@ -131,12 +171,22 @@ function patch(
   const setlist = selectSetlist(getState(), id);
   if (!setlist) return;
 
-  const updated: SetlistManifest = { ...setlist, ...changes, id, updatedAt: new Date().toISOString() };
+  const updated: SetlistManifest = {
+    ...setlist,
+    ...changes,
+    id,
+    updatedAt: new Date().toISOString(),
+  };
   try {
     writeSetlist(updated);
   } catch (error) {
     console.warn(`Failed to write setlist "${id}"`, error);
     return;
   }
-  dispatch(setlistUpdated({ id, changes: { ...changes, updatedAt: updated.updatedAt } }));
+  dispatch(
+    setlistUpdated({
+      id,
+      changes: { ...changes, updatedAt: updated.updatedAt },
+    }),
+  );
 }

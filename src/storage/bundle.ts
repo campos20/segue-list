@@ -53,7 +53,10 @@ export function bundleFileName(label: string): string {
   return `${slug}.${BUNDLE_EXTENSION}`;
 }
 
-export function buildBundle(contents: BundleContents, appVersion?: string): LibraryBundle {
+export function buildBundle(
+  contents: BundleContents,
+  appVersion?: string,
+): LibraryBundle {
   return {
     format: BUNDLE_FORMAT,
     version: BUNDLE_VERSION,
@@ -65,9 +68,15 @@ export function buildBundle(contents: BundleContents, appVersion?: string): Libr
 }
 
 /** Writes a bundle into the cache directory, where it can be handed to the share sheet. */
-export function writeBundleToCache(contents: BundleContents, label: string, appVersion?: string): File {
+export function writeBundleToCache(
+  contents: BundleContents,
+  label: string,
+  appVersion?: string,
+): File {
   if (!isFileSystemAvailable) {
-    throw new BundleFormatError("Backups aren't supported in this environment.");
+    throw new BundleFormatError(
+      "Backups aren't supported in this environment.",
+    );
   }
   const bundle = buildBundle(contents, appVersion);
   const destination = new File(Paths.cache, bundleFileName(label));
@@ -78,7 +87,11 @@ export function writeBundleToCache(contents: BundleContents, label: string, appV
 
 function isUsableBundle(value: unknown): value is LibraryBundle {
   const candidate = value as LibraryBundle | null;
-  return candidate?.format === BUNDLE_FORMAT && Array.isArray(candidate.songs) && Array.isArray(candidate.setlists);
+  return (
+    candidate?.format === BUNDLE_FORMAT &&
+    Array.isArray(candidate.songs) &&
+    Array.isArray(candidate.setlists)
+  );
 }
 
 /** Reads a `.seguelist` file back into its parts, without writing anything. */
@@ -108,7 +121,10 @@ export function readBundle(file: File): LibraryBundle {
  * of silently replacing something you've since changed, and a bundle from
  * someone else can never clobber one of yours that happens to share an id.
  */
-export function importBundle(file: File, existing: BundleContents): ImportedBundle {
+export function importBundle(
+  file: File,
+  existing: BundleContents,
+): ImportedBundle {
   const bundle = readBundle(file);
 
   const existingSongIds = new Set(existing.songs.map((song) => song.id));
@@ -123,7 +139,9 @@ export function importBundle(file: File, existing: BundleContents): ImportedBund
     newSongs.push(song);
   }
 
-  const existingSetlistIds = new Set(existing.setlists.map((setlist) => setlist.id));
+  const existingSetlistIds = new Set(
+    existing.setlists.map((setlist) => setlist.id),
+  );
   const newSetlists: SetlistManifest[] = [];
   const skippedSetlistIds: string[] = [];
   for (const setlist of bundle.setlists) {
@@ -135,5 +153,10 @@ export function importBundle(file: File, existing: BundleContents): ImportedBund
     newSetlists.push(setlist);
   }
 
-  return { songs: newSongs, setlists: newSetlists, skippedSongIds, skippedSetlistIds };
+  return {
+    songs: newSongs,
+    setlists: newSetlists,
+    skippedSongIds,
+    skippedSetlistIds,
+  };
 }

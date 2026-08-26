@@ -34,23 +34,33 @@ export function AboutScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
-  const languageOverride = useAppSelector((state) => state.settings.languageOverride);
+  const languageOverride = useAppSelector(
+    (state) => state.settings.languageOverride,
+  );
   const version = Constants.expoConfig?.version;
 
   const currentKey: LanguageKey = languageOverride ?? "system";
-  const currentLabel = currentKey === "system" ? t.about.languageSystem : LANGUAGE_NAMES[currentKey];
+  const currentLabel =
+    currentKey === "system"
+      ? t.about.languageSystem
+      : LANGUAGE_NAMES[currentKey];
 
   const languageMenuItems = (["system", "en", "pt-BR"] as const).map((key) => ({
     key,
     label: `${LANGUAGE_FLAGS[key]} ${key === "system" ? t.about.languageSystem : LANGUAGE_NAMES[key]}`,
-    onPress: () => dispatch(persistLanguageOverride(key === "system" ? null : key)),
+    onPress: () =>
+      dispatch(persistLanguageOverride(key === "system" ? null : key)),
     testID: `language-option-${key}`,
   }));
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8} testID="about-back-button">
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          testID="about-back-button"
+        >
           <Text style={styles.back}>{t.common.back}</Text>
         </Pressable>
       </View>
@@ -59,9 +69,13 @@ export function AboutScreen() {
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>{t.library.eyebrow}</Text>
           <Text style={styles.title}>{t.about.title}</Text>
-          <Text style={styles.developedBy}>{t.about.developedBy(DEVELOPER)}</Text>
+          <Text style={styles.developedBy}>
+            {t.about.developedBy(DEVELOPER)}
+          </Text>
 
-          {version && <Text style={styles.meta}>{t.about.version(version)}</Text>}
+          {version && (
+            <Text style={styles.meta}>{t.about.version(version)}</Text>
+          )}
 
           <Pressable
             onPress={() => openBrowserAsync(GITHUB_URL)}

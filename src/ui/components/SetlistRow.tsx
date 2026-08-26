@@ -59,9 +59,17 @@ export function SetlistRow({
         accessibilityLabel={expandAccessibilityLabel}
         accessibilityState={{ expanded }}
         testID={testID}
-        style={({ pressed }) => [styles.row, pressed && !renaming && styles.pressed]}
+        style={({ pressed }) => [
+          styles.row,
+          pressed && !renaming && styles.pressed,
+        ]}
       >
-        <View style={[styles.triangle, expanded ? styles.triangleOpen : styles.triangleClosed]} />
+        <View
+          style={[
+            styles.triangle,
+            expanded ? styles.triangleOpen : styles.triangleClosed,
+          ]}
+        />
         <View style={styles.body}>
           {renaming ? (
             <TextInput
@@ -72,7 +80,9 @@ export function SetlistRow({
               autoFocus
               selectTextOnFocus
               returnKeyType="done"
-              onSubmitEditing={(event) => onRenameSubmit?.(event.nativeEvent.text)}
+              onSubmitEditing={(event) =>
+                onRenameSubmit?.(event.nativeEvent.text)
+              }
               onBlur={onRenameCancel}
               testID={testID ? `${testID}-rename-input` : undefined}
             />
@@ -86,7 +96,11 @@ export function SetlistRow({
       </Pressable>
 
       <View style={styles.menuColumn}>
-        <OverflowMenu items={menuItems} accessibilityLabel={menuAccessibilityLabel} testID={testID ? `${testID}-menu` : undefined}>
+        <OverflowMenu
+          items={menuItems}
+          accessibilityLabel={menuAccessibilityLabel}
+          testID={testID ? `${testID}-menu` : undefined}
+        >
           <KebabIcon />
         </OverflowMenu>
       </View>

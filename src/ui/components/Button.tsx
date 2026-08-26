@@ -6,7 +6,13 @@ interface ButtonProps extends PressableProps {
   variant?: "primary" | "secondary";
 }
 
-export function Button({ children, disabled, variant = "primary", style, ...rest }: ButtonProps) {
+export function Button({
+  children,
+  disabled,
+  variant = "primary",
+  style,
+  ...rest
+}: ButtonProps) {
   const isPrimary = variant === "primary";
   return (
     <Pressable
@@ -20,7 +26,14 @@ export function Button({ children, disabled, variant = "primary", style, ...rest
       ]}
       {...rest}
     >
-      <Text style={[styles.text, isPrimary ? styles.textPrimary : styles.textSecondary]}>{children}</Text>
+      <Text
+        style={[
+          styles.text,
+          isPrimary ? styles.textPrimary : styles.textSecondary,
+        ]}
+      >
+        {children}
+      </Text>
     </Pressable>
   );
 }

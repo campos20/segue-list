@@ -1,7 +1,11 @@
 import { File } from "expo-file-system";
 import type { SongManifest } from "@/types/song";
 import { generateId } from "./ids";
-import { ensureSongsDirectoryExists, isFileSystemAvailable, songFile } from "./paths";
+import {
+  ensureSongsDirectoryExists,
+  isFileSystemAvailable,
+  songFile,
+} from "./paths";
 
 export const DRAFT_SONG_NAME = "New song";
 
@@ -16,7 +20,10 @@ export async function listSongs(): Promise<SongManifest[]> {
 
   const files = ensureSongsDirectoryExists()
     .list()
-    .filter((item): item is File => item instanceof File && item.name.endsWith(".json"));
+    .filter(
+      (item): item is File =>
+        item instanceof File && item.name.endsWith(".json"),
+    );
 
   const manifests = await Promise.all(
     files.map(async (file): Promise<SongManifest | null> => {
@@ -29,7 +36,9 @@ export async function listSongs(): Promise<SongManifest[]> {
     }),
   );
 
-  return manifests.filter((manifest): manifest is SongManifest => manifest !== null);
+  return manifests.filter(
+    (manifest): manifest is SongManifest => manifest !== null,
+  );
 }
 
 export function writeSong(manifest: SongManifest): void {
@@ -38,7 +47,10 @@ export function writeSong(manifest: SongManifest): void {
   songFile(manifest.id).write(JSON.stringify(manifest, null, 2));
 }
 
-export function createSong(name = DRAFT_SONG_NAME, lyrics: string | null = null): SongManifest {
+export function createSong(
+  name = DRAFT_SONG_NAME,
+  lyrics: string | null = null,
+): SongManifest {
   const now = new Date().toISOString();
   const manifest: SongManifest = {
     id: generateId(name),

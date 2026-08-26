@@ -1,12 +1,21 @@
 import { File } from "expo-file-system";
 import { extractLyricsFromFile } from "@/storage/lyricsImport";
-import { createSong as createSongFile, deleteSong as deleteSongFile, writeSong } from "@/storage/songLibrary";
+import {
+  createSong as createSongFile,
+  deleteSong as deleteSongFile,
+  writeSong,
+} from "@/storage/songLibrary";
 import type { SongManifest } from "@/types/song";
 import { songKey } from "@/ui/libraryTree";
 import type { AppDispatch, RootState } from "./index";
 import { persistLibraryOrder } from "./persistLibrary";
 import { removeSongFromAllSetlists } from "./persistSetlists";
-import { songAdded, songRemoved, songUpdated, songsSelectors } from "./songsSlice";
+import {
+  songAdded,
+  songRemoved,
+  songUpdated,
+  songsSelectors,
+} from "./songsSlice";
 
 /**
  * Song library writes. Each one writes the file first and updates the store
@@ -15,7 +24,10 @@ import { songAdded, songRemoved, songUpdated, songsSelectors } from "./songsSlic
 
 /** Creates a song, loose at the top of the Library, so it's visible immediately. */
 export function createSong(name?: string) {
-  return (dispatch: AppDispatch, getState: () => RootState): SongManifest | null => {
+  return (
+    dispatch: AppDispatch,
+    getState: () => RootState,
+  ): SongManifest | null => {
     let song: SongManifest;
     try {
       song = createSongFile(name);
@@ -24,24 +36,42 @@ export function createSong(name?: string) {
       return null;
     }
     dispatch(songAdded(song));
-    dispatch(persistLibraryOrder([songKey(song.id), ...getState().settings.libraryOrder]));
+    dispatch(
+      persistLibraryOrder([
+        songKey(song.id),
+        ...getState().settings.libraryOrder,
+      ]),
+    );
     return song;
   };
 }
 
-export function updateSong(id: string, changes: Partial<Omit<SongManifest, "id" | "createdAt">>) {
+export function updateSong(
+  id: string,
+  changes: Partial<Omit<SongManifest, "id" | "createdAt">>,
+) {
   return (dispatch: AppDispatch, getState: () => RootState) => {
     const song = songsSelectors.selectById(getState().songs, id);
     if (!song) return;
 
-    const updated: SongManifest = { ...song, ...changes, id, updatedAt: new Date().toISOString() };
+    const updated: SongManifest = {
+      ...song,
+      ...changes,
+      id,
+      updatedAt: new Date().toISOString(),
+    };
     try {
       writeSong(updated);
     } catch (error) {
       console.warn(`Failed to write song "${id}"`, error);
       return;
     }
-    dispatch(songUpdated({ id, changes: { ...changes, updatedAt: updated.updatedAt } }));
+    dispatch(
+      songUpdated({
+        id,
+        changes: { ...changes, updatedAt: updated.updatedAt },
+      }),
+    );
   };
 }
 
@@ -62,25 +92,41 @@ export interface LyricsFileImportResult {
  * bulk import of a folder of lyric sheets is exactly the case where one bad
  * file shouldn't cost you the other eleven.
  */
-export function importSongsFromLyricsFiles(files: { uri: string; fileName: string }[]) {
-  return async (dispatch: AppDispatch, getState: () => RootState): Promise<LyricsFileImportResult> => {
+export function importSongsFromLyricsFiles(
+  files: { uri: string; fileName: string }[],
+) {
+  return async (
+    dispatch: AppDispatch,
+    getState: () => RootState,
+  ): Promise<LyricsFileImportResult> => {
     const imported: SongManifest[] = [];
     const failed: LyricsFileImportFailure[] = [];
 
     for (const { uri, fileName } of files) {
       try {
-        const { name, lyrics } = await extractLyricsFromFile(new File(uri), fileName);
+        const { name, lyrics } = await extractLyricsFromFile(
+          new File(uri),
+          fileName,
+        );
         const song = createSongFile(name, lyrics || null);
         dispatch(songAdded(song));
         imported.push(song);
       } catch (error) {
-        failed.push({ fileName, error: error instanceof Error ? error.message : String(error) });
+        failed.push({
+          fileName,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
     if (imported.length > 0) {
       const order = getState().settings.libraryOrder;
-      dispatch(persistLibraryOrder([...imported.map((song) => songKey(song.id)), ...order]));
+      dispatch(
+        persistLibraryOrder([
+          ...imported.map((song) => songKey(song.id)),
+          ...order,
+        ]),
+      );
     }
 
     return { imported, failed };
@@ -101,6 +147,7 @@ export function deleteSong(id: string) {
 
     const key = songKey(id);
     const order = getState().settings.libraryOrder;
-    if (order.includes(key)) dispatch(persistLibraryOrder(order.filter((entry) => entry !== key)));
+    if (order.includes(key))
+      dispatch(persistLibraryOrder(order.filter((entry) => entry !== key)));
   };
 }

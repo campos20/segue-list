@@ -19,7 +19,10 @@ import { isFileSystemAvailable } from "./paths";
 export class DocxExportError extends Error {}
 
 function escapeXml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 // Monospace, matching SongDetailScreen's lyrics editor - keeps chord charts
@@ -27,7 +30,11 @@ function escapeXml(text: string): string {
 const LYRICS_RUN_PROPS = `<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/>`;
 const NO_LYRICS_RUN_PROPS = `<w:i/><w:color w:val="888888"/>`;
 
-function textParagraph(text: string, runProps: string, paragraphProps = ""): string {
+function textParagraph(
+  text: string,
+  runProps: string,
+  paragraphProps = "",
+): string {
   if (text.length === 0) return "<w:p/>";
   const pPr = paragraphProps ? `<w:pPr>${paragraphProps}</w:pPr>` : "";
   return `<w:p>${pPr}<w:r><w:rPr>${runProps}</w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
@@ -41,16 +48,38 @@ function lyricsParagraphs(lyrics: string): string {
     .join("");
 }
 
-function songSection(song: SongManifest, isFirst: boolean, noLyricsLabel: string): string {
-  const pageBreak = isFirst ? "" : `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
-  const heading = textParagraph(song.name, `<w:b/><w:sz w:val="32"/>`, `<w:spacing w:before="240" w:after="120"/>`);
-  const lyrics = song.lyrics?.trim() ? lyricsParagraphs(song.lyrics) : textParagraph(noLyricsLabel, NO_LYRICS_RUN_PROPS);
+function songSection(
+  song: SongManifest,
+  isFirst: boolean,
+  noLyricsLabel: string,
+): string {
+  const pageBreak = isFirst
+    ? ""
+    : `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+  const heading = textParagraph(
+    song.name,
+    `<w:b/><w:sz w:val="32"/>`,
+    `<w:spacing w:before="240" w:after="120"/>`,
+  );
+  const lyrics = song.lyrics?.trim()
+    ? lyricsParagraphs(song.lyrics)
+    : textParagraph(noLyricsLabel, NO_LYRICS_RUN_PROPS);
   return pageBreak + heading + lyrics;
 }
 
-function buildDocumentXml(title: string, songs: SongManifest[], noLyricsLabel: string): string {
-  const titleParagraph = textParagraph(title, `<w:b/><w:sz w:val="44"/>`, `<w:jc w:val="center"/><w:spacing w:after="480"/>`);
-  const sections = songs.map((song, index) => songSection(song, index === 0, noLyricsLabel)).join("");
+function buildDocumentXml(
+  title: string,
+  songs: SongManifest[],
+  noLyricsLabel: string,
+): string {
+  const titleParagraph = textParagraph(
+    title,
+    `<w:b/><w:sz w:val="44"/>`,
+    `<w:jc w:val="center"/><w:spacing w:after="480"/>`,
+  );
+  const sections = songs
+    .map((song, index) => songSection(song, index === 0, noLyricsLabel))
+    .join("");
   return (
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">` +
@@ -84,7 +113,11 @@ export function docxFileName(label: string): string {
 }
 
 /** Writes `songs` as one .docx into the cache directory, where it can be handed to the share sheet. */
-export function writeSongsAsDocxToCache(songs: SongManifest[], title: string, noLyricsLabel: string): File {
+export function writeSongsAsDocxToCache(
+  songs: SongManifest[],
+  title: string,
+  noLyricsLabel: string,
+): File {
   if (!isFileSystemAvailable) {
     throw new DocxExportError("Exporting isn't supported in this environment.");
   }

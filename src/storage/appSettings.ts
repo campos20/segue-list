@@ -41,7 +41,9 @@ export function writeAppSettings(changes: Partial<PersistedAppSettings>): void {
   if (!isFileSystemAvailable) return;
   try {
     const updated = { ...readAppSettings(), ...changes };
-    new File(Paths.document, "settings.json").write(JSON.stringify(updated, null, 2));
+    new File(Paths.document, "settings.json").write(
+      JSON.stringify(updated, null, 2),
+    );
   } catch (error) {
     console.warn("Failed to persist app settings", error);
   }

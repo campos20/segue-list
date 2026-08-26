@@ -44,19 +44,31 @@ export function SongRow({
 }: SongRowProps) {
   return (
     <View style={[styles.container, nested && styles.nested]}>
-      <Pressable onPress={onPress} testID={testID} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-        {position !== undefined && <Text style={styles.position}>{position}</Text>}
+      <Pressable
+        onPress={onPress}
+        testID={testID}
+        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      >
+        {position !== undefined && (
+          <Text style={styles.position}>{position}</Text>
+        )}
         <View style={styles.body}>
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          <Text style={styles.meta}>{hasLyrics ? hasLyricsLabel : noLyricsLabel}</Text>
+          <Text style={styles.meta}>
+            {hasLyrics ? hasLyricsLabel : noLyricsLabel}
+          </Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
 
       <View style={styles.menuColumn}>
-        <OverflowMenu items={menuItems} accessibilityLabel={menuAccessibilityLabel} testID={testID ? `${testID}-menu` : undefined}>
+        <OverflowMenu
+          items={menuItems}
+          accessibilityLabel={menuAccessibilityLabel}
+          testID={testID ? `${testID}-menu` : undefined}
+        >
           <KebabIcon />
         </OverflowMenu>
       </View>

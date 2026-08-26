@@ -7,7 +7,7 @@ another musician by exporting a file.
 
 ## The name
 
-A *segue* is a smooth transition straight into the next song - no gap, no
+A _segue_ is a smooth transition straight into the next song - no gap, no
 fumbling for a lyrics sheet. That's what Presentation mode is: tap through a
 setlist mid-set with the next song's lyrics one tap away.
 
@@ -42,7 +42,7 @@ setlist mid-set with the next song's lyrics one tap away.
 - **Storage**: [`expo-file-system`](https://docs.expo.dev/versions/latest/sdk/filesystem/)
   (`src/storage/`). Each song and each setlist is its own
   `<id>.json` file under the app's document directory - a setlist's file
-  holds song *ids*, not the songs themselves, which is what lets one song
+  holds song _ids_, not the songs themselves, which is what lets one song
   belong to several setlists without duplication. There is no database and
   no sync; the filesystem is the source of truth, read once at launch.
 - **i18n**: `src/i18n/` - a plain object dictionary per locale, checked
