@@ -1,8 +1,3 @@
-import { useKeepAwake } from "expo-keep-awake";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -14,6 +9,18 @@ import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
 import { colors, glow, radii, spacing } from "@/ui/theme";
+import { useKeepAwake } from "expo-keep-awake";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const AUTO_SCROLL_STEP_PX = 1;
 const AUTO_SCROLL_INTERVAL_MS = 50;
@@ -29,19 +36,35 @@ const LYRICS_LINE_HEIGHT_RATIO = 28 / 18;
 export function SetlistPresentationScreen() {
   // songId is optional - set when a specific song within the setlist was
   // tapped, so presentation opens on that song instead of always the first.
-  const { setlistId, songId } = useLocalSearchParams<{ setlistId: string; songId?: string }>();
+  const { setlistId, songId } = useLocalSearchParams<{
+    setlistId: string;
+    songId?: string;
+  }>();
   const { t } = useTranslation();
 
-  const setlist = useAppSelector((state) => setlistsSelectors.selectById(state.setlists, setlistId));
+  const setlist = useAppSelector((state) =>
+    setlistsSelectors.selectById(state.setlists, setlistId),
+  );
   const allSongs = useAppSelector((state) => state.songs);
   // Ids that no longer resolve (a song deleted elsewhere) are skipped rather
   // than rendered as blanks - same as the Library tree.
   const songs = (setlist?.songs ?? [])
     .map((id) => songsSelectors.selectById(allSongs, id))
     .filter((song): song is SongManifest => song !== undefined);
-  const initialIndex = songId ? Math.max(songs.findIndex((song) => song.id === songId), 0) : 0;
+  const initialIndex = songId
+    ? Math.max(
+        songs.findIndex((song) => song.id === songId),
+        0,
+      )
+    : 0;
 
-  return <PresentationView songs={songs} emptyMessage={t.presentation.empty} initialIndex={initialIndex} />;
+  return (
+    <PresentationView
+      songs={songs}
+      emptyMessage={t.presentation.empty}
+      initialIndex={initialIndex}
+    />
+  );
 }
 
 /** Presents a single song, outside the context of any setlist. */
@@ -49,9 +72,16 @@ export function SongPresentationScreen() {
   const { songId } = useLocalSearchParams<{ songId: string }>();
   const { t } = useTranslation();
 
-  const song = useAppSelector((state) => songsSelectors.selectById(state.songs, songId));
+  const song = useAppSelector((state) =>
+    songsSelectors.selectById(state.songs, songId),
+  );
 
-  return <PresentationView songs={song ? [song] : []} emptyMessage={t.presentation.emptySong} />;
+  return (
+    <PresentationView
+      songs={song ? [song] : []}
+      emptyMessage={t.presentation.emptySong}
+    />
+  );
 }
 
 function PresentationView({
@@ -84,8 +114,12 @@ function PresentationView({
   // Persisted across sessions - remembered how you last left it, not reset
   // every time you enter presentation mode.
   const allCaps = useAppSelector((state) => state.settings.presentationAllCaps);
-  const fontSize = useAppSelector((state) => state.settings.presentationFontSize);
-  const autoScrollLevel = useAppSelector((state) => state.settings.presentationAutoScrollLevel);
+  const fontSize = useAppSelector(
+    (state) => state.settings.presentationFontSize,
+  );
+  const autoScrollLevel = useAppSelector(
+    (state) => state.settings.presentationAutoScrollLevel,
+  );
   const lyricsScrollRef = useRef<ScrollView>(null);
   const lyricsOffsetRef = useRef(0);
 
@@ -98,7 +132,10 @@ function PresentationView({
     if (autoScrollLevel === 0) return;
     const interval = setInterval(() => {
       lyricsOffsetRef.current += AUTO_SCROLL_STEP_PX * autoScrollLevel;
-      lyricsScrollRef.current?.scrollTo({ y: lyricsOffsetRef.current, animated: false });
+      lyricsScrollRef.current?.scrollTo({
+        y: lyricsOffsetRef.current,
+        animated: false,
+      });
     }, AUTO_SCROLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [autoScrollLevel, index]);
@@ -118,7 +155,9 @@ function PresentationView({
   const multipleSongs = songs.length > 1;
 
   const trimmedQuery = panelQuery.trim().toLowerCase();
-  const filteredSongs = trimmedQuery ? songs.filter((song) => song.name.toLowerCase().includes(trimmedQuery)) : songs;
+  const filteredSongs = trimmedQuery
+    ? songs.filter((song) => song.name.toLowerCase().includes(trimmedQuery))
+    : songs;
   // Computed once per render rather than with a `findIndex` inside the list
   // below, which would re-scan `songs` for every row (O(n²) for the panel).
   const songIndexById = new Map(songs.map((song, i) => [song.id, i]));
@@ -145,32 +184,74 @@ function PresentationView({
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={[styles.rail, isPanelOpen && styles.railOpen]}>
         {multipleSongs && (
-          <Pressable onPress={() => setIsPanelOpen((open) => !open)} style={styles.railButton}>
+          <Pressable
+            onPress={() => setIsPanelOpen((open) => !open)}
+            style={styles.railButton}
+          >
             <Text style={styles.railGlyph}>{isPanelOpen ? "‹" : "☰"}</Text>
           </Pressable>
         )}
-        <Pressable onPress={() => dispatch(persistPresentationAllCaps(!allCaps))} style={styles.railButton}>
-          <Text style={[styles.railText, allCaps && styles.railActive]}>AA</Text>
+        <Pressable
+          onPress={() => dispatch(persistPresentationAllCaps(!allCaps))}
+          style={styles.railButton}
+        >
+          <Text style={[styles.railText, allCaps && styles.railActive]}>
+            AA
+          </Text>
         </Pressable>
         <Pressable
-          onPress={() => dispatch(persistPresentationFontSize(Math.min(fontSize + FONT_SIZE_STEP, MAX_FONT_SIZE)))}
+          onPress={() =>
+            dispatch(
+              persistPresentationFontSize(
+                Math.min(fontSize + FONT_SIZE_STEP, MAX_FONT_SIZE),
+              ),
+            )
+          }
           disabled={fontSize >= MAX_FONT_SIZE}
           style={styles.railButton}
         >
-          <Text style={[styles.railText, fontSize >= MAX_FONT_SIZE && styles.railDisabled]}>A+</Text>
+          <Text
+            style={[
+              styles.railText,
+              fontSize >= MAX_FONT_SIZE && styles.railDisabled,
+            ]}
+          >
+            A+
+          </Text>
         </Pressable>
         <Pressable
-          onPress={() => dispatch(persistPresentationFontSize(Math.max(fontSize - FONT_SIZE_STEP, MIN_FONT_SIZE)))}
+          onPress={() =>
+            dispatch(
+              persistPresentationFontSize(
+                Math.max(fontSize - FONT_SIZE_STEP, MIN_FONT_SIZE),
+              ),
+            )
+          }
           disabled={fontSize <= MIN_FONT_SIZE}
           style={styles.railButton}
         >
-          <Text style={[styles.railText, fontSize <= MIN_FONT_SIZE && styles.railDisabled]}>A−</Text>
+          <Text
+            style={[
+              styles.railText,
+              fontSize <= MIN_FONT_SIZE && styles.railDisabled,
+            ]}
+          >
+            A−
+          </Text>
         </Pressable>
         <Pressable
-          onPress={() => dispatch(persistPresentationAutoScrollLevel((autoScrollLevel + 1) % (MAX_AUTO_SCROLL_LEVEL + 1)))}
+          onPress={() =>
+            dispatch(
+              persistPresentationAutoScrollLevel(
+                (autoScrollLevel + 1) % (MAX_AUTO_SCROLL_LEVEL + 1),
+              ),
+            )
+          }
           style={styles.railButton}
         >
-          <Text style={[styles.railGlyph, autoScrollLevel > 0 && styles.railActive]}>
+          <Text
+            style={[styles.railGlyph, autoScrollLevel > 0 && styles.railActive]}
+          >
             {autoScrollLevel > 0 ? `⇩${autoScrollLevel}` : "⇩"}
           </Text>
         </Pressable>
@@ -188,7 +269,9 @@ function PresentationView({
               style={styles.panelSearch}
             />
             <ScrollView style={styles.panelList}>
-              {filteredSongs.length === 0 && <Text style={styles.panelEmpty}>{t.presentation.noMatch}</Text>}
+              {filteredSongs.length === 0 && (
+                <Text style={styles.panelEmpty}>{t.presentation.noMatch}</Text>
+              )}
               {filteredSongs.map((song) => {
                 const songIndex = songIndexById.get(song.id)!;
                 const isCurrent = songIndex === index;
@@ -200,14 +283,19 @@ function PresentationView({
                       setIndex(songIndex);
                       setPanelQuery("");
                     }}
-                    style={[styles.panelRow, isCurrent && styles.panelRowActive]}
+                    style={[
+                      styles.panelRow,
+                      isCurrent && styles.panelRowActive,
+                    ]}
                   >
                     <Text style={styles.panelPosition}>{songIndex + 1}</Text>
                     <Text
                       numberOfLines={1}
                       style={[
                         styles.panelSongName,
-                        isCurrent ? styles.panelSongNameCurrent : isPlayed && styles.panelSongNamePlayed,
+                        isCurrent
+                          ? styles.panelSongNameCurrent
+                          : isPlayed && styles.panelSongNamePlayed,
                       ]}
                     >
                       {song.name}
@@ -228,7 +316,12 @@ function PresentationView({
               {current.name}
             </Text>
             <Pressable
-              onPress={() => router.push({ pathname: "/song/[songId]", params: { songId: current.id } })}
+              onPress={() =>
+                router.push({
+                  pathname: "/song/[songId]",
+                  params: { songId: current.id },
+                })
+              }
               hitSlop={8}
               style={styles.editButton}
             >
@@ -256,7 +349,10 @@ function PresentationView({
               style={[
                 styles.lyrics,
                 allCaps && styles.lyricsUppercase,
-                { fontSize, lineHeight: Math.round(fontSize * LYRICS_LINE_HEIGHT_RATIO) },
+                {
+                  fontSize,
+                  lineHeight: Math.round(fontSize * LYRICS_LINE_HEIGHT_RATIO),
+                },
               ]}
             >
               {current.lyrics}
@@ -267,43 +363,41 @@ function PresentationView({
         </ScrollView>
 
         <View style={styles.footer}>
-          {multipleSongs && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dotsRow}>
-              {songs.map((song, i) => {
-                const isCurrent = i === index;
-                const isPlayed = played.has(song.id);
-                return (
-                  <Pressable
-                    key={song.id}
-                    onPress={() => setIndex(i)}
-                    style={[styles.dot, isCurrent ? styles.dotCurrent : isPlayed && styles.dotPlayed]}
-                  >
-                    <Text style={[styles.dotText, isCurrent ? styles.dotTextCurrent : isPlayed && styles.dotTextPlayed]}>
-                      {i + 1}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
           <View style={styles.transportRow}>
             <Pressable
               onPress={goPrev}
               disabled={!multipleSongs || index === 0}
-              style={[styles.transportButton, (!multipleSongs || index === 0) && styles.transportDisabled]}
+              style={[
+                styles.transportButton,
+                (!multipleSongs || index === 0) && styles.transportDisabled,
+              ]}
             >
               <Text style={styles.transportGlyph}>←</Text>
             </Pressable>
             <Pressable
               onPress={togglePlayedAndAdvance}
-              style={[styles.transportButton, played.has(current.id) && styles.transportButtonPlayed]}
+              style={[
+                styles.transportButton,
+                played.has(current.id) && styles.transportButtonPlayed,
+              ]}
             >
-              <Text style={[styles.transportGlyph, played.has(current.id) && styles.transportGlyphPlayed]}>✓</Text>
+              <Text
+                style={[
+                  styles.transportGlyph,
+                  played.has(current.id) && styles.transportGlyphPlayed,
+                ]}
+              >
+                ✓
+              </Text>
             </Pressable>
             <Pressable
               onPress={goNext}
               disabled={!multipleSongs || index === songs.length - 1}
-              style={[styles.transportButtonPrimary, (!multipleSongs || index === songs.length - 1) && styles.transportDisabled]}
+              style={[
+                styles.transportButtonPrimary,
+                (!multipleSongs || index === songs.length - 1) &&
+                  styles.transportDisabled,
+              ]}
             >
               <Text style={styles.transportGlyphPrimary}>→</Text>
             </Pressable>
