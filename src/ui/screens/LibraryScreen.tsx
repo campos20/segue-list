@@ -381,7 +381,10 @@ export function LibraryScreen() {
                           onPress={() =>
                             router.push(
                               Boolean(song.lyrics?.trim())
-                                ? { pathname: "/song/[songId]/present", params: { songId: song.id } }
+                                ? {
+                                    pathname: "/setlist/[setlistId]/present",
+                                    params: { setlistId: setlist.id, songId: song.id },
+                                  }
                                 : { pathname: "/song/[songId]", params: { songId: song.id } }
                             )
                           }

@@ -27,7 +27,9 @@ const LYRICS_LINE_HEIGHT_RATIO = 28 / 18;
 
 /** Presents every song in a setlist, in order, with quick switching between them. */
 export function SetlistPresentationScreen() {
-  const { setlistId } = useLocalSearchParams<{ setlistId: string }>();
+  // songId is optional - set when a specific song within the setlist was
+  // tapped, so presentation opens on that song instead of always the first.
+  const { setlistId, songId } = useLocalSearchParams<{ setlistId: string; songId?: string }>();
   const { t } = useTranslation();
 
   const setlist = useAppSelector((state) => setlistsSelectors.selectById(state.setlists, setlistId));
@@ -37,8 +39,9 @@ export function SetlistPresentationScreen() {
   const songs = (setlist?.songs ?? [])
     .map((id) => songsSelectors.selectById(allSongs, id))
     .filter((song): song is SongManifest => song !== undefined);
+  const initialIndex = songId ? Math.max(songs.findIndex((song) => song.id === songId), 0) : 0;
 
-  return <PresentationView songs={songs} emptyMessage={t.presentation.empty} />;
+  return <PresentationView songs={songs} emptyMessage={t.presentation.empty} initialIndex={initialIndex} />;
 }
 
 /** Presents a single song, outside the context of any setlist. */
@@ -51,7 +54,15 @@ export function SongPresentationScreen() {
   return <PresentationView songs={song ? [song] : []} emptyMessage={t.presentation.emptySong} />;
 }
 
-function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; emptyMessage: string }) {
+function PresentationView({
+  songs,
+  emptyMessage,
+  initialIndex = 0,
+}: {
+  songs: SongManifest[];
+  emptyMessage: string;
+  initialIndex?: number;
+}) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
@@ -63,7 +74,7 @@ function PresentationView({ songs, emptyMessage }: { songs: SongManifest[]; empt
   // right after being entered.
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
 
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(initialIndex);
   const [played, setPlayed] = useState<Set<string>>(new Set());
   // Collapsed by default: the lyrics of the current song should fill the
   // screen when presentation mode starts, not compete with the track list
