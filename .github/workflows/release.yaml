@@ -42,7 +42,7 @@ jobs:
       tag: ${{ steps.bump.outputs.tag }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
@@ -59,7 +59,7 @@ jobs:
           fi
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -100,14 +100,14 @@ jobs:
       RELEASE_TAG: ${{ needs.prepare.outputs.tag || github.ref_name }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.RELEASE_TAG }}
 
       - name: Resolve the release commit
         run: echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm

@@ -1,20 +1,4 @@
-import Constants from "expo-constants";
-import { getDocumentAsync } from "expo-document-picker";
-import { File } from "expo-file-system";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
-import type { SongManifest } from "@/types/song";
 import {
   shareBundle,
   shareDocx,
@@ -40,8 +24,7 @@ import {
 } from "@/store/persistSongs";
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
-import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
-import { moveItem } from "@/ui/reorder";
+import type { SongManifest } from "@/types/song";
 import {
   KebabIcon,
   OverflowMenu,
@@ -50,7 +33,24 @@ import {
 import { SetlistRow } from "@/ui/components/SetlistRow";
 import { SongRow } from "@/ui/components/SongRow";
 import { TextField } from "@/ui/components/TextField";
+import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
+import { moveItem } from "@/ui/reorder";
 import { colors, radii, spacing } from "@/ui/theme";
+import Constants from "expo-constants";
+import { getDocumentAsync } from "expo-document-picker";
+import { File } from "expo-file-system";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export function LibraryScreen() {
   const dispatch = useAppDispatch();
@@ -547,10 +547,20 @@ export function LibraryScreen() {
                           menuAccessibilityLabel={t.setlist.songOptions}
                           menuItems={songMenuItems(song, setlist.id)}
                           onPress={() =>
-                            router.push({
-                              pathname: "/song/[songId]",
-                              params: { songId: song.id },
-                            })
+                            router.push(
+                              Boolean(song.lyrics?.trim())
+                                ? {
+                                    pathname: "/setlist/[setlistId]/present",
+                                    params: {
+                                      setlistId: setlist.id,
+                                      songId: song.id,
+                                    },
+                                  }
+                                : {
+                                    pathname: "/song/[songId]",
+                                    params: { songId: song.id },
+                                  },
+                            )
                           }
                           canMoveUp={songIndex > 0}
                           canMoveDown={songIndex < setlistSongs.length - 1}
@@ -585,10 +595,17 @@ export function LibraryScreen() {
                 menuAccessibilityLabel={t.setlist.songOptions}
                 menuItems={songMenuItems(song)}
                 onPress={() =>
-                  router.push({
-                    pathname: "/song/[songId]",
-                    params: { songId: song.id },
-                  })
+                  router.push(
+                    Boolean(song.lyrics?.trim())
+                      ? {
+                          pathname: "/song/[songId]/present",
+                          params: { songId: song.id },
+                        }
+                      : {
+                          pathname: "/song/[songId]",
+                          params: { songId: song.id },
+                        },
+                  )
                 }
                 canMoveUp={canMoveUp}
                 canMoveDown={canMoveDown}

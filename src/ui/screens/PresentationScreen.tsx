@@ -1,3 +1,14 @@
+import { useTranslation } from "@/i18n";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  persistPresentationAllCaps,
+  persistPresentationAutoScrollLevel,
+  persistPresentationFontSize,
+} from "@/store/persistSettings";
+import { setlistsSelectors } from "@/store/setlistsSlice";
+import { songsSelectors } from "@/store/songsSlice";
+import type { SongManifest } from "@/types/song";
+import { colors, glow, radii, spacing } from "@/ui/theme";
 import { useKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -10,17 +21,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTranslation } from "@/i18n";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  persistPresentationAllCaps,
-  persistPresentationAutoScrollLevel,
-  persistPresentationFontSize,
-} from "@/store/persistSettings";
-import { setlistsSelectors } from "@/store/setlistsSlice";
-import { songsSelectors } from "@/store/songsSlice";
-import type { SongManifest } from "@/types/song";
-import { colors, glow, radii, spacing } from "@/ui/theme";
 
 const AUTO_SCROLL_STEP_PX = 1;
 const AUTO_SCROLL_INTERVAL_MS = 50;
@@ -34,7 +34,12 @@ const LYRICS_LINE_HEIGHT_RATIO = 28 / 18;
 
 /** Presents every song in a setlist, in order, with quick switching between them. */
 export function SetlistPresentationScreen() {
-  const { setlistId } = useLocalSearchParams<{ setlistId: string }>();
+  // songId is optional - set when a specific song within the setlist was
+  // tapped, so presentation opens on that song instead of always the first.
+  const { setlistId, songId } = useLocalSearchParams<{
+    setlistId: string;
+    songId?: string;
+  }>();
   const { t } = useTranslation();
 
   const setlist = useAppSelector((state) =>
@@ -47,7 +52,13 @@ export function SetlistPresentationScreen() {
     .map((id) => songsSelectors.selectById(allSongs, id))
     .filter((song): song is SongManifest => song !== undefined);
 
-  return <PresentationView songs={songs} emptyMessage={t.presentation.empty} />;
+  return (
+    <PresentationView
+      songs={songs}
+      emptyMessage={t.presentation.empty}
+      initialSongId={songId}
+    />
+  );
 }
 
 /** Presents a single song, outside the context of any setlist. */
@@ -70,9 +81,11 @@ export function SongPresentationScreen() {
 function PresentationView({
   songs,
   emptyMessage,
+  initialSongId,
 }: {
   songs: SongManifest[];
   emptyMessage: string;
+  initialSongId?: string;
 }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -86,6 +99,23 @@ function PresentationView({
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
 
   const [index, setIndex] = useState(0);
+  // LibraryGate hydrates songs/setlists asynchronously after this screen can
+  // already be mounted (a cold start restoring this route, or a deep link) -
+  // see LibraryGate.tsx. `songs` can therefore still be empty on the first
+  // render even when `initialSongId` is set, so the jump-to-song can't be a
+  // one-time useState initializer: it has to keep retrying at render time
+  // until `songs` actually contains it, then latch so it never fights
+  // manual next/prev navigation afterward.
+  const [appliedInitialSongId, setAppliedInitialSongId] = useState<
+    string | undefined
+  >(undefined);
+  if (initialSongId && initialSongId !== appliedInitialSongId) {
+    const targetIndex = songs.findIndex((song) => song.id === initialSongId);
+    if (targetIndex !== -1) {
+      setAppliedInitialSongId(initialSongId);
+      setIndex(targetIndex);
+    }
+  }
   const [played, setPlayed] = useState<Set<string>>(new Set());
   // Collapsed by default: the lyrics of the current song should fill the
   // screen when presentation mode starts, not compete with the track list
@@ -344,41 +374,6 @@ function PresentationView({
         </ScrollView>
 
         <View style={styles.footer}>
-          {multipleSongs && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.dotsRow}
-            >
-              {songs.map((song, i) => {
-                const isCurrent = i === index;
-                const isPlayed = played.has(song.id);
-                return (
-                  <Pressable
-                    key={song.id}
-                    onPress={() => setIndex(i)}
-                    style={[
-                      styles.dot,
-                      isCurrent
-                        ? styles.dotCurrent
-                        : isPlayed && styles.dotPlayed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dotText,
-                        isCurrent
-                          ? styles.dotTextCurrent
-                          : isPlayed && styles.dotTextPlayed,
-                      ]}
-                    >
-                      {i + 1}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
           <View style={styles.transportRow}>
             <Pressable
               onPress={goPrev}

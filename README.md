@@ -1,5 +1,8 @@
 # Segue List
 
+![Statements](https://img.shields.io/badge/statements-71.78%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-68%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-70.27%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-72.13%25-red.svg?style=flat)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/campos20)
+
 A setlist app for musicians: write your songs' lyrics once, group them into
 setlists, and read them on a phone or tablet during a show. No account, no
 backend - everything lives on your device, and you back it up or hand it to
@@ -78,6 +81,29 @@ Scan the QR code with Expo Go (Android) or the Camera app (iOS), or press
 tap **New song** to write your first lyrics, or **New setlist** to start
 grouping songs for a show.
 
+## Testing
+
+```bash
+npm test              # watch mode
+npm run test:coverage # single run with a coverage summary
+```
+
+Coverage is unit tests over the pure logic and Redux thunks in `src/store/`
+and `src/ui/`'s top-level files (`reorder.ts`, `libraryTree.ts`, ...) - not
+`ui/components/`, `ui/screens/`, or `app/` (see [Stability over
+appearance](AGENTS.md) for why UI correctness here leans on manual device
+testing instead). The badges above are generated from the coverage report,
+not hand-edited:
+
+```bash
+npm run test:coverage && npm run coverage:badges
+```
+
+CI re-generates them on every pull request into `main` (and on manual
+dispatch) and fails if the README's badges don't match a fresh run, so a
+badge here is never stale - if you add or change tests, run the command
+above and commit the result.
+
 ## Downloading a release
 
 Tagged releases publish a signed APK to the
@@ -131,6 +157,23 @@ project's real release key via
 [`plugins/withAndroidSigning.js`](plugins/withAndroidSigning.js), which only
 activates when the signing secrets are configured in the repo (see
 [`.github/workflows/release.yaml`](.github/workflows/release.yaml)).
+
+## Sponsor
+
+[![Sponsor via GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white&style=for-the-badge)](https://github.com/sponsors/campos20)
+
+Segue List is free and GPL-licensed, and it stays that way. If it earns its
+place on your stage, sponsorship helps in one concrete way right now: an
+**Apple Developer Program membership ($99/year)**. Right now this only ships
+as a sideloaded Android APK - that membership is what unlocks a real iOS
+release, the same way it does for this project's sibling app,
+[Virtual VS](https://github.com/campos20/virtual-vs).
+
+You can also sponsor from the **Sponsor** button at the top of the
+[repository page](https://github.com/campos20/segue-list).
+
+Not in a position to sponsor? Reporting a bug from a real gig is worth a lot
+too - the fixes in this project all came from someone actually using it.
 
 ## License
 
