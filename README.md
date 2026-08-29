@@ -1,6 +1,6 @@
 # Segue List
 
-![Statements](https://img.shields.io/badge/statements-18.76%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-8.07%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-17.33%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-18.75%25-red.svg?style=flat)
+![Statements](https://img.shields.io/badge/statements-71.78%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-68%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-70.27%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-72.13%25-red.svg?style=flat)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/campos20)
 
 A setlist app for musicians: write your songs' lyrics once, group them into
@@ -89,7 +89,8 @@ npm run test:coverage # single run with a coverage summary
 ```
 
 Coverage is unit tests over the pure logic and Redux thunks in `src/store/`
-and `src/ui/` - not the screens themselves (see [Stability over
+and `src/ui/`'s top-level files (`reorder.ts`, `libraryTree.ts`, ...) - not
+`ui/components/`, `ui/screens/`, or `app/` (see [Stability over
 appearance](AGENTS.md) for why UI correctness here leans on manual device
 testing instead). The badges above are generated from the coverage report,
 not hand-edited:
@@ -98,9 +99,10 @@ not hand-edited:
 npm run test:coverage && npm run coverage:badges
 ```
 
-CI re-generates them on every push and fails if the README's badges don't
-match a fresh run, so a badge here is never stale - if you add or change
-tests, run the command above and commit the result.
+CI re-generates them on every pull request into `main` (and on manual
+dispatch) and fails if the README's badges don't match a fresh run, so a
+badge here is never stale - if you add or change tests, run the command
+above and commit the result.
 
 ## Downloading a release
 

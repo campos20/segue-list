@@ -57,8 +57,11 @@
   "jest": {
     "preset": "jest-expo",
     "collectCoverageFrom": [
-      "src/**/*.{ts,tsx}",
-      "!src/**/*.d.ts"
+      "src/store/**/*.{ts,tsx}",
+      "src/ui/*.{ts,tsx}",
+      "!src/**/*.test.{ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/ui/LibraryGate.tsx"
     ],
     "coverageReporters": [
       "text",

@@ -51,18 +51,12 @@ export function SetlistPresentationScreen() {
   const songs = (setlist?.songs ?? [])
     .map((id) => songsSelectors.selectById(allSongs, id))
     .filter((song): song is SongManifest => song !== undefined);
-  const initialIndex = songId
-    ? Math.max(
-        songs.findIndex((song) => song.id === songId),
-        0,
-      )
-    : 0;
 
   return (
     <PresentationView
       songs={songs}
       emptyMessage={t.presentation.empty}
-      initialIndex={initialIndex}
+      initialSongId={songId}
     />
   );
 }
@@ -87,11 +81,11 @@ export function SongPresentationScreen() {
 function PresentationView({
   songs,
   emptyMessage,
-  initialIndex = 0,
+  initialSongId,
 }: {
   songs: SongManifest[];
   emptyMessage: string;
-  initialIndex?: number;
+  initialSongId?: string;
 }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -104,7 +98,24 @@ function PresentationView({
   // right after being entered.
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
 
-  const [index, setIndex] = useState(initialIndex);
+  const [index, setIndex] = useState(0);
+  // LibraryGate hydrates songs/setlists asynchronously after this screen can
+  // already be mounted (a cold start restoring this route, or a deep link) -
+  // see LibraryGate.tsx. `songs` can therefore still be empty on the first
+  // render even when `initialSongId` is set, so the jump-to-song can't be a
+  // one-time useState initializer: it has to keep retrying at render time
+  // until `songs` actually contains it, then latch so it never fights
+  // manual next/prev navigation afterward.
+  const [appliedInitialSongId, setAppliedInitialSongId] = useState<
+    string | undefined
+  >(undefined);
+  if (initialSongId && initialSongId !== appliedInitialSongId) {
+    const targetIndex = songs.findIndex((song) => song.id === initialSongId);
+    if (targetIndex !== -1) {
+      setAppliedInitialSongId(initialSongId);
+      setIndex(targetIndex);
+    }
+  }
   const [played, setPlayed] = useState<Set<string>>(new Set());
   // Collapsed by default: the lyrics of the current song should fill the
   // screen when presentation mode starts, not compete with the track list
