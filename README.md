@@ -1,5 +1,7 @@
 # Segue List
 
+![Statements](https://img.shields.io/badge/statements-18.76%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-8.07%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-17.33%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-18.75%25-red.svg?style=flat)
+
 A setlist app for musicians: write your songs' lyrics once, group them into
 setlists, and read them on a phone or tablet during a show. No account, no
 backend - everything lives on your device, and you back it up or hand it to
@@ -77,6 +79,27 @@ Scan the QR code with Expo Go (Android) or the Camera app (iOS), or press
 `i` / `a` in the terminal for a simulator/emulator. The Library starts empty:
 tap **New song** to write your first lyrics, or **New setlist** to start
 grouping songs for a show.
+
+## Testing
+
+```bash
+npm test              # watch mode
+npm run test:coverage # single run with a coverage summary
+```
+
+Coverage is unit tests over the pure logic and Redux thunks in `src/store/`
+and `src/ui/` - not the screens themselves (see [Stability over
+appearance](AGENTS.md) for why UI correctness here leans on manual device
+testing instead). The badges above are generated from the coverage report,
+not hand-edited:
+
+```bash
+npm run test:coverage && npm run coverage:badges
+```
+
+CI re-generates them on every push and fails if the README's badges don't
+match a fresh run, so a badge here is never stale - if you add or change
+tests, run the command above and commit the result.
 
 ## Downloading a release
 

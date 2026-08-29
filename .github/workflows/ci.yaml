@@ -1,18 +1,10 @@
 name: CI
 
-# Runs on every push and pull request. Until now the test suite only ran when
-# a release tag was pushed, which is the worst time to discover it's red.
-#
-# Also dispatchable directly: release.yaml's workflow_dispatch path pushes
-# the version-bump commit with the default GITHUB_TOKEN, which - by
-# GitHub's own loop-prevention rule - does not trigger this workflow's
-# `push` trigger. It explicitly dispatches this workflow instead so the
-# release-time "require a green CI run" gate has something to find.
+# Run this workflow on pull requests to main and when manually triggered.
 on:
-  push:
-    branches: ["**"]
-    tags-ignore: ["**"] # release.yaml already runs the same checks for tags
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 # Superseded runs on the same branch are pointless once a newer commit lands.
@@ -26,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -41,3 +33,18 @@ jobs:
 
       - name: Lint
         run: npx prettier --check . && npx eslint . --max-warnings 0
+
+      - name: Test
+        run: npx jest --coverage --ci
+
+      # Badges are generated from the coverage report, not hand-edited (see
+      # the Testing section of the README). Regenerating here and diffing
+      # catches a README a contributor forgot to update after adding tests,
+      # without the workflow ever pushing a commit of its own.
+      - name: Verify coverage badges are up to date
+        run: |
+          npx istanbul-badges-readme
+          if ! git diff --exit-code README.md; then
+            echo "::error::README coverage badges are stale - run 'npm run test:coverage && npm run coverage:badges' and commit the result."
+            exit 1
+          fi
