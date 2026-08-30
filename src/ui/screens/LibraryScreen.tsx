@@ -26,6 +26,14 @@ import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
 import {
+  AboutIcon,
+  ExportDocxIcon,
+  ExportIcon,
+  ImportIcon,
+  ImportLyricsIcon,
+  SettingsIcon,
+} from "@/ui/components/MenuIcons";
+import {
   KebabIcon,
   OverflowMenu,
   type OverflowMenuItem,
@@ -360,28 +368,42 @@ export function LibraryScreen() {
   }
 
   const libraryMenuItems: OverflowMenuItem[] = [
-    { key: "import", label: t.library.importBackup, onPress: handleImport },
+    {
+      key: "import",
+      label: t.library.importBackup,
+      icon: <ImportIcon />,
+      onPress: handleImport,
+    },
     {
       key: "import-lyrics",
       label: t.library.importLyricsFiles,
+      icon: <ImportLyricsIcon />,
       onPress: handleImportLyricsFiles,
     },
     {
       key: "export",
       label: t.library.exportFullLibrary,
+      icon: <ExportIcon />,
       onPress: handleExportAll,
     },
     {
       key: "export-docx",
       label: t.library.exportFullLibraryDocx,
+      icon: <ExportDocxIcon />,
       onPress: handleExportAllDocx,
     },
     {
       key: "settings",
       label: t.menu.settings,
+      icon: <SettingsIcon />,
       onPress: () => router.push("/settings"),
     },
-    { key: "about", label: t.menu.about, onPress: () => router.push("/about") },
+    {
+      key: "about",
+      label: t.menu.about,
+      icon: <AboutIcon />,
+      onPress: () => router.push("/about"),
+    },
   ];
 
   return (

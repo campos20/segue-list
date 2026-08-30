@@ -1,3 +1,10 @@
+import {
+  elevation,
+  radii,
+  spacing,
+  useThemeColors,
+  type ThemeColors,
+} from "@/ui/theme";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Dimensions,
@@ -7,13 +14,6 @@ import {
   Text,
   View,
 } from "react-native";
-import {
-  elevation,
-  radii,
-  spacing,
-  useThemeColors,
-  type ThemeColors,
-} from "@/ui/theme";
 
 export interface OverflowMenuItem {
   key: string;
@@ -21,6 +21,7 @@ export interface OverflowMenuItem {
   onPress: () => void;
   testID?: string;
   destructive?: boolean;
+  icon?: ReactNode; // Optional icon to display alongside the label
 }
 
 interface Anchor {
@@ -118,20 +119,24 @@ export function OverflowMenu({
               key={item.key}
               onPress={() => handleSelect(item)}
               testID={item.testID}
+
               style={({ pressed }) => [
                 styles.item,
                 index < items.length - 1 && styles.itemDivider,
                 pressed && styles.pressed,
               ]}
             >
-              <Text
-                style={[
-                  styles.itemText,
-                  item.destructive && styles.itemTextDestructive,
-                ]}
-              >
-                {item.label}
-              </Text>
+              <View style={styles.itemContent}>
+                {item.icon}
+                <Text
+                  style={[
+                    styles.itemText,
+                    item.destructive && styles.itemTextDestructive,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </View>
             </Pressable>
           ))}
         </View>
@@ -191,6 +196,11 @@ function createStyles(colors: ThemeColors) {
     item: {
       paddingVertical: 14,
       paddingHorizontal: spacing.lg,
+    },
+    itemContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
     },
     itemDivider: {
       borderBottomWidth: StyleSheet.hairlineWidth,
