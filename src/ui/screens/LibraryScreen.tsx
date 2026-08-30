@@ -47,7 +47,11 @@ import {
 import { SetlistRow } from "@/ui/components/SetlistRow";
 import { SongRow } from "@/ui/components/SongRow";
 import { TextField } from "@/ui/components/TextField";
-import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
+import {
+  buildLibraryTree,
+  songMatchesSearch,
+  type LibraryItem,
+} from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import Constants from "expo-constants";
@@ -102,25 +106,24 @@ export function LibraryScreen() {
   /**
    * While searching, a setlist stays visible if its own name matches (showing
    * every song in it, same as browsing normally) or if any song inside it
-   * matches (showing just those). A song not in any matching setlist stays
-   * visible on its own name. Reordering during a search would be ambiguous
-   * about what "up"/"down" even means, so moves below always look the real
-   * position up in `items` rather than trusting the filtered list's index.
+   * matches by name or tag (showing just those). A song not in any matching
+   * setlist stays visible on its own name or tag. Reordering during a search
+   * would be ambiguous about what "up"/"down" even means, so moves below
+   * always look the real position up in `items` rather than trusting the
+   * filtered list's index.
    */
   const displayedItems = useMemo((): LibraryItem[] => {
     if (!trimmedSearch) return items;
     return items.flatMap((item): LibraryItem[] => {
       if (item.kind === "song") {
-        return item.song.name.toLowerCase().includes(trimmedSearch)
-          ? [item]
-          : [];
+        return songMatchesSearch(item.song, trimmedSearch) ? [item] : [];
       }
       const nameMatches = item.setlist.name
         .toLowerCase()
         .includes(trimmedSearch);
       if (nameMatches) return [item];
       const matchingSongs = item.songs.filter((song) =>
-        song.name.toLowerCase().includes(trimmedSearch),
+        songMatchesSearch(song, trimmedSearch),
       );
       return matchingSongs.length > 0
         ? [{ ...item, songs: matchingSongs }]
@@ -590,6 +593,7 @@ export function LibraryScreen() {
                           hasLyrics={Boolean(song.lyrics?.trim())}
                           hasLyricsLabel={t.song.hasLyrics}
                           noLyricsLabel={t.song.noLyricsYet}
+                          tags={song.tags}
                           menuAccessibilityLabel={t.setlist.songOptions}
                           menuItems={songMenuItems(song, setlist.id)}
                           onPress={() =>
@@ -638,6 +642,7 @@ export function LibraryScreen() {
                 hasLyrics={Boolean(song.lyrics?.trim())}
                 hasLyricsLabel={t.song.hasLyrics}
                 noLyricsLabel={t.song.noLyricsYet}
+                tags={song.tags}
                 menuAccessibilityLabel={t.setlist.songOptions}
                 menuItems={songMenuItems(song)}
                 onPress={() =>

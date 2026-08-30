@@ -9,6 +9,7 @@ interface SongRowProps {
   hasLyrics: boolean;
   hasLyricsLabel: string;
   noLyricsLabel: string;
+  tags?: string[];
   onPress: () => void;
   menuItems: OverflowMenuItem[];
   menuAccessibilityLabel: string;
@@ -30,6 +31,7 @@ export function SongRow({
   hasLyrics,
   hasLyricsLabel,
   noLyricsLabel,
+  tags,
   onPress,
   menuItems,
   menuAccessibilityLabel,
@@ -59,8 +61,9 @@ export function SongRow({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          <Text style={styles.meta}>
+          <Text style={styles.meta} numberOfLines={1}>
             {hasLyrics ? hasLyricsLabel : noLyricsLabel}
+            {tags && tags.length > 0 ? ` · ${tags.join(", ")}` : ""}
           </Text>
         </View>
         <Text style={styles.chevron}>›</Text>

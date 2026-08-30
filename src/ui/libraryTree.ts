@@ -68,6 +68,12 @@ export function buildLibraryTree(
   return applyOrder([...setlistItems, ...looseItems], order);
 }
 
+/** Whether a song's name or any of its tags matches a search query (already trimmed and lowercased). */
+export function songMatchesSearch(song: SongManifest, query: string): boolean {
+  if (song.name.toLowerCase().includes(query)) return true;
+  return (song.tags ?? []).some((tag) => tag.toLowerCase().includes(query));
+}
+
 /**
  * Puts `items` into `order`, appending anything `order` doesn't mention in
  * its existing relative position. A new item is never lost just because the

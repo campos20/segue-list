@@ -86,19 +86,24 @@ export function SettingsIcon() {
     <View style={styles.box}>
       <View style={[styles.sliderLine, { backgroundColor: color, top: 3 }]} />
       <View
-        style={[styles.sliderKnob, { backgroundColor: color, top: 1.5, left: 10 }]}
+        style={[
+          styles.sliderKnob,
+          { backgroundColor: color, top: 1.5, left: 10 },
+        ]}
       />
+      <View style={[styles.sliderLine, { backgroundColor: color, top: 8 }]} />
       <View
-        style={[styles.sliderLine, { backgroundColor: color, top: 8 }]}
+        style={[
+          styles.sliderKnob,
+          { backgroundColor: color, top: 6.5, left: 4 },
+        ]}
       />
+      <View style={[styles.sliderLine, { backgroundColor: color, top: 13 }]} />
       <View
-        style={[styles.sliderKnob, { backgroundColor: color, top: 6.5, left: 4 }]}
-      />
-      <View
-        style={[styles.sliderLine, { backgroundColor: color, top: 13 }]}
-      />
-      <View
-        style={[styles.sliderKnob, { backgroundColor: color, top: 11.5, left: 12 }]}
+        style={[
+          styles.sliderKnob,
+          { backgroundColor: color, top: 11.5, left: 12 },
+        ]}
       />
     </View>
   );
@@ -131,7 +136,10 @@ export function RemoveFromSetlistIcon() {
   return (
     <View style={styles.box}>
       <View
-        style={[styles.plusHorizontal, { backgroundColor: colors.textSecondary }]}
+        style={[
+          styles.plusHorizontal,
+          { backgroundColor: colors.textSecondary },
+        ]}
       />
     </View>
   );

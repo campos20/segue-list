@@ -1,6 +1,11 @@
 import type { SetlistManifest } from "@/types/setlist";
 import type { SongManifest } from "@/types/song";
-import { buildLibraryTree, songKey, setlistKey } from "./libraryTree";
+import {
+  buildLibraryTree,
+  songKey,
+  setlistKey,
+  songMatchesSearch,
+} from "./libraryTree";
 
 function song(id: string, overrides: Partial<SongManifest> = {}): SongManifest {
   return {
@@ -123,5 +128,29 @@ describe("buildLibraryTree", () => {
     const tree = buildLibraryTree([s1], [], [songKey("gone"), songKey("s1")]);
 
     expect(tree.map((item) => item.key)).toEqual([songKey("s1")]);
+  });
+});
+
+describe("songMatchesSearch", () => {
+  it("matches on the song's name", () => {
+    expect(
+      songMatchesSearch(song("s1", { name: "Wonderwall" }), "wonder"),
+    ).toBe(true);
+  });
+
+  it("matches on a tag even when the name doesn't match", () => {
+    expect(
+      songMatchesSearch(song("s1", { name: "X", tags: ["acoustic"] }), "acou"),
+    ).toBe(true);
+  });
+
+  it("does not match when neither the name nor any tag contains the query", () => {
+    expect(
+      songMatchesSearch(song("s1", { name: "X", tags: ["rock"] }), "jazz"),
+    ).toBe(false);
+  });
+
+  it("treats a missing tags field as no tags rather than throwing", () => {
+    expect(songMatchesSearch(song("s1", { name: "X" }), "x")).toBe(true);
   });
 });

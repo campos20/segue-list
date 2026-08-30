@@ -56,6 +56,7 @@ export function createSong(
     id: generateId(name),
     name,
     lyrics,
+    tags: [],
     createdAt: now,
     updatedAt: now,
   };
