@@ -18,8 +18,19 @@ import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import { Button } from "@/ui/components/Button";
 import { TextField } from "@/ui/components/TextField";
-import { toggleHighlightAt } from "@/ui/lyricsHighlight";
+import { parseLyricsHighlights, toggleHighlightAt } from "@/ui/lyricsHighlight";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
+
+// Matches the presentation screen's own lyrics style (PresentationScreen.tsx's
+// default fontSize/lineHeight and font family), so the editor and its
+// preview read as a stand-in for the stage view rather than a plain form.
+const LYRICS_FONT_SIZE = 18;
+const LYRICS_LINE_HEIGHT = 28;
+const LYRICS_FONT_FAMILY = Platform.select({
+  ios: "Menlo",
+  android: "monospace",
+  default: "monospace",
+});
 
 export function SongDetailScreen() {
   const { songId } = useLocalSearchParams<{ songId: string }>();
@@ -243,6 +254,29 @@ export function SongDetailScreen() {
             />
           </View>
 
+          <View style={styles.section}>
+            <Text style={styles.label}>{t.song.lyricsPreviewLabel}</Text>
+            <View style={styles.lyricsPreview}>
+              {lyrics ? (
+                <Text style={styles.lyricsPreviewText}>
+                  {parseLyricsHighlights(lyrics).map((segment, index) =>
+                    segment.highlighted ? (
+                      <Text key={index} style={styles.lyricsPreviewHighlight}>
+                        {segment.text}
+                      </Text>
+                    ) : (
+                      segment.text
+                    ),
+                  )}
+                </Text>
+              ) : (
+                <Text style={styles.lyricsPreviewEmpty}>
+                  {t.song.lyricsPlaceholder}
+                </Text>
+              )}
+            </View>
+          </View>
+
           {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
 
           <View style={styles.actionsRow}>
@@ -310,22 +344,45 @@ function createStyles(colors: ThemeColors) {
       fontSize: 12,
       fontWeight: "700",
     },
+    // Sized and colored to match the presentation screen's own lyrics style
+    // (same font size/line-height ratio, same background token) so editing
+    // reads as a preview of what you'll see on stage, not a plain form field.
     lyricsInput: {
       minHeight: 320,
-      borderRadius: 12,
+      borderRadius: radii.md,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.background,
       color: colors.textPrimary,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      fontSize: 15,
-      lineHeight: 22,
-      fontFamily: Platform.select({
-        ios: "Menlo",
-        android: "monospace",
-        default: "monospace",
-      }),
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+      fontSize: LYRICS_FONT_SIZE,
+      lineHeight: LYRICS_LINE_HEIGHT,
+      fontFamily: LYRICS_FONT_FAMILY,
+    },
+    lyricsPreview: {
+      minHeight: 160,
+      borderRadius: radii.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+    },
+    lyricsPreviewText: {
+      color: colors.textPrimary,
+      fontSize: LYRICS_FONT_SIZE,
+      lineHeight: LYRICS_LINE_HEIGHT,
+      fontFamily: LYRICS_FONT_FAMILY,
+    },
+    lyricsPreviewHighlight: {
+      fontWeight: "800",
+      backgroundColor: colors.highlightBackground,
+    },
+    lyricsPreviewEmpty: {
+      color: colors.textTertiary,
+      fontSize: 14,
+      fontFamily: LYRICS_FONT_FAMILY,
     },
     savedText: {
       color: colors.success,
