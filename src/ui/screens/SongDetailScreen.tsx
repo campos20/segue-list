@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -57,6 +57,12 @@ export function SongDetailScreen() {
   const [name, setName] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [lyricsSelection, setLyricsSelection] = useState({ start: 0, end: 0 });
+  // Mirrors lyricsSelection but updated synchronously (no render lag), so
+  // handleToggleHighlight always reads the true latest selection even if
+  // the user taps Highlight right after finishing a selection, before
+  // React has re-rendered with the state from that selection change - a
+  // stale-closure race that showed up as "have to tap Highlight twice".
+  const lyricsSelectionRef = useRef({ start: 0, end: 0 });
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [saved, setSaved] = useState(false);
@@ -78,15 +84,18 @@ export function SongDetailScreen() {
 
   /**
    * Wraps (or unwraps) the current text selection in highlight markers -
-   * see lyricsHighlight.ts. The selection is read from the TextInput's own
-   * `onSelectionChange`, never fed back as a controlled `selection` prop:
-   * round-tripping selection through state is a known source of cursor-jump
-   * bugs on native TextInput, so this only ever reads it.
+   * see lyricsHighlight.ts. The selection is read from the ref (not the
+   * state variable) so it's never a render behind: reading state here would
+   * capture whatever `lyricsSelection` was as of the last render, which can
+   * still be the pre-selection value if this fires before that render
+   * commits. The selection is never fed back as a controlled `selection`
+   * prop either way: round-tripping selection through state is a known
+   * source of cursor-jump bugs on native TextInput, so this only ever reads it.
    */
   function handleToggleHighlight() {
-    setLyrics((current) =>
-      toggleHighlightAt(current, lyricsSelection.start, lyricsSelection.end),
-    );
+    const { start, end } = lyricsSelectionRef.current;
+    setLyrics((current) => toggleHighlightAt(current, start, end));
+    lyricsSelectionRef.current = { start: 0, end: 0 };
     setLyricsSelection({ start: 0, end: 0 });
   }
 
@@ -250,9 +259,10 @@ export function SongDetailScreen() {
             <TextInput
               value={lyrics}
               onChangeText={setLyrics}
-              onSelectionChange={(event) =>
-                setLyricsSelection(event.nativeEvent.selection)
-              }
+              onSelectionChange={(event) => {
+                lyricsSelectionRef.current = event.nativeEvent.selection;
+                setLyricsSelection(event.nativeEvent.selection);
+              }}
               multiline
               textAlignVertical="top"
               placeholder={t.song.lyricsPlaceholder}
