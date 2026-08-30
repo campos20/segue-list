@@ -16,6 +16,7 @@ import {
   moveSongInSetlist,
   removeSongFromSetlist,
   renameSetlist,
+  reorderSetlistSongs,
 } from "@/store/persistSetlists";
 import {
   createSong,
@@ -38,6 +39,7 @@ import {
   RemoveFromSetlistIcon,
   RenameIcon,
   SettingsIcon,
+  SortIcon,
 } from "@/ui/components/MenuIcons";
 import {
   KebabIcon,
@@ -46,6 +48,7 @@ import {
 } from "@/ui/components/OverflowMenu";
 import { SetlistRow } from "@/ui/components/SetlistRow";
 import { SongRow } from "@/ui/components/SongRow";
+import { SortSetlistModal } from "@/ui/components/SortSetlistModal";
 import { TextField } from "@/ui/components/TextField";
 import {
   buildLibraryTree,
@@ -92,6 +95,7 @@ export function LibraryScreen() {
   const [renamingSetlistId, setRenamingSetlistId] = useState<string | null>(
     null,
   );
+  const [sortingSetlistId, setSortingSetlistId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -536,6 +540,12 @@ export function LibraryScreen() {
                         onPress: () => handleDuplicateSetlist(setlist.id),
                       },
                       {
+                        key: "sort",
+                        label: t.setlist.sort,
+                        icon: <SortIcon />,
+                        onPress: () => setSortingSetlistId(setlist.id),
+                      },
+                      {
                         key: "export",
                         label: t.setlist.export,
                         icon: <ExportIcon />,
@@ -629,6 +639,15 @@ export function LibraryScreen() {
                         />
                       ))
                     ))}
+                  <SortSetlistModal
+                    visible={sortingSetlistId === setlist.id}
+                    songs={setlistSongs}
+                    onClose={() => setSortingSetlistId(null)}
+                    onConfirm={(orderedSongIds) => {
+                      dispatch(reorderSetlistSongs(setlist.id, orderedSongIds));
+                      setSortingSetlistId(null);
+                    }}
+                  />
                 </View>
               );
             }

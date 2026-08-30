@@ -191,6 +191,24 @@ export function DuplicateIcon() {
   );
 }
 
+export function SortIcon() {
+  const colors = useThemeColors();
+  const color = colors.textSecondary;
+  return (
+    <View style={styles.box}>
+      <View
+        style={[styles.sortBar, { backgroundColor: color, top: 3, width: 14 }]}
+      />
+      <View
+        style={[styles.sortBar, { backgroundColor: color, top: 8, width: 10 }]}
+      />
+      <View
+        style={[styles.sortBar, { backgroundColor: color, top: 13, width: 6 }]}
+      />
+    </View>
+  );
+}
+
 export function AboutIcon() {
   const colors = useThemeColors();
   const color = colors.textSecondary;
@@ -433,5 +451,11 @@ const styles = StyleSheet.create({
     height: 9,
     borderWidth: 1.4,
     borderRadius: 1.5,
+  },
+  sortBar: {
+    position: "absolute",
+    left: 2,
+    height: 2,
+    borderRadius: 1,
   },
 });
