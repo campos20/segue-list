@@ -281,6 +281,7 @@ export function LibraryScreen() {
           "text/plain",
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           "application/vnd.oasis.opendocument.text",
+          "application/pdf",
         ],
         multiple: true,
         copyToCacheDirectory: true,
