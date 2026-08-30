@@ -18,6 +18,7 @@ import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import { Button } from "@/ui/components/Button";
 import { TextField } from "@/ui/components/TextField";
+import { toggleHighlightAt } from "@/ui/lyricsHighlight";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 export function SongDetailScreen() {
@@ -37,6 +38,7 @@ export function SongDetailScreen() {
 
   const [name, setName] = useState("");
   const [lyrics, setLyrics] = useState("");
+  const [lyricsSelection, setLyricsSelection] = useState({ start: 0, end: 0 });
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [saved, setSaved] = useState(false);
@@ -53,6 +55,20 @@ export function SongDetailScreen() {
     setName(song.name);
     setLyrics(song.lyrics ?? "");
     setTags(song.tags ?? []);
+  }
+
+  /**
+   * Wraps (or unwraps) the current text selection in highlight markers -
+   * see lyricsHighlight.ts. The selection is read from the TextInput's own
+   * `onSelectionChange`, never fed back as a controlled `selection` prop:
+   * round-tripping selection through state is a known source of cursor-jump
+   * bugs on native TextInput, so this only ever reads it.
+   */
+  function handleToggleHighlight() {
+    setLyrics((current) =>
+      toggleHighlightAt(current, lyricsSelection.start, lyricsSelection.end),
+    );
+    setLyricsSelection({ start: 0, end: 0 });
   }
 
   // Every tag used anywhere in the library, offered as one-tap suggestions
@@ -200,10 +216,24 @@ export function SongDetailScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>{t.song.lyricsLabel}</Text>
+            <View style={styles.lyricsHeaderRow}>
+              <Text style={styles.label}>{t.song.lyricsLabel}</Text>
+              <Button
+                variant="secondary"
+                onPress={handleToggleHighlight}
+                disabled={lyricsSelection.start === lyricsSelection.end}
+                style={styles.highlightButton}
+              >
+                {t.song.highlightToggle}
+              </Button>
+            </View>
+            <Text style={styles.hint}>{t.song.highlightHint}</Text>
             <TextInput
               value={lyrics}
               onChangeText={setLyrics}
+              onSelectionChange={(event) =>
+                setLyricsSelection(event.nativeEvent.selection)
+              }
               multiline
               numberOfLines={20}
               textAlignVertical="top"
@@ -260,6 +290,20 @@ function createStyles(colors: ThemeColors) {
     section: {
       marginTop: spacing.lg,
       gap: spacing.xs,
+    },
+    lyricsHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    highlightButton: {
+      paddingVertical: 6,
+      paddingHorizontal: spacing.md,
+    },
+    hint: {
+      color: colors.textTertiary,
+      fontSize: 11,
     },
     label: {
       color: colors.textSecondary,

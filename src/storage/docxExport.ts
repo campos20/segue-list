@@ -1,6 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 import { File, Paths } from "expo-file-system";
 import type { SongManifest } from "@/types/song";
+import { parseLyricsHighlights, splitIntoLines } from "@/ui/lyricsHighlight";
 import { isFileSystemAvailable } from "./paths";
 
 /**
@@ -28,7 +29,16 @@ function escapeXml(text: string): string {
 // Monospace, matching SongDetailScreen's lyrics editor - keeps chord charts
 // and any hand-spaced alignment intact when opened outside the app.
 const LYRICS_RUN_PROPS = `<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/>`;
+// Bold + a highlighter-yellow shade, mirroring the app's own highlighted
+// lyrics style (see lyricsHighlight.ts / PresentationScreen's `lyricsHighlight`
+// style) - a highlighted span shouldn't leak its `{{...}}` markers into an
+// exported document, it should read as visibly marked there too.
+const HIGHLIGHT_RUN_PROPS = `${LYRICS_RUN_PROPS}<w:b/><w:shd w:val="clear" w:fill="FFD54A"/>`;
 const NO_LYRICS_RUN_PROPS = `<w:i/><w:color w:val="888888"/>`;
+
+function run(text: string, runProps: string): string {
+  return `<w:r><w:rPr>${runProps}</w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
+}
 
 function textParagraph(
   text: string,
@@ -37,14 +47,30 @@ function textParagraph(
 ): string {
   if (text.length === 0) return "<w:p/>";
   const pPr = paragraphProps ? `<w:pPr>${paragraphProps}</w:pPr>` : "";
-  return `<w:p>${pPr}<w:r><w:rPr>${runProps}</w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
+  return `<w:p>${pPr}${run(text, runProps)}</w:p>`;
 }
 
-/** One `<w:p>` per line, so a blank line between verses stays a blank line. */
+/**
+ * One `<w:p>` per line, so a blank line between verses stays a blank line -
+ * and, within a line, one `<w:r>` per highlighted/plain run, so a
+ * highlighted phrase renders bold-and-shaded instead of showing its raw
+ * `{{...}}` markers.
+ */
 function lyricsParagraphs(lyrics: string): string {
-  return lyrics
-    .split("\n")
-    .map((line) => textParagraph(line, LYRICS_RUN_PROPS))
+  const lines = splitIntoLines(parseLyricsHighlights(lyrics));
+  return lines
+    .map((line) => {
+      if (line.length === 0) return "<w:p/>";
+      const runs = line
+        .map((segment) =>
+          run(
+            segment.text,
+            segment.highlighted ? HIGHLIGHT_RUN_PROPS : LYRICS_RUN_PROPS,
+          ),
+        )
+        .join("");
+      return `<w:p>${runs}</w:p>`;
+    })
     .join("");
 }
 

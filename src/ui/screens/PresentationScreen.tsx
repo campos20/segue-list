@@ -8,6 +8,7 @@ import {
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
+import { parseLyricsHighlights } from "@/ui/lyricsHighlight";
 import {
   glow,
   radii,
@@ -374,7 +375,15 @@ function PresentationView({
                 },
               ]}
             >
-              {current.lyrics}
+              {parseLyricsHighlights(current.lyrics).map((segment, index) =>
+                segment.highlighted ? (
+                  <Text key={index} style={styles.lyricsHighlight}>
+                    {segment.text}
+                  </Text>
+                ) : (
+                  segment.text
+                ),
+              )}
             </Text>
           ) : (
             <Text style={styles.lyricsEmpty}>{t.presentation.noLyrics}</Text>
@@ -589,6 +598,10 @@ function createStyles(colors: ThemeColors) {
     },
     lyricsUppercase: {
       textTransform: "uppercase",
+    },
+    lyricsHighlight: {
+      fontWeight: "800",
+      backgroundColor: colors.highlightBackground,
     },
     lyricsEmpty: {
       color: colors.textTertiary,

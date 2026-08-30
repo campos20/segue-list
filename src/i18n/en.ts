@@ -84,6 +84,9 @@ export const en = {
     lyricsPlaceholder: "Type or paste the lyrics...",
     removeTag: (tag: string) => `Remove tag "${tag}"`,
     suggestedTags: "Suggested tags",
+    highlightToggle: "Highlight",
+    highlightHint:
+      "Select text above, then tap Highlight to mark it (e.g. backing vocals).",
     saved: "Saved.",
     discardTitle: "Discard changes?",
     discardBody: "You have unsaved changes to this song.",

@@ -87,6 +87,9 @@ export const ptBR: TranslationDictionary = {
     addTag: "Adicionar",
     removeTag: (tag: string) => `Remover tag "${tag}"`,
     suggestedTags: "Sugeridas",
+    highlightToggle: "Destacar",
+    highlightHint:
+      "Selecione o texto acima e toque em Destacar para marcá-lo (ex.: backing vocal).",
     saved: "Salvo.",
     discardTitle: "Descartar alterações?",
     discardBody: "Você tem alterações não salvas nesta música.",
