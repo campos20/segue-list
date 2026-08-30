@@ -29,12 +29,14 @@ import {
   AboutIcon,
   AddToSetlistIcon,
   DeleteIcon,
+  DuplicateIcon,
   ExportDocxIcon,
   ExportIcon,
   ImportIcon,
   ImportLyricsIcon,
   PresentIcon,
   RemoveFromSetlistIcon,
+  RenameIcon,
   SettingsIcon,
 } from "@/ui/components/MenuIcons";
 import {
@@ -511,11 +513,13 @@ export function LibraryScreen() {
                       {
                         key: "rename",
                         label: t.setlist.rename,
+                        icon: <RenameIcon />,
                         onPress: () => setRenamingSetlistId(setlist.id),
                       },
                       {
                         key: "present",
                         label: t.setlist.present,
+                        icon: <PresentIcon />,
                         onPress: () =>
                           router.push({
                             pathname: "/setlist/[setlistId]/present",
@@ -525,11 +529,13 @@ export function LibraryScreen() {
                       {
                         key: "duplicate",
                         label: t.setlist.duplicate,
+                        icon: <DuplicateIcon />,
                         onPress: () => handleDuplicateSetlist(setlist.id),
                       },
                       {
                         key: "export",
                         label: t.setlist.export,
+                        icon: <ExportIcon />,
                         onPress: () =>
                           handleExportSetlist(
                             setlist.id,
@@ -540,6 +546,7 @@ export function LibraryScreen() {
                       {
                         key: "export-docx",
                         label: t.setlist.exportDocx,
+                        icon: <ExportDocxIcon />,
                         onPress: () =>
                           handleExportSetlistDocx(setlist.name, setlistSongs),
                       },
@@ -547,6 +554,7 @@ export function LibraryScreen() {
                         key: "delete",
                         label: t.setlist.delete,
                         destructive: true,
+                        icon: <DeleteIcon destructive />,
                         onPress: () =>
                           handleDeleteSetlist(
                             setlist.id,

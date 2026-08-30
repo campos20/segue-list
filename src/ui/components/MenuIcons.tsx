@@ -152,6 +152,37 @@ export function DeleteIcon({ destructive }: { destructive?: boolean }) {
   );
 }
 
+export function RenameIcon() {
+  const colors = useThemeColors();
+  const color = colors.textSecondary;
+  return (
+    <View style={styles.box}>
+      <View style={[styles.pencilShaft, { backgroundColor: color }]} />
+      <View style={[styles.pencilTip, { borderLeftColor: color }]} />
+    </View>
+  );
+}
+
+export function DuplicateIcon() {
+  const colors = useThemeColors();
+  return (
+    <View style={styles.box}>
+      <View
+        style={[styles.duplicateBack, { borderColor: colors.textSecondary }]}
+      />
+      <View
+        style={[
+          styles.duplicateFront,
+          {
+            borderColor: colors.textSecondary,
+            backgroundColor: colors.panelRaised,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
 export function AboutIcon() {
   const colors = useThemeColors();
   const color = colors.textSecondary;
@@ -354,5 +385,45 @@ const styles = StyleSheet.create({
     width: 1.3,
     height: 6,
     borderRadius: 1,
+  },
+  pencilShaft: {
+    position: "absolute",
+    left: 3,
+    top: 7.5,
+    width: 12,
+    height: 3,
+    borderRadius: 1,
+    transform: [{ rotate: "45deg" }],
+  },
+  pencilTip: {
+    position: "absolute",
+    left: 2,
+    top: 12,
+    width: 0,
+    height: 0,
+    borderTopWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 3.5,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    transform: [{ rotate: "45deg" }],
+  },
+  duplicateBack: {
+    position: "absolute",
+    left: 6,
+    top: 2,
+    width: 9,
+    height: 9,
+    borderWidth: 1.4,
+    borderRadius: 1.5,
+  },
+  duplicateFront: {
+    position: "absolute",
+    left: 3,
+    top: 6,
+    width: 9,
+    height: 9,
+    borderWidth: 1.4,
+    borderRadius: 1.5,
   },
 });
