@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -18,13 +18,15 @@ import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import { Button } from "@/ui/components/Button";
 import { TextField } from "@/ui/components/TextField";
-import { colors, spacing } from "@/ui/theme";
+import { spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 export function SongDetailScreen() {
   const { songId } = useLocalSearchParams<{ songId: string }>();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const song = useAppSelector((state) =>
     songsSelectors.selectById(state.songs, songId),
@@ -139,56 +141,58 @@ export function SongDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  notFound: {
-    color: colors.danger,
-    padding: spacing.lg,
-  },
-  back: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  section: {
-    marginTop: spacing.lg,
-    gap: spacing.xs,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  lyricsInput: {
-    minHeight: 320,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.textPrimary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: 15,
-    lineHeight: 22,
-    fontFamily: Platform.select({
-      ios: "Menlo",
-      android: "monospace",
-      default: "monospace",
-    }),
-  },
-  savedText: {
-    color: colors.success,
-    fontSize: 13,
-    marginTop: spacing.md,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scroll: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    notFound: {
+      color: colors.danger,
+      padding: spacing.lg,
+    },
+    back: {
+      color: colors.textSecondary,
+      fontSize: 14,
+    },
+    section: {
+      marginTop: spacing.lg,
+      gap: spacing.xs,
+    },
+    label: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    lyricsInput: {
+      minHeight: 320,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      color: colors.textPrimary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      fontSize: 15,
+      lineHeight: 22,
+      fontFamily: Platform.select({
+        ios: "Menlo",
+        android: "monospace",
+        default: "monospace",
+      }),
+    },
+    savedText: {
+      color: colors.success,
+      fontSize: 13,
+      marginTop: spacing.md,
+    },
+    actionsRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+  });
+}

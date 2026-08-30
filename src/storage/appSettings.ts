@@ -1,5 +1,6 @@
 import { File, Paths } from "expo-file-system";
 import type { Locale } from "@/i18n";
+import type { ThemeOverride } from "@/types/theme";
 import { isFileSystemAvailable } from "./paths";
 
 export interface PersistedAppSettings {
@@ -13,6 +14,8 @@ export interface PersistedAppSettings {
   libraryOrder?: string[];
   /** Manually chosen language, overriding the device locale. Absent means "follow the device". */
   languageOverride?: Locale;
+  /** Absent means "dark" - see types/theme.ts. */
+  themeOverride?: ThemeOverride;
   /** Presentation mode's all-caps lyrics toggle, remembered across sessions. */
   presentationAllCaps?: boolean;
   /** Presentation mode's lyrics font size in points, remembered across sessions. */

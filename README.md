@@ -1,6 +1,6 @@
 # Segue List
 
-![Statements](https://img.shields.io/badge/statements-71.78%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-68%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-70.27%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-72.13%25-red.svg?style=flat)
+![Statements](https://img.shields.io/badge/statements-71.75%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-65.51%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-64.63%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-72.3%25-red.svg?style=flat)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/campos20)
 
 A setlist app for musicians: write your songs' lyrics once, group them into
@@ -33,7 +33,10 @@ setlist mid-set with the next song's lyrics one tap away.
   email, whatever. Importing merges it into your library without touching
   anything you already have.
 - **English and Portuguese**, following the device's language by default,
-  overridable in About.
+  overridable in Settings.
+- **Light and dark themes**, following the device's setting by default (or
+  pick one in Settings) - defaults to dark for anyone updating from before
+  this existed, so the app never changes look out from under you.
 
 ## Architecture
 

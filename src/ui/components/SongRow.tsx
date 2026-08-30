@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii, spacing } from "@/ui/theme";
+import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import { KebabIcon, OverflowMenu, type OverflowMenuItem } from "./OverflowMenu";
 import { MoveColumn } from "./MoveColumn";
 
@@ -42,6 +43,8 @@ export function SongRow({
   position,
   testID,
 }: SongRowProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={[styles.container, nested && styles.nested]}>
       <Pressable
@@ -86,63 +89,65 @@ export function SongRow({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface,
-    overflow: "hidden",
-  },
-  nested: {
-    // Reads as contained by the setlist above it rather than as another
-    // top-level row: pulled in from the left, flatter background.
-    marginLeft: spacing.lg,
-    backgroundColor: colors.panelRaised,
-  },
-  row: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    padding: spacing.md,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  position: {
-    color: colors.textTertiary,
-    fontSize: 15,
-    fontWeight: "800",
-    fontVariant: ["tabular-nums"],
-    minWidth: 20,
-    marginRight: spacing.sm,
-    textAlign: "right",
-  },
-  body: {
-    flex: 1,
-    gap: 4,
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  meta: {
-    color: colors.textTertiary,
-    fontSize: 12,
-  },
-  chevron: {
-    color: colors.textTertiary,
-    fontSize: 22,
-    fontWeight: "600",
-    marginLeft: spacing.sm,
-  },
-  menuColumn: {
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.border,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "stretch",
+      borderRadius: radii.lg,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      overflow: "hidden",
+    },
+    nested: {
+      // Reads as contained by the setlist above it rather than as another
+      // top-level row: pulled in from the left, flatter background.
+      marginLeft: spacing.lg,
+      backgroundColor: colors.panelRaised,
+    },
+    row: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      padding: spacing.md,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    position: {
+      color: colors.textTertiary,
+      fontSize: 15,
+      fontWeight: "800",
+      fontVariant: ["tabular-nums"],
+      minWidth: 20,
+      marginRight: spacing.sm,
+      textAlign: "right",
+    },
+    body: {
+      flex: 1,
+      gap: 4,
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    meta: {
+      color: colors.textTertiary,
+      fontSize: 12,
+    },
+    chevron: {
+      color: colors.textTertiary,
+      fontSize: 22,
+      fontWeight: "600",
+      marginLeft: spacing.sm,
+    },
+    menuColumn: {
+      justifyContent: "center",
+      paddingHorizontal: spacing.sm,
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderLeftColor: colors.border,
+    },
+  });
+}

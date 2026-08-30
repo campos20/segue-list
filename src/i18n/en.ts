@@ -88,6 +88,7 @@ export const en = {
   },
   menu: {
     about: "About",
+    settings: "Settings",
   },
   about: {
     title: "About",
@@ -95,9 +96,16 @@ export const en = {
     version: (version: string) => `Version ${version}`,
     viewOnGithub: "View on GitHub",
     license: "License",
+    backToLibrary: "Library",
+  },
+  settings: {
+    title: "Settings",
     language: "Language",
     languageSystem: "System",
-    backToLibrary: "Library",
+    theme: "Appearance",
+    themeSystem: "System",
+    themeLight: "Light",
+    themeDark: "Dark",
   },
 };
 

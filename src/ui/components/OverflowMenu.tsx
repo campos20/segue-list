@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Dimensions,
   Modal,
@@ -7,7 +7,13 @@ import {
   Text,
   View,
 } from "react-native";
-import { colors, elevation, radii, spacing } from "@/ui/theme";
+import {
+  elevation,
+  radii,
+  spacing,
+  useThemeColors,
+  type ThemeColors,
+} from "@/ui/theme";
 
 export interface OverflowMenuItem {
   key: string;
@@ -44,6 +50,8 @@ export function OverflowMenu({
   accessibilityLabel,
   testID,
 }: OverflowMenuProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const triggerRef = useRef<View>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [anchor, setAnchor] = useState<Anchor>(() =>
@@ -134,6 +142,8 @@ export function OverflowMenu({
 
 /** The "..." trigger icon - three dots, drawn with Views rather than a glyph/icon font. */
 export function KebabIcon() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.kebab}>
       <View style={styles.kebabDot} />
@@ -143,52 +153,56 @@ export function KebabIcon() {
   );
 }
 
-const styles = StyleSheet.create({
-  pressed: {
-    opacity: 0.6,
-  },
-  kebab: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderLight,
-  },
-  kebabDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.textSecondary,
-  },
-  menu: {
-    position: "absolute",
-    minWidth: 180,
-    maxWidth: 300,
-    borderRadius: radii.lg,
-    backgroundColor: colors.panelRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    overflow: "hidden",
-    ...elevation,
-  },
-  item: {
-    paddingVertical: 14,
-    paddingHorizontal: spacing.lg,
-  },
-  itemDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  itemText: {
-    color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  itemTextDestructive: {
-    color: colors.danger,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    pressed: {
+      opacity: 0.6,
+    },
+    kebab: {
+      width: 36,
+      height: 36,
+      borderRadius: radii.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 3,
+      // Same subtle wash as borderLight - white-on-dark or black-on-light,
+      // whichever this theme is.
+      backgroundColor: colors.borderLight,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    kebabDot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.textSecondary,
+    },
+    menu: {
+      position: "absolute",
+      minWidth: 180,
+      maxWidth: 300,
+      borderRadius: radii.lg,
+      backgroundColor: colors.panelRaised,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      overflow: "hidden",
+      ...elevation,
+    },
+    item: {
+      paddingVertical: 14,
+      paddingHorizontal: spacing.lg,
+    },
+    itemDivider: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    itemText: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    itemTextDestructive: {
+      color: colors.danger,
+    },
+  });
+}

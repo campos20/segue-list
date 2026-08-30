@@ -91,6 +91,7 @@ export const ptBR: TranslationDictionary = {
   },
   menu: {
     about: "Sobre",
+    settings: "Configurações",
   },
   about: {
     title: "Sobre",
@@ -98,8 +99,15 @@ export const ptBR: TranslationDictionary = {
     version: (version: string) => `Versão ${version}`,
     viewOnGithub: "Ver no GitHub",
     license: "Licença",
+    backToLibrary: "Biblioteca",
+  },
+  settings: {
+    title: "Configurações",
     language: "Idioma",
     languageSystem: "Sistema",
-    backToLibrary: "Biblioteca",
+    theme: "Aparência",
+    themeSystem: "Sistema",
+    themeLight: "Claro",
+    themeDark: "Escuro",
   },
 };

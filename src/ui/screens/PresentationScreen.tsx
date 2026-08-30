@@ -8,10 +8,16 @@ import {
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
-import { colors, glow, radii, spacing } from "@/ui/theme";
+import {
+  glow,
+  radii,
+  spacing,
+  useThemeColors,
+  type ThemeColors,
+} from "@/ui/theme";
 import { useKeepAwake } from "expo-keep-awake";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -90,6 +96,8 @@ function PresentationView({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // The screen must never lock mid-song - there's no "wake it back up and
   // find your place" during a live show. `suppressDeactivateWarnings`
@@ -419,250 +427,252 @@ function PresentationView({
   );
 }
 
-const styles = StyleSheet.create({
-  emptyContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  exitLink: {
-    color: colors.accent,
-    fontSize: 14,
-  },
-  container: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: colors.background,
-  },
-  rail: {
-    width: 48,
-    flexShrink: 0,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: colors.borderLight,
-  },
-  railOpen: {
-    width: 220,
-  },
-  railButton: {
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
-  },
-  railGlyph: {
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
-  railText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.textSecondary,
-  },
-  railActive: {
-    color: colors.accent,
-  },
-  railDisabled: {
-    opacity: 0.3,
-  },
-  panel: {
-    flex: 1,
-    padding: spacing.sm,
-  },
-  panelSearch: {
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.textPrimary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 8,
-    fontSize: 13,
-    marginBottom: spacing.sm,
-  },
-  panelList: {
-    flex: 1,
-  },
-  panelEmpty: {
-    color: colors.textTertiary,
-    fontSize: 12,
-    paddingVertical: spacing.sm,
-  },
-  panelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  panelRowActive: {
-    backgroundColor: "rgba(251,191,36,0.1)",
-  },
-  panelPosition: {
-    width: 18,
-    color: colors.textTertiary,
-    fontSize: 12,
-  },
-  panelSongName: {
-    flex: 1,
-    color: colors.textSecondary,
-    fontSize: 13,
-  },
-  panelSongNameCurrent: {
-    color: colors.accent,
-  },
-  panelSongNamePlayed: {
-    color: colors.success,
-  },
-  panelCheck: {
-    color: colors.success,
-    fontSize: 12,
-  },
-  main: {
-    flex: 1,
-    minWidth: 0,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
-  },
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  songTitle: {
-    flex: 1,
-    minWidth: 0,
-    color: colors.textPrimary,
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  editButton: {
-    flexShrink: 0,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
-  editButtonText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  songMeta: {
-    marginTop: spacing.xs,
-    color: colors.textTertiary,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  lyricsScroll: {
-    flex: 1,
-  },
-  lyricsContent: {
-    padding: spacing.lg,
-  },
-  lyrics: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    lineHeight: 28,
-    fontFamily: "monospace",
-  },
-  lyricsUppercase: {
-    textTransform: "uppercase",
-  },
-  lyricsEmpty: {
-    color: colors.textTertiary,
-    fontSize: 14,
-  },
-  footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderLight,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  dotsRow: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingBottom: spacing.md,
-  },
-  dot: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  dotCurrent: {
-    backgroundColor: colors.accent,
-    ...glow(colors.accent, 6),
-  },
-  dotPlayed: {
-    backgroundColor: "rgba(52,211,153,0.18)",
-  },
-  dotText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.textSecondary,
-  },
-  dotTextCurrent: {
-    color: colors.accentText,
-  },
-  dotTextPlayed: {
-    color: colors.success,
-  },
-  transportRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  transportButton: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  transportButtonPlayed: {
-    borderColor: "rgba(52,211,153,0.4)",
-    backgroundColor: "rgba(52,211,153,0.1)",
-  },
-  transportButtonPrimary: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.pill,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  transportDisabled: {
-    opacity: 0.3,
-  },
-  transportGlyph: {
-    fontSize: 18,
-    color: colors.textPrimary,
-  },
-  transportGlyphPlayed: {
-    color: colors.success,
-  },
-  transportGlyphPrimary: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.accentText,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    emptyContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.md,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+    },
+    exitLink: {
+      color: colors.accent,
+      fontSize: 14,
+    },
+    container: {
+      flex: 1,
+      flexDirection: "row",
+      backgroundColor: colors.background,
+    },
+    rail: {
+      width: 48,
+      flexShrink: 0,
+      borderRightWidth: StyleSheet.hairlineWidth,
+      borderRightColor: colors.borderLight,
+    },
+    railOpen: {
+      width: 220,
+    },
+    railButton: {
+      height: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    railGlyph: {
+      fontSize: 18,
+      color: colors.textSecondary,
+    },
+    railText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textSecondary,
+    },
+    railActive: {
+      color: colors.accent,
+    },
+    railDisabled: {
+      opacity: 0.3,
+    },
+    panel: {
+      flex: 1,
+      padding: spacing.sm,
+    },
+    panelSearch: {
+      borderRadius: radii.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      color: colors.textPrimary,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 8,
+      fontSize: 13,
+      marginBottom: spacing.sm,
+    },
+    panelList: {
+      flex: 1,
+    },
+    panelEmpty: {
+      color: colors.textTertiary,
+      fontSize: 12,
+      paddingVertical: spacing.sm,
+    },
+    panelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
+    },
+    panelRowActive: {
+      backgroundColor: "rgba(251,191,36,0.1)",
+    },
+    panelPosition: {
+      width: 18,
+      color: colors.textTertiary,
+      fontSize: 12,
+    },
+    panelSongName: {
+      flex: 1,
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    panelSongNameCurrent: {
+      color: colors.accent,
+    },
+    panelSongNamePlayed: {
+      color: colors.success,
+    },
+    panelCheck: {
+      color: colors.success,
+      fontSize: 12,
+    },
+    main: {
+      flex: 1,
+      minWidth: 0,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    headerTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    songTitle: {
+      flex: 1,
+      minWidth: 0,
+      color: colors.textPrimary,
+      fontSize: 28,
+      fontWeight: "800",
+    },
+    editButton: {
+      flexShrink: 0,
+      borderRadius: radii.pill,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+    },
+    editButtonText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    songMeta: {
+      marginTop: spacing.xs,
+      color: colors.textTertiary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    lyricsScroll: {
+      flex: 1,
+    },
+    lyricsContent: {
+      padding: spacing.lg,
+    },
+    lyrics: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      lineHeight: 28,
+      fontFamily: "monospace",
+    },
+    lyricsUppercase: {
+      textTransform: "uppercase",
+    },
+    lyricsEmpty: {
+      color: colors.textTertiary,
+      fontSize: 14,
+    },
+    footer: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    dotsRow: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      paddingBottom: spacing.md,
+    },
+    dot: {
+      width: 32,
+      height: 32,
+      borderRadius: radii.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.borderLight,
+    },
+    dotCurrent: {
+      backgroundColor: colors.accent,
+      ...glow(colors.accent, 6),
+    },
+    dotPlayed: {
+      backgroundColor: "rgba(52,211,153,0.18)",
+    },
+    dotText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textSecondary,
+    },
+    dotTextCurrent: {
+      color: colors.accentText,
+    },
+    dotTextPlayed: {
+      color: colors.success,
+    },
+    transportRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    transportButton: {
+      width: 48,
+      height: 48,
+      borderRadius: radii.pill,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    transportButtonPlayed: {
+      borderColor: "rgba(52,211,153,0.4)",
+      backgroundColor: "rgba(52,211,153,0.1)",
+    },
+    transportButtonPrimary: {
+      width: 48,
+      height: 48,
+      borderRadius: radii.pill,
+      backgroundColor: colors.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    transportDisabled: {
+      opacity: 0.3,
+    },
+    transportGlyph: {
+      fontSize: 18,
+      color: colors.textPrimary,
+    },
+    transportGlyphPlayed: {
+      color: colors.success,
+    },
+    transportGlyphPrimary: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.accentText,
+    },
+  });
+}
