@@ -86,7 +86,7 @@ export interface LyricsFileImportResult {
 }
 
 /**
- * Creates one song per picked .txt/.docx/.odt file, named from the filename
+ * Creates one song per picked .txt/.docx/.odt/.pdf file, named from the filename
  * with lyrics read out of it. Each file is isolated - one that fails to
  * parse is reported and skipped rather than aborting the batch, since a
  * bulk import of a folder of lyric sheets is exactly the case where one bad

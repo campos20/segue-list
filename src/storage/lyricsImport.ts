@@ -1,17 +1,20 @@
 import { strFromU8, unzipSync } from "fflate";
 import type { File } from "expo-file-system";
+import { LyricsImportError } from "./lyricsImportError";
+import { extractPdfText } from "./pdfTextExtract";
 
 /**
- * Reads lyrics out of a picked .txt/.docx/.odt file so a user with dozens of
- * lyric sheets already sitting in Drive/OneDrive/Files doesn't have to
- * retype each one. .docx and .odt are both a zip of XML parts underneath -
- * `word/document.xml` and `content.xml` respectively - so both go through
- * the same "strip the markup, keep paragraph/line breaks" extraction, just
- * pointed at different tag names.
+ * Reads lyrics out of a picked .txt/.docx/.odt/.pdf file so a user with
+ * dozens of lyric sheets already sitting in Drive/OneDrive/Files doesn't
+ * have to retype each one. .docx and .odt are both a zip of XML parts
+ * underneath - `word/document.xml` and `content.xml` respectively - so both
+ * go through the same "strip the markup, keep paragraph/line breaks"
+ * extraction, just pointed at different tag names. .pdf has no such
+ * shortcut - see pdfTextExtract.ts for why and how.
  */
-export class LyricsImportError extends Error {}
+export { LyricsImportError };
 
-const SUPPORTED_EXTENSIONS = ["txt", "docx", "odt"] as const;
+const SUPPORTED_EXTENSIONS = ["txt", "docx", "odt", "pdf"] as const;
 type SupportedExtension = (typeof SUPPORTED_EXTENSIONS)[number];
 
 function extensionOf(fileName: string): string {
@@ -121,7 +124,7 @@ export interface ImportedLyricsFile {
   lyrics: string;
 }
 
-/** Reads a picked .txt/.docx/.odt file into a song name (from the filename) and its lyrics text. */
+/** Reads a picked .txt/.docx/.odt/.pdf file into a song name (from the filename) and its lyrics text. */
 export async function extractLyricsFromFile(
   file: File,
   fileName: string,
@@ -129,7 +132,7 @@ export async function extractLyricsFromFile(
   const extension = extensionOf(fileName);
   if (!isSupportedExtension(extension)) {
     throw new LyricsImportError(
-      `"${fileName}" isn't a .txt, .docx, or .odt file.`,
+      `"${fileName}" isn't a .txt, .docx, .odt, or .pdf file.`,
     );
   }
   const name =
@@ -138,6 +141,13 @@ export async function extractLyricsFromFile(
 
   if (extension === "txt") {
     return { name, lyrics: cleanLyrics(await file.text()) };
+  }
+
+  if (extension === "pdf") {
+    return {
+      name,
+      lyrics: cleanLyrics(extractPdfText(await file.bytes(), fileName)),
+    };
   }
 
   let zip: Record<string, Uint8Array>;

@@ -1,11 +1,13 @@
 import type { Locale } from "@/i18n";
 import { writeAppSettings } from "@/storage/appSettings";
+import type { ThemeOverride } from "@/types/theme";
 import type { AppDispatch } from "./index";
 import {
   languageOverrideSet,
   presentationAllCapsSet,
   presentationAutoScrollLevelSet,
   presentationFontSizeSet,
+  themeOverrideSet,
 } from "./settingsSlice";
 
 /** Sets the manual language override (or `null` to follow the device locale again) and persists it. */
@@ -13,6 +15,14 @@ export function persistLanguageOverride(locale: Locale | null) {
   return (dispatch: AppDispatch) => {
     dispatch(languageOverrideSet(locale));
     writeAppSettings({ languageOverride: locale ?? undefined });
+  };
+}
+
+/** Sets the theme preference ("system" follows the device) and persists it. */
+export function persistThemeOverride(theme: ThemeOverride) {
+  return (dispatch: AppDispatch) => {
+    dispatch(themeOverrideSet(theme));
+    writeAppSettings({ themeOverride: theme });
   };
 }
 

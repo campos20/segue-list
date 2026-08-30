@@ -35,7 +35,7 @@ import { SongRow } from "@/ui/components/SongRow";
 import { TextField } from "@/ui/components/TextField";
 import { buildLibraryTree, type LibraryItem } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
-import { colors, radii, spacing } from "@/ui/theme";
+import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import Constants from "expo-constants";
 import { getDocumentAsync } from "expo-document-picker";
 import { File } from "expo-file-system";
@@ -56,6 +56,8 @@ export function LibraryScreen() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const songs = useAppSelector((state) =>
     songsSelectors.selectAll(state.songs),
@@ -281,6 +283,7 @@ export function LibraryScreen() {
           "text/plain",
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           "application/vnd.oasis.opendocument.text",
+          "application/pdf",
         ],
         multiple: true,
         copyToCacheDirectory: true,
@@ -372,6 +375,11 @@ export function LibraryScreen() {
       key: "export-docx",
       label: t.library.exportFullLibraryDocx,
       onPress: handleExportAllDocx,
+    },
+    {
+      key: "settings",
+      label: t.menu.settings,
+      onPress: () => router.push("/settings"),
     },
     { key: "about", label: t.menu.about, onPress: () => router.push("/about") },
   ];
@@ -622,110 +630,112 @@ export function LibraryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  searchRow: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  eyebrow: {
-    color: colors.textTertiary,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginBottom: 2,
-  },
-  header: {
-    color: colors.textPrimary,
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  newSetlistButton: {
-    borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-  },
-  newSetlistText: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  newSongButton: {
-    borderRadius: radii.pill,
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-  },
-  newSongText: {
-    color: colors.accentText,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-  status: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: 13,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  setlistGroup: {
-    gap: spacing.sm,
-  },
-  setlistEmpty: {
-    color: colors.textTertiary,
-    fontSize: 13,
-    marginLeft: spacing.lg,
-    marginBottom: spacing.xs,
-  },
-  empty: {
-    alignItems: "center",
-    paddingTop: 80,
-    gap: 6,
-  },
-  emptyTitle: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  emptyMeta: {
-    color: colors.textTertiary,
-    fontSize: 13,
-  },
-  loading: {
-    marginTop: 60,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    searchRow: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.md,
+    },
+    eyebrow: {
+      color: colors.textTertiary,
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+      marginBottom: 2,
+    },
+    header: {
+      color: colors.textPrimary,
+      fontSize: 30,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
+    newSetlistButton: {
+      borderRadius: radii.pill,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 10,
+    },
+    newSetlistText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    newSongButton: {
+      borderRadius: radii.pill,
+      backgroundColor: colors.accent,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 10,
+    },
+    newSongText: {
+      color: colors.accentText,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+    status: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    error: {
+      color: colors.danger,
+      fontSize: 13,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    list: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.sm,
+    },
+    setlistGroup: {
+      gap: spacing.sm,
+    },
+    setlistEmpty: {
+      color: colors.textTertiary,
+      fontSize: 13,
+      marginLeft: spacing.lg,
+      marginBottom: spacing.xs,
+    },
+    empty: {
+      alignItems: "center",
+      paddingTop: 80,
+      gap: 6,
+    },
+    emptyTitle: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    emptyMeta: {
+      color: colors.textTertiary,
+      fontSize: 13,
+    },
+    loading: {
+      marginTop: 60,
+    },
+  });
+}

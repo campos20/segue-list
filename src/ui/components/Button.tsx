@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, type PressableProps } from "react-native";
-import { colors, radii, spacing } from "@/ui/theme";
+import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 interface ButtonProps extends PressableProps {
   children: string;
@@ -13,6 +14,8 @@ export function Button({
   style,
   ...rest
 }: ButtonProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isPrimary = variant === "primary";
   return (
     <Pressable
@@ -38,37 +41,39 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    flexShrink: 0,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primary: {
-    backgroundColor: colors.accent,
-  },
-  secondary: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-  text: {
-    fontSize: 14,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  textPrimary: {
-    color: colors.accentText,
-  },
-  textSecondary: {
-    color: colors.textPrimary,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    base: {
+      flexShrink: 0,
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    primary: {
+      backgroundColor: colors.accent,
+    },
+    secondary: {
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+    text: {
+      fontSize: 14,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    textPrimary: {
+      color: colors.accentText,
+    },
+    textSecondary: {
+      color: colors.textPrimary,
+    },
+  });
+}

@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { colors } from "@/ui/theme";
+import { useThemeColors, type ThemeColors } from "@/ui/theme";
 
 interface MoveColumnProps {
   canMoveUp: boolean;
@@ -26,6 +27,8 @@ export function MoveColumn({
   moveDownAccessibilityLabel,
   testID,
 }: MoveColumnProps) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.column}>
       <Pressable
@@ -62,42 +65,44 @@ export function MoveColumn({
   );
 }
 
-const styles = StyleSheet.create({
-  column: {
-    justifyContent: "center",
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: colors.border,
-  },
-  button: {
-    width: 40,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  arrowUp: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderBottomWidth: 7,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: colors.textSecondary,
-  },
-  arrowDown: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 7,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: colors.textSecondary,
-  },
-  arrowDisabled: {
-    opacity: 0.25,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    column: {
+      justifyContent: "center",
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderLeftColor: colors.border,
+    },
+    button: {
+      width: 40,
+      height: 32,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    arrowUp: {
+      width: 0,
+      height: 0,
+      borderLeftWidth: 5,
+      borderRightWidth: 5,
+      borderBottomWidth: 7,
+      borderLeftColor: "transparent",
+      borderRightColor: "transparent",
+      borderBottomColor: colors.textSecondary,
+    },
+    arrowDown: {
+      width: 0,
+      height: 0,
+      borderLeftWidth: 5,
+      borderRightWidth: 5,
+      borderTopWidth: 7,
+      borderLeftColor: "transparent",
+      borderRightColor: "transparent",
+      borderTopColor: colors.textSecondary,
+    },
+    arrowDisabled: {
+      opacity: 0.25,
+    },
+  });
+}

@@ -1,5 +1,25 @@
-/** Shared visual language for the app - a dark, stage-friendly look with an amber accent for setlists. */
-export const colors = {
+import { useColorScheme } from "react-native";
+import { useAppSelector } from "@/store/hooks";
+import type { ThemeOverride } from "@/types/theme";
+
+export interface ThemeColors {
+  background: string;
+  panel: string;
+  panelRaised: string;
+  surface: string;
+  border: string;
+  borderLight: string;
+  textPrimary: string;
+  textSecondary: string;
+  textTertiary: string;
+  accent: string;
+  accentText: string;
+  danger: string;
+  success: string;
+}
+
+/** Shared visual language for the app - a stage-friendly look with an amber accent for setlists, in a dark and a light variant. */
+export const darkColors: ThemeColors = {
   background: "#000000",
   panel: "#111114",
   panelRaised: "#18181c",
@@ -13,7 +33,27 @@ export const colors = {
   accentText: "#1c1400",
   danger: "#ff453a",
   success: "#34d399",
-} as const;
+};
+
+// Same relationships as darkColors (panel darker than surface, tertiary <
+// secondary < primary text emphasis), not a straight color inversion - a
+// slightly warm off-white rather than pure white, and a darker amber so
+// `accent` still passes as body text, not just as a filled swatch.
+export const lightColors: ThemeColors = {
+  background: "#faf9f6",
+  panel: "#f1efe8",
+  panelRaised: "#e8e4da",
+  surface: "#ffffff",
+  border: "#ddd8cd",
+  borderLight: "rgba(0,0,0,0.08)",
+  textPrimary: "#1a1a18",
+  textSecondary: "#5c5b56",
+  textTertiary: "#8f8c84",
+  accent: "#a15c00",
+  accentText: "#fff6e6",
+  danger: "#c81e37",
+  success: "#0f8f5a",
+};
 
 export const radii = {
   sm: 8,
@@ -49,4 +89,37 @@ export function glow(color: string, radius = 10) {
     shadowRadius: radius,
     elevation: 8,
   } as const;
+}
+
+/**
+ * Resolves the persisted theme preference and the device's own color scheme
+ * down to a single dark/light decision. Pulled out as a plain function (no
+ * hooks) so it's unit-testable without rendering anything - `useThemeColors`
+ * below is just this plus the two reactive data sources.
+ */
+export function resolveIsDark(
+  themeOverride: ThemeOverride,
+  // Android can report "unspecified" alongside RN's own null/undefined for
+  // "the OS has no opinion" - all three fall back to dark, same as an
+  // absent preference does, per this app's own default.
+  systemScheme: string | null | undefined,
+): boolean {
+  if (themeOverride === "system") return systemScheme !== "light";
+  return themeOverride !== "light";
+}
+
+function useIsDark(): boolean {
+  const themeOverride = useAppSelector((state) => state.settings.themeOverride);
+  const systemScheme = useColorScheme();
+  return resolveIsDark(themeOverride, systemScheme);
+}
+
+/** The current theme's colors, reactive to the persisted preference and (when set to "system") the device's own light/dark setting. */
+export function useThemeColors(): ThemeColors {
+  return useIsDark() ? darkColors : lightColors;
+}
+
+/** For anything that needs the dark/light decision itself, not the color values - e.g. `<StatusBar style="light" | "dark">`. */
+export function useThemeMode(): "dark" | "light" {
+  return useIsDark() ? "dark" : "light";
 }
