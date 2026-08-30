@@ -104,6 +104,54 @@ export function SettingsIcon() {
   );
 }
 
+export function PresentIcon() {
+  const colors = useThemeColors();
+  return (
+    <View style={styles.box}>
+      <View
+        style={[styles.playTriangle, { borderLeftColor: colors.textSecondary }]}
+      />
+    </View>
+  );
+}
+
+export function AddToSetlistIcon() {
+  const colors = useThemeColors();
+  const color = colors.textSecondary;
+  return (
+    <View style={styles.box}>
+      <View style={[styles.plusHorizontal, { backgroundColor: color }]} />
+      <View style={[styles.plusVertical, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+export function RemoveFromSetlistIcon() {
+  const colors = useThemeColors();
+  return (
+    <View style={styles.box}>
+      <View
+        style={[styles.plusHorizontal, { backgroundColor: colors.textSecondary }]}
+      />
+    </View>
+  );
+}
+
+export function DeleteIcon({ destructive }: { destructive?: boolean }) {
+  const colors = useThemeColors();
+  const color = destructive ? colors.danger : colors.textSecondary;
+  return (
+    <View style={styles.box}>
+      <View style={[styles.trashLid, { backgroundColor: color }]} />
+      <View style={[styles.trashHandle, { borderColor: color }]} />
+      <View style={[styles.trashBody, { borderColor: color }]}>
+        <View style={[styles.trashRidge, { backgroundColor: color }]} />
+        <View style={[styles.trashRidge, { backgroundColor: color }]} />
+      </View>
+    </View>
+  );
+}
+
 export function AboutIcon() {
   const colors = useThemeColors();
   const color = colors.textSecondary;
@@ -238,6 +286,73 @@ const styles = StyleSheet.create({
     top: 8.5,
     width: 2,
     height: 5,
+    borderRadius: 1,
+  },
+  playTriangle: {
+    position: "absolute",
+    left: 6,
+    top: 3,
+    width: 0,
+    height: 0,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderLeftWidth: 8,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+  },
+  plusHorizontal: {
+    position: "absolute",
+    left: 4,
+    top: 8,
+    width: 10,
+    height: 2,
+    borderRadius: 1,
+  },
+  plusVertical: {
+    position: "absolute",
+    left: 8,
+    top: 4,
+    width: 2,
+    height: 10,
+    borderRadius: 1,
+  },
+  trashLid: {
+    position: "absolute",
+    left: 3,
+    top: 4,
+    width: 12,
+    height: 1.5,
+    borderRadius: 1,
+  },
+  trashHandle: {
+    position: "absolute",
+    left: 7,
+    top: 1.5,
+    width: 4,
+    height: 3,
+    borderWidth: 1.3,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  trashBody: {
+    position: "absolute",
+    left: 4,
+    top: 6,
+    width: 10,
+    height: 10,
+    borderWidth: 1.3,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2.5,
+  },
+  trashRidge: {
+    width: 1.3,
+    height: 6,
     borderRadius: 1,
   },
 });

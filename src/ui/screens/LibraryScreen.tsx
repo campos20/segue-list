@@ -27,10 +27,14 @@ import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
 import {
   AboutIcon,
+  AddToSetlistIcon,
+  DeleteIcon,
   ExportDocxIcon,
   ExportIcon,
   ImportIcon,
   ImportLyricsIcon,
+  PresentIcon,
+  RemoveFromSetlistIcon,
   SettingsIcon,
 } from "@/ui/components/MenuIcons";
 import {
@@ -332,6 +336,7 @@ export function LibraryScreen() {
       .map((setlist) => ({
         key: `add-${setlist.id}`,
         label: t.setlist.addTo(setlist.name),
+        icon: <AddToSetlistIcon />,
         onPress: () => dispatch(addSongToSetlist(setlist.id, song.id)),
       }));
 
@@ -340,6 +345,7 @@ export function LibraryScreen() {
           {
             key: "remove",
             label: t.setlist.removeFrom,
+            icon: <RemoveFromSetlistIcon />,
             onPress: () =>
               dispatch(removeSongFromSetlist(containingSetlistId, song.id)),
           },
@@ -350,6 +356,7 @@ export function LibraryScreen() {
       {
         key: "present",
         label: t.setlist.present,
+        icon: <PresentIcon />,
         onPress: () =>
           router.push({
             pathname: "/song/[songId]/present",
@@ -362,6 +369,7 @@ export function LibraryScreen() {
         key: "delete",
         label: t.setlist.deleteSong,
         destructive: true,
+        icon: <DeleteIcon destructive />,
         onPress: () => handleDeleteSong(song.id, song.name),
       },
     ];
