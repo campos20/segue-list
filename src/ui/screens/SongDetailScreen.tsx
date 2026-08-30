@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -166,7 +165,14 @@ export function SongDetailScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll}>
+        {/*
+          Fixed header (name, tags, the Highlight row) and fixed footer
+          (Save/Present) never scroll away - only the lyrics box in between
+          is flex: 1, so it's the one thing that shrinks/grows and scrolls
+          internally. That's a deliberate layout choice: on a real stage,
+          losing sight of Save mid-edit is worse than a shorter text box.
+        */}
+        <View style={styles.header}>
           <Pressable
             onPress={() => confirmDiscardIfDirty(() => router.back())}
             hitSlop={8}
@@ -243,38 +249,59 @@ export function SongDetailScreen() {
             )}
           </View>
 
-          <View style={styles.section}>
-            <View style={styles.lyricsHeaderRow}>
-              <Text style={styles.label}>{t.song.lyricsLabel}</Text>
-              <Button
-                variant="secondary"
-                onPress={handleToggleHighlight}
-                disabled={lyricsSelection.start === lyricsSelection.end}
-                style={styles.highlightButton}
-              >
-                {t.song.highlightToggle}
-              </Button>
-            </View>
-            <Text style={styles.hint}>{t.song.highlightHint}</Text>
-            <TextInput
-              value={lyrics}
-              onChangeText={setLyrics}
-              onSelectionChange={(event) => {
-                lyricsSelectionRef.current = event.nativeEvent.selection;
-                setLyricsSelection(event.nativeEvent.selection);
-              }}
-              multiline
-              textAlignVertical="top"
-              placeholder={t.song.lyricsPlaceholder}
-              placeholderTextColor={colors.textTertiary}
-              selectionColor={colors.accent}
-              cursorColor={colors.accent}
-              style={styles.lyricsInput}
-            />
+          <View style={styles.lyricsHeaderRow}>
+            <Text style={styles.label}>{t.song.lyricsLabel}</Text>
+            <Button
+              variant="secondary"
+              onPress={handleToggleHighlight}
+              disabled={lyricsSelection.start === lyricsSelection.end}
+              style={styles.highlightButton}
+            >
+              {t.song.highlightToggle}
+            </Button>
           </View>
+          <Text style={styles.hint}>{t.song.highlightHint}</Text>
+        </View>
 
+        <View style={styles.lyricsSection}>
+          <TextInput
+            value={lyrics}
+            onChangeText={setLyrics}
+            onSelectionChange={(event) => {
+              lyricsSelectionRef.current = event.nativeEvent.selection;
+              setLyricsSelection(event.nativeEvent.selection);
+            }}
+            multiline
+            textAlignVertical="top"
+            placeholder={t.song.lyricsPlaceholder}
+            placeholderTextColor={colors.textTertiary}
+            selectionColor={colors.accent}
+            cursorColor={colors.accent}
+            style={styles.lyricsInput}
+          />
+
+          {/*
+            Anchored to lyricsSection (not the whole screen) so it's always
+            centered on the lyrics box itself, regardless of how tall the
+            header ends up (more tags = taller header = lyricsSection starts
+            lower) - a screen-relative percentage would drift into the
+            header on a tag-heavy song.
+          */}
+          <Pressable
+            onPress={() => setPreviewOpen(true)}
+            style={({ pressed }) => [
+              styles.previewTab,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.previewTabText}>
+              {t.song.lyricsPreviewLabel}
+            </Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.footer}>
           {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
-
           <View style={styles.actionsRow}>
             <Button onPress={handleSave} disabled={!name.trim()}>
               {t.common.save}
@@ -293,17 +320,7 @@ export function SongDetailScreen() {
               {t.setlist.present}
             </Button>
           </View>
-        </ScrollView>
-
-        <Pressable
-          onPress={() => setPreviewOpen(true)}
-          style={({ pressed }) => [
-            styles.previewTab,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.previewTabText}>{t.song.lyricsPreviewLabel}</Text>
-        </Pressable>
+        </View>
       </KeyboardAvoidingView>
 
       <LyricsPreviewDrawer
@@ -321,9 +338,29 @@ function createStyles(colors: ThemeColors) {
       flex: 1,
       backgroundColor: colors.background,
     },
-    scroll: {
-      padding: spacing.lg,
-      paddingBottom: spacing.xl,
+    // Never scrolls - name, tags, and the Highlight row stay on screen the
+    // whole time you're editing.
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+      gap: spacing.xs,
+    },
+    // The one part of the screen that grows/shrinks with available space
+    // and scrolls internally (via the TextInput's own native scrolling) -
+    // see lyricsInput below.
+    lyricsSection: {
+      flex: 1,
+      position: "relative",
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    // Never scrolls either - Save/Present are always reachable.
+    footer: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
     },
     notFound: {
       color: colors.danger,
@@ -342,6 +379,7 @@ function createStyles(colors: ThemeColors) {
       alignItems: "center",
       justifyContent: "space-between",
       gap: spacing.sm,
+      marginTop: spacing.lg,
     },
     highlightButton: {
       paddingVertical: 6,
@@ -360,9 +398,11 @@ function createStyles(colors: ThemeColors) {
     // to read, so the styled/highlighted rendering only lives in the
     // LyricsPreviewDrawer now. Still sized to match the presentation
     // screen's own lyrics font, so it at least *feels* like editing the
-    // real thing.
+    // real thing. flex: 1 (both here and on lyricsSection) is what makes
+    // this the one part of the screen that grows/shrinks - it scrolls
+    // internally rather than pushing the header or footer off screen.
     lyricsInput: {
-      minHeight: 220,
+      flex: 1,
       borderRadius: radii.md,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -374,12 +414,12 @@ function createStyles(colors: ThemeColors) {
       lineHeight: LYRICS_LINE_HEIGHT,
       fontFamily: LYRICS_FONT_FAMILY,
     },
-    // A tab pinned to the screen's right edge (not the scroll content), so
-    // it's reachable regardless of scroll position - opens LyricsPreviewDrawer.
+    // A tab pinned to the right edge of the lyrics box specifically (see
+    // lyricsSection's position: relative) - opens LyricsPreviewDrawer.
     previewTab: {
       position: "absolute",
       right: 0,
-      top: "42%",
+      top: "50%",
       backgroundColor: colors.accent,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.sm,
@@ -395,7 +435,6 @@ function createStyles(colors: ThemeColors) {
     savedText: {
       color: colors.success,
       fontSize: 13,
-      marginTop: spacing.md,
     },
     actionsRow: {
       flexDirection: "row",
