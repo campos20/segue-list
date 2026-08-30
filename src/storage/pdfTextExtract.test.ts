@@ -281,6 +281,34 @@ describe("extractPdfText", () => {
     const pdf = buildPdf([{ num: 1, dict: "/Type /Pages /Kids []" }]);
     expect(() => extractPdfText(pdf, "song.pdf")).toThrow(LyricsImportError);
   });
+
+  it("does not mistake 'endobj' bytes inside a stream's payload for the object's real terminator", () => {
+    // A stream's payload is arbitrary bytes - an embedded font or image
+    // could, by coincidence, contain the literal text "endobj". If the
+    // object scanner stopped at that instead of the real terminator, every
+    // object after it would be scanned starting from mid-stream garbage.
+    const pdf = buildPdf([
+      {
+        num: 1,
+        dict: "/Length 0",
+        stream: "junk data with endobj inside it, not a real terminator",
+      },
+      {
+        num: 2,
+        dict: "/Type /Page /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R",
+      },
+      {
+        num: 3,
+        dict: "/Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding",
+      },
+      {
+        num: 4,
+        dict: "/Length 0",
+        stream: "BT\n/F1 12 Tf\n100 700 Td\n(Real lyrics) Tj\nET",
+      },
+    ]);
+    expect(extractPdfText(pdf, "song.pdf")).toBe("Real lyrics");
+  });
 });
 
 describe("parseToUnicodeCMap", () => {

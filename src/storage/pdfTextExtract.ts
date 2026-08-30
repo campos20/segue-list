@@ -57,12 +57,39 @@ function scanObjects(text: string): Map<number, PdfObject> {
   while ((match = re.exec(text))) {
     const num = Number(match[1]);
     const start = re.lastIndex;
-    const end = text.indexOf("endobj", start);
+    const end = findObjectEnd(text, start);
     if (end === -1) continue;
     objects.set(num, { start, end });
     re.lastIndex = end;
   }
   return objects;
+}
+
+/**
+ * Finds this object's real `endobj`, skipping past any occurrence that
+ * lands inside a `stream ... endstream` block instead of terminating the
+ * object - a stream's payload is arbitrary bytes (compressed data, an
+ * embedded font, an image), and nothing stops those bytes from spelling
+ * "endobj" by coincidence. `\bstream\b`/`\bendstream\b` (not a bare
+ * `indexOf`) so a word like "Streamline" in a dict value can't be
+ * mistaken for the keyword.
+ */
+function findObjectEnd(text: string, start: number): number {
+  let pos = start;
+  for (;;) {
+    const streamMatch = /\bstream\b/.exec(text.slice(pos));
+    const endobjIdx = text.indexOf("endobj", pos);
+    if (endobjIdx === -1) return -1;
+    const streamIdx = streamMatch ? pos + streamMatch.index : -1;
+    if (streamIdx === -1 || streamIdx > endobjIdx) return endobjIdx;
+
+    const endstreamMatch = /\bendstream\b/.exec(
+      text.slice(streamIdx + "stream".length),
+    );
+    if (!endstreamMatch) return endobjIdx; // malformed; best effort
+    pos =
+      streamIdx + "stream".length + endstreamMatch.index + "endstream".length;
+  }
 }
 
 function bodyOf(text: string, obj: PdfObject): string {
@@ -606,7 +633,14 @@ function extractPageText(
   return out;
 }
 
-/** Reads a picked .pdf file's plain text, page by page, in file order. */
+/**
+ * Reads a picked .pdf file's plain text, page by page, in ascending object
+ * number order. Not necessarily physical byte order in the file - but
+ * object numbers are assigned in creation order by every generator this
+ * extractor targets, and stay stable across an incremental update (unlike
+ * physical position, which a later save can freely reshuffle), so they're
+ * the more reliable proxy for page order between the two.
+ */
 export function extractPdfText(bytes: Uint8Array, fileName: string): string {
   const text = bytesToLatin1(bytes);
   const objects = scanObjects(text);

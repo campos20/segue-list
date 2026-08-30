@@ -1,6 +1,6 @@
 # Segue List
 
-![Statements](https://img.shields.io/badge/statements-71.75%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-65.51%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-64.63%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-72.3%25-red.svg?style=flat)
+![Statements](https://img.shields.io/badge/statements-71.75%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-63.79%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-64.63%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-72.3%25-red.svg?style=flat)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/campos20)
 
 A setlist app for musicians: write your songs' lyrics once, group them into

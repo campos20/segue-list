@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { Locale } from "@/i18n";
 import { readAppSettings } from "@/storage/appSettings";
-import type { ThemeOverride } from "@/types/theme";
+import { isThemeOverride, type ThemeOverride } from "@/types/theme";
 
 export const DEFAULT_PRESENTATION_FONT_SIZE = 18;
 export type { ThemeOverride };
@@ -23,7 +23,9 @@ const persisted = readAppSettings();
 const initialState: SettingsState = {
   libraryOrder: persisted.libraryOrder ?? [],
   languageOverride: persisted.languageOverride ?? null,
-  themeOverride: persisted.themeOverride ?? "dark",
+  themeOverride: isThemeOverride(persisted.themeOverride)
+    ? persisted.themeOverride
+    : "dark",
   presentationAllCaps: persisted.presentationAllCaps ?? false,
   presentationFontSize:
     persisted.presentationFontSize ?? DEFAULT_PRESENTATION_FONT_SIZE,
