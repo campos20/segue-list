@@ -52,6 +52,54 @@ export function parseLyricsHighlights(source: string): LyricsSegment[] {
   return segments;
 }
 
+export interface LyricsOverlaySegment {
+  text: string;
+  kind: "plain" | "marker" | "highlighted";
+}
+
+/**
+ * Like `parseLyricsHighlights`, but keeps the `{{`/`}}` markers themselves
+ * as their own "marker" segments instead of stripping them - for the
+ * editor's WYSIWYG overlay, where an invisible-text TextInput sits exactly
+ * on top of this rendering and needs every character (markers included) to
+ * be present in both layers, or the two would wrap differently and the
+ * cursor would drift out of alignment with what's on screen. The markers
+ * are rendered dimmed rather than truly hidden - genuinely hiding them
+ * would only be safe with a real rich-text editor, not a position overlay.
+ */
+export function parseLyricsForOverlay(source: string): LyricsOverlaySegment[] {
+  const segments: LyricsOverlaySegment[] = [];
+  let rest = source;
+
+  while (rest.length > 0) {
+    const openIndex = rest.indexOf(HIGHLIGHT_OPEN);
+    if (openIndex === -1) {
+      segments.push({ text: rest, kind: "plain" });
+      break;
+    }
+    if (openIndex > 0) {
+      segments.push({ text: rest.slice(0, openIndex), kind: "plain" });
+    }
+
+    const afterOpen = rest.slice(openIndex + HIGHLIGHT_OPEN.length);
+    const closeIndex = afterOpen.indexOf(HIGHLIGHT_CLOSE);
+    if (closeIndex === -1) {
+      segments.push({ text: rest.slice(openIndex), kind: "plain" });
+      break;
+    }
+
+    segments.push({ text: HIGHLIGHT_OPEN, kind: "marker" });
+    segments.push({
+      text: afterOpen.slice(0, closeIndex),
+      kind: "highlighted",
+    });
+    segments.push({ text: HIGHLIGHT_CLOSE, kind: "marker" });
+    rest = afterOpen.slice(closeIndex + HIGHLIGHT_CLOSE.length);
+  }
+
+  return segments;
+}
+
 /**
  * Groups parsed segments back into lines (one array of runs per line),
  * splitting on `\n` wherever it falls - including inside a highlighted

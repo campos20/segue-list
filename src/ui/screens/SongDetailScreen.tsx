@@ -17,13 +17,20 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import { Button } from "@/ui/components/Button";
+import { LyricsPreviewDrawer } from "@/ui/components/LyricsPreviewDrawer";
 import { TextField } from "@/ui/components/TextField";
-import { parseLyricsHighlights, toggleHighlightAt } from "@/ui/lyricsHighlight";
-import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
+import { toggleHighlightAt } from "@/ui/lyricsHighlight";
+import {
+  elevation,
+  radii,
+  spacing,
+  useThemeColors,
+  type ThemeColors,
+} from "@/ui/theme";
 
 // Matches the presentation screen's own lyrics style (PresentationScreen.tsx's
-// default fontSize/lineHeight and font family), so the editor and its
-// preview read as a stand-in for the stage view rather than a plain form.
+// default fontSize/lineHeight and font family), so the editor reads as a
+// stand-in for the stage view rather than a plain form field.
 const LYRICS_FONT_SIZE = 18;
 const LYRICS_LINE_HEIGHT = 28;
 const LYRICS_FONT_FAMILY = Platform.select({
@@ -53,6 +60,7 @@ export function SongDetailScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [saved, setSaved] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Adjusted during render rather than in an effect: resets the draft when
   // the song first becomes available (hydration can land after this screen
@@ -246,35 +254,13 @@ export function SongDetailScreen() {
                 setLyricsSelection(event.nativeEvent.selection)
               }
               multiline
-              numberOfLines={20}
               textAlignVertical="top"
               placeholder={t.song.lyricsPlaceholder}
               placeholderTextColor={colors.textTertiary}
+              selectionColor={colors.accent}
+              cursorColor={colors.accent}
               style={styles.lyricsInput}
             />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{t.song.lyricsPreviewLabel}</Text>
-            <View style={styles.lyricsPreview}>
-              {lyrics ? (
-                <Text style={styles.lyricsPreviewText}>
-                  {parseLyricsHighlights(lyrics).map((segment, index) =>
-                    segment.highlighted ? (
-                      <Text key={index} style={styles.lyricsPreviewHighlight}>
-                        {segment.text}
-                      </Text>
-                    ) : (
-                      segment.text
-                    ),
-                  )}
-                </Text>
-              ) : (
-                <Text style={styles.lyricsPreviewEmpty}>
-                  {t.song.lyricsPlaceholder}
-                </Text>
-              )}
-            </View>
           </View>
 
           {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
@@ -298,7 +284,23 @@ export function SongDetailScreen() {
             </Button>
           </View>
         </ScrollView>
+
+        <Pressable
+          onPress={() => setPreviewOpen(true)}
+          style={({ pressed }) => [
+            styles.previewTab,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.previewTabText}>{t.song.lyricsPreviewLabel}</Text>
+        </Pressable>
       </KeyboardAvoidingView>
+
+      <LyricsPreviewDrawer
+        visible={previewOpen}
+        lyrics={lyrics}
+        onClose={() => setPreviewOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -344,11 +346,13 @@ function createStyles(colors: ThemeColors) {
       fontSize: 12,
       fontWeight: "700",
     },
-    // Sized and colored to match the presentation screen's own lyrics style
-    // (same font size/line-height ratio, same background token) so editing
-    // reads as a preview of what you'll see on stage, not a plain form field.
+    // A plain text field - a styled inline overlay was tried and found hard
+    // to read, so the styled/highlighted rendering only lives in the
+    // LyricsPreviewDrawer now. Still sized to match the presentation
+    // screen's own lyrics font, so it at least *feels* like editing the
+    // real thing.
     lyricsInput: {
-      minHeight: 320,
+      minHeight: 220,
       borderRadius: radii.md,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -360,29 +364,23 @@ function createStyles(colors: ThemeColors) {
       lineHeight: LYRICS_LINE_HEIGHT,
       fontFamily: LYRICS_FONT_FAMILY,
     },
-    lyricsPreview: {
-      minHeight: 160,
-      borderRadius: radii.md,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.background,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.lg,
+    // A tab pinned to the screen's right edge (not the scroll content), so
+    // it's reachable regardless of scroll position - opens LyricsPreviewDrawer.
+    previewTab: {
+      position: "absolute",
+      right: 0,
+      top: "42%",
+      backgroundColor: colors.accent,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderTopLeftRadius: radii.md,
+      borderBottomLeftRadius: radii.md,
+      ...elevation,
     },
-    lyricsPreviewText: {
-      color: colors.textPrimary,
-      fontSize: LYRICS_FONT_SIZE,
-      lineHeight: LYRICS_LINE_HEIGHT,
-      fontFamily: LYRICS_FONT_FAMILY,
-    },
-    lyricsPreviewHighlight: {
-      fontWeight: "800",
-      backgroundColor: colors.highlightBackground,
-    },
-    lyricsPreviewEmpty: {
-      color: colors.textTertiary,
-      fontSize: 14,
-      fontFamily: LYRICS_FONT_FAMILY,
+    previewTabText: {
+      color: colors.accentText,
+      fontSize: 13,
+      fontWeight: "700",
     },
     savedText: {
       color: colors.success,

@@ -1,4 +1,5 @@
 import {
+  parseLyricsForOverlay,
   parseLyricsHighlights,
   splitIntoLines,
   toggleHighlightAt,
@@ -43,6 +44,43 @@ describe("parseLyricsHighlights", () => {
 
   it("returns nothing for an empty string", () => {
     expect(parseLyricsHighlights("")).toEqual([]);
+  });
+});
+
+describe("parseLyricsForOverlay", () => {
+  it("returns the whole string as one plain segment when there is no marker", () => {
+    expect(parseLyricsForOverlay("Hello world")).toEqual([
+      { text: "Hello world", kind: "plain" },
+    ]);
+  });
+
+  it("keeps the markers as their own segments around the highlighted text", () => {
+    expect(parseLyricsForOverlay("Lead {{Ooh ooh}} lead")).toEqual([
+      { text: "Lead ", kind: "plain" },
+      { text: "{{", kind: "marker" },
+      { text: "Ooh ooh", kind: "highlighted" },
+      { text: "}}", kind: "marker" },
+      { text: " lead", kind: "plain" },
+    ]);
+  });
+
+  it("reassembles back to the exact original string, character for character", () => {
+    const source = "Lead {{Ooh ooh}} lead\n{{again}}";
+    const rebuilt = parseLyricsForOverlay(source)
+      .map((segment) => segment.text)
+      .join("");
+    expect(rebuilt).toBe(source);
+  });
+
+  it("treats an unmatched opening marker as plain text", () => {
+    expect(parseLyricsForOverlay("Lead {{Ooh lead")).toEqual([
+      { text: "Lead ", kind: "plain" },
+      { text: "{{Ooh lead", kind: "plain" },
+    ]);
+  });
+
+  it("returns nothing for an empty string", () => {
+    expect(parseLyricsForOverlay("")).toEqual([]);
   });
 });
 
