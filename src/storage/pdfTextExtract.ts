@@ -99,6 +99,28 @@ function indirectRef(body: string, key: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+/**
+ * A dictionary-valued key (e.g. `/Resources`, `/Font`) is just as often an
+ * indirect reference to a separate object as it is inlined - a shared
+ * `/Resources` object referenced by every page is the common case for a
+ * multi-page "export to PDF" document, not an edge case. Resolving the
+ * reference first, falling back to an inline `<< ... >>` after `keyword`
+ * only when there isn't one, is what `findNestedDict` alone was missing.
+ */
+function resolveNestedDict(
+  text: string,
+  objects: Map<number, PdfObject>,
+  containerBody: string,
+  key: string,
+): string | null {
+  const ref = indirectRef(containerBody, key);
+  if (ref !== null) {
+    const obj = objects.get(ref);
+    return obj ? bodyOf(text, obj) : null;
+  }
+  return findNestedDict(containerBody, key);
+}
+
 /** `/Contents` is either one indirect reference or an array of them. */
 function contentsRefs(body: string): number[] {
   const single = indirectRef(body, "/Contents");
@@ -176,14 +198,61 @@ function decodeWinAnsiByte(byte: number): string {
   return String.fromCharCode(byte);
 }
 
+// Mac OS Roman (PDF's /MacRomanEncoding) diverges from Latin-1 across the
+// *entire* 0x80-0xFF range, unlike WinAnsi which only differs in 0x80-0x9F -
+// a PDF exported from a Mac app (Pages, Preview, Keynote - all of which
+// write this encoding for simple fonts) decoded as WinAnsi turns every
+// accented character into a different, wrong one, not just missing ones.
+// Verified against a real Pages-exported PDF's garbled é/ã/ó/ﬁ/Ã.
+const MAC_ROMAN_HIGH: Record<number, number> = {
+  0x80: 0xc4, 0x81: 0xc5, 0x82: 0xc7, 0x83: 0xc9, 0x84: 0xd1, 0x85: 0xd6,
+  0x86: 0xdc, 0x87: 0xe1, 0x88: 0xe0, 0x89: 0xe2, 0x8a: 0xe4, 0x8b: 0xe3,
+  0x8c: 0xe5, 0x8d: 0xe7, 0x8e: 0xe9, 0x8f: 0xe8, 0x90: 0xea, 0x91: 0xeb,
+  0x92: 0xed, 0x93: 0xec, 0x94: 0xee, 0x95: 0xef, 0x96: 0xf1, 0x97: 0xf3,
+  0x98: 0xf2, 0x99: 0xf4, 0x9a: 0xf6, 0x9b: 0xf5, 0x9c: 0xfa, 0x9d: 0xf9,
+  0x9e: 0xfb, 0x9f: 0xfc, 0xa0: 0x2020, 0xa1: 0xb0, 0xa2: 0xa2, 0xa3: 0xa3,
+  0xa4: 0xa7, 0xa5: 0x2022, 0xa6: 0xb6, 0xa7: 0xdf, 0xa8: 0xae, 0xa9: 0xa9,
+  0xaa: 0x2122, 0xab: 0xb4, 0xac: 0xa8, 0xad: 0x2260, 0xae: 0xc6, 0xaf: 0xd8,
+  0xb0: 0x221e, 0xb1: 0xb1, 0xb2: 0x2264, 0xb3: 0x2265, 0xb4: 0xa5, 0xb5: 0xb5,
+  0xb6: 0x2202, 0xb7: 0x2211, 0xb8: 0x220f, 0xb9: 0x3c0, 0xba: 0x222b, 0xbb: 0xaa,
+  0xbc: 0xba, 0xbd: 0x3a9, 0xbe: 0xe6, 0xbf: 0xf8, 0xc0: 0xbf, 0xc1: 0xa1,
+  0xc2: 0xac, 0xc3: 0x221a, 0xc4: 0x192, 0xc5: 0x2248, 0xc6: 0x2206, 0xc7: 0xab,
+  0xc8: 0xbb, 0xc9: 0x2026, 0xca: 0xa0, 0xcb: 0xc0, 0xcc: 0xc3, 0xcd: 0xd5,
+  0xce: 0x152, 0xcf: 0x153, 0xd0: 0x2013, 0xd1: 0x2014, 0xd2: 0x201c, 0xd3: 0x201d,
+  0xd4: 0x2018, 0xd5: 0x2019, 0xd6: 0xf7, 0xd7: 0x25ca, 0xd8: 0xff, 0xd9: 0x178,
+  0xda: 0x2044, 0xdb: 0x20ac, 0xdc: 0x2039, 0xdd: 0x203a, 0xde: 0xfb01, 0xdf: 0xfb02,
+  0xe0: 0x2021, 0xe1: 0xb7, 0xe2: 0x201a, 0xe3: 0x201e, 0xe4: 0x2030, 0xe5: 0xc2,
+  0xe6: 0xca, 0xe7: 0xc1, 0xe8: 0xcb, 0xe9: 0xc8, 0xea: 0xcd, 0xeb: 0xce,
+  0xec: 0xcf, 0xed: 0xcc, 0xee: 0xd3, 0xef: 0xd4, 0xf0: 0xf8ff, 0xf1: 0xd2,
+  0xf2: 0xda, 0xf3: 0xdb, 0xf4: 0xd9, 0xf5: 0x131, 0xf6: 0x2c6, 0xf7: 0x2dc,
+  0xf8: 0xaf, 0xf9: 0x2d8, 0xfa: 0x2d9, 0xfb: 0x2da, 0xfc: 0xb8, 0xfd: 0x2dd,
+  0xfe: 0x2db, 0xff: 0x2c7,
+}; // prettier-ignore
+
+function decodeMacRomanByte(byte: number): string {
+  if (byte < 0x80) return String.fromCharCode(byte);
+  const code = MAC_ROMAN_HIGH[byte];
+  return code === undefined ? " " : String.fromCodePoint(code);
+}
+
 type FontDecoder = (raw: string) => string;
 
-/** Simple (1-byte) fonts: WinAnsiEncoding covers this app's Latin-script content (English and Portuguese, incl. all its diacritics) without needing the font's actual glyph names. */
-function simpleFontDecoder(): FontDecoder {
+/**
+ * Simple (1-byte) fonts. WinAnsiEncoding and MacRomanEncoding are the two
+ * standard named encodings actually seen in practice (Windows- vs
+ * Mac-authored PDFs) - which one a given font uses is picked in
+ * resolveFontDecoders from its `/Encoding` entry, defaulting to WinAnsi when
+ * that's absent or something this extractor doesn't specifically recognize
+ * (e.g. a `/Differences` array remapping individual byte codes to arbitrary
+ * glyph names - no general table exists for that, but WinAnsi still decodes
+ * the plain-ASCII range correctly, which covers most of a real document).
+ */
+function simpleFontDecoder(encoding: "WinAnsi" | "MacRoman"): FontDecoder {
+  const decodeByte =
+    encoding === "MacRoman" ? decodeMacRomanByte : decodeWinAnsiByte;
   return (raw) => {
     let out = "";
-    for (let i = 0; i < raw.length; i++)
-      out += decodeWinAnsiByte(raw.charCodeAt(i));
+    for (let i = 0; i < raw.length; i++) out += decodeByte(raw.charCodeAt(i));
     return out;
   };
 }
@@ -240,12 +309,24 @@ function parseToUnicodeCMap(cmapText: string): Map<number, string> {
   return map;
 }
 
-/** Type0 (composite) fonts: 2-byte codes, decoded through the font's own ToUnicode CMap - there's no standard encoding to fall back on for an arbitrary embedded/subset font. */
-function type0FontDecoder(cmap: Map<number, string>): FontDecoder {
+/**
+ * Decodes through a font's own `/ToUnicode` CMap - present on a Type0
+ * (composite, 2-byte-code) font as its only reliable decoding, but also
+ * sometimes on a simple (1-byte-code) font, in which case it's still the
+ * most trustworthy source available (more so than guessing WinAnsi vs
+ * MacRoman) and takes priority over simpleFontDecoder - see resolveFontDecoders.
+ */
+function toUnicodeFontDecoder(
+  cmap: Map<number, string>,
+  bytesPerCode: 1 | 2,
+): FontDecoder {
   return (raw) => {
     let out = "";
-    for (let i = 0; i + 1 < raw.length; i += 2) {
-      const code = (raw.charCodeAt(i) << 8) | raw.charCodeAt(i + 1);
+    for (let i = 0; i + bytesPerCode <= raw.length; i += bytesPerCode) {
+      const code =
+        bytesPerCode === 2
+          ? (raw.charCodeAt(i) << 8) | raw.charCodeAt(i + 1)
+          : raw.charCodeAt(i);
       out += cmap.get(code) ?? "�";
     }
     return out;
@@ -260,9 +341,14 @@ function resolveFontDecoders(
   pageBody: string,
 ): Map<string, FontDecoder> {
   const decoders = new Map<string, FontDecoder>();
-  const resourcesDict = findNestedDict(pageBody, "/Resources");
+  const resourcesDict = resolveNestedDict(
+    text,
+    objects,
+    pageBody,
+    "/Resources",
+  );
   if (!resourcesDict) return decoders;
-  const fontDict = findNestedDict(resourcesDict, "/Font");
+  const fontDict = resolveNestedDict(text, objects, resourcesDict, "/Font");
   if (!fontDict) return decoders;
 
   for (const entry of fontDict.matchAll(/\/(\S+)\s+(\d+)\s+\d+\s+R/g)) {
@@ -271,20 +357,24 @@ function resolveFontDecoders(
     if (!fontObj) continue;
     const fontBody = bodyOf(text, fontObj);
 
-    if (/\/Subtype\s*\/Type0\b/.test(fontBody)) {
-      const toUnicodeRef = indirectRef(fontBody, "/ToUnicode");
-      const toUnicodeObj = toUnicodeRef ? objects.get(toUnicodeRef) : undefined;
-      const cmapBytes = toUnicodeObj
-        ? streamBytes(bytes, text, toUnicodeObj)
-        : null;
-      if (cmapBytes) {
-        const cmap = parseToUnicodeCMap(bytesToLatin1(cmapBytes));
-        decoders.set(resourceName, type0FontDecoder(cmap));
-      }
-      // No ToUnicode: this font's codes can't be decoded reliably - leave
+    const isType0 = /\/Subtype\s*\/Type0\b/.test(fontBody);
+    const toUnicodeRef = indirectRef(fontBody, "/ToUnicode");
+    const toUnicodeObj = toUnicodeRef ? objects.get(toUnicodeRef) : undefined;
+    const cmapBytes = toUnicodeObj
+      ? streamBytes(bytes, text, toUnicodeObj)
+      : null;
+
+    if (cmapBytes) {
+      const cmap = parseToUnicodeCMap(bytesToLatin1(cmapBytes));
+      decoders.set(resourceName, toUnicodeFontDecoder(cmap, isType0 ? 2 : 1));
+    } else if (isType0) {
+      // A composite font with no ToUnicode has no reliable decoding - leave
       // it unmapped so its text is skipped rather than turned into noise.
     } else {
-      decoders.set(resourceName, simpleFontDecoder());
+      const encoding = /\/Encoding\s*\/MacRomanEncoding\b/.test(fontBody)
+        ? "MacRoman"
+        : "WinAnsi";
+      decoders.set(resourceName, simpleFontDecoder(encoding));
     }
   }
 
@@ -355,12 +445,27 @@ function readHexString(
 /** A word-gap threshold in the ~1000-units-per-em text space `TJ` numbers are expressed in - tuned to catch a real space between words without splitting normally-kerned letters within one. */
 const TJ_WORD_GAP_THRESHOLD = -100;
 
+/** Below this, a Y move is a same-line nudge (kerning, a ligature substituted via a second run), not a new line - real line-height deltas are many points, this is well under any of them. */
+const LINE_Y_EPSILON = 1;
+
 /**
  * Walks a decompressed content stream's operators, extracting the text
  * shown by `Tj`/`'`/`"`/`TJ`, decoded through whichever font was last
- * selected by `Tf`. `Td`/`TD`/`T*`/`Tm` (anything that repositions the text
- * cursor) is treated as a line break - accurate enough for a lyric sheet's
- * simple, single-column layout, not a general-purpose reflow.
+ * selected by `Tf`.
+ *
+ * Figuring out where a *visual* line actually ends is the hard part: `T*`
+ * always means "next line" by definition, so that's unconditional, and so
+ * (as a simpler proxy for the same idea) is any `Td`/`TD`. But `Tm`/`cm`
+ * reappear mid-line too - a PDF writer that substitutes a ligature glyph
+ * (e.g. "fi") via a second, separately-positioned run splits one visual
+ * line across multiple `BT...ET` blocks, each re-issuing `Tm`/`cm` to land
+ * the next run right after the previous one, not on a new line (confirmed
+ * against a real Pages-exported PDF, which does exactly this around every
+ * "fi" ligature). So those two are compared against their own last-seen Y
+ * instead of unconditionally breaking - only a real jump is a new line.
+ * `cm` and `Tm` are tracked separately since they're different coordinate
+ * spaces (CTM vs. text matrix within it) and aren't safe to compare against
+ * each other.
  */
 function extractPageText(
   content: string,
@@ -371,12 +476,21 @@ function extractPageText(
   let atLineStart = true;
   let pendingStrings: string[] = [];
   let pendingNames: string[] = [];
+  let pendingNumbers: number[] = [];
+  let lastCmY: number | null = null;
+  let lastTmY: number | null = null;
 
   function newline() {
     if (!atLineStart) {
       out += "\n";
       atLineStart = true;
     }
+  }
+
+  /** Only a real jump in Y is a new line - a same-line re-positioning (e.g. around a ligature run) must not fragment one line into several. */
+  function newlineOnYJump(newY: number, lastY: number | null): number {
+    if (lastY !== null && Math.abs(newY - lastY) > LINE_Y_EPSILON) newline();
+    return newY;
   }
 
   function show(raw: string) {
@@ -419,19 +533,31 @@ function extractPageText(
       i = arrEnd === -1 ? content.length : arrEnd + 1;
       continue;
     }
+    const numMatch = /^-?\d+(\.\d+)?/.exec(content.slice(i));
+    if (numMatch) {
+      pendingNumbers.push(Number(numMatch[0]));
+      i += numMatch[0].length;
+      continue;
+    }
 
     const opMatch = /^[A-Za-z'"*]+/.exec(content.slice(i));
     if (opMatch) {
       const op = opMatch[0];
       i += op.length;
 
-      if (op === "BT") {
-        atLineStart = true;
-      } else if (op === "Tf") {
+      if (op === "Tf") {
         const name = pendingNames[pendingNames.length - 1];
         currentFont = (name && fontDecoders.get(name)) || null;
-      } else if (op === "Td" || op === "TD" || op === "Tm" || op === "T*") {
+      } else if (op === "Td" || op === "TD" || op === "T*") {
         newline();
+      } else if (op === "Tm") {
+        // a b c d e f Tm - f is the absolute text-space Y.
+        const f = pendingNumbers[pendingNumbers.length - 1];
+        if (f !== undefined) lastTmY = newlineOnYJump(f, lastTmY);
+      } else if (op === "cm") {
+        // a b c d e f cm - f is the CTM's Y translation.
+        const f = pendingNumbers[pendingNumbers.length - 1];
+        if (f !== undefined) lastCmY = newlineOnYJump(f, lastCmY);
       } else if (op === "Tj") {
         show(pendingStrings[pendingStrings.length - 1] ?? "");
       } else if (op === "'") {
@@ -453,22 +579,24 @@ function extractPageText(
             show(value);
             j = end;
           } else {
-            const numMatch = /^-?\d+(\.\d+)?/.exec(arrText.slice(j));
-            if (numMatch) {
-              if (Number(numMatch[0]) <= TJ_WORD_GAP_THRESHOLD && !atLineStart)
+            const arrNumMatch = /^-?\d+(\.\d+)?/.exec(arrText.slice(j));
+            if (arrNumMatch) {
+              if (
+                Number(arrNumMatch[0]) <= TJ_WORD_GAP_THRESHOLD &&
+                !atLineStart
+              )
                 out += " ";
-              j += numMatch[0].length;
+              j += arrNumMatch[0].length;
             } else {
               j++;
             }
           }
         }
-      } else if (op === "ET") {
-        newline();
       }
 
       pendingStrings = [];
       pendingNames = [];
+      pendingNumbers = [];
       continue;
     }
 

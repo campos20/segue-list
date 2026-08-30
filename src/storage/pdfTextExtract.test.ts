@@ -89,6 +89,100 @@ describe("extractPdfText", () => {
     expect(extractPdfText(pdf, "song.pdf")).toBe("Hi");
   });
 
+  it("resolves /Resources when it's an indirect reference, not inlined", () => {
+    // A separate, shared Resources object (4 0 R) is the common case for a
+    // real multi-page "export to PDF" document - not the inline-dict-only
+    // case simplePagePdf builds. Regression test for a real Pages-exported
+    // PDF that silently produced zero text because of this.
+    const pdf = buildPdf([
+      {
+        num: 1,
+        dict: "/Type /Page /Resources 4 0 R /Contents 3 0 R",
+      },
+      {
+        num: 2,
+        dict: "/Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding",
+      },
+      {
+        num: 3,
+        dict: "/Length 0",
+        stream: "BT\n/F1 12 Tf\n100 700 Td\n(Hello) Tj\nET",
+      },
+      { num: 4, dict: "/Font << /F1 2 0 R >>" },
+    ]);
+    expect(extractPdfText(pdf, "song.pdf")).toBe("Hello");
+  });
+
+  it("decodes MacRomanEncoding, distinct from WinAnsiEncoding", () => {
+    // Byte 0x8E is "Ž" in WinAnsi but "é" in MacRoman (the encoding a
+    // Mac-authored PDF - Pages, Preview, Keynote - actually declares).
+    // Regression test for a real PDF that decoded as WinAnsi regardless of
+    // what /Encoding actually said, garbling every accented character.
+    const pdf = buildPdf([
+      {
+        num: 1,
+        dict: "/Type /Page /Resources << /Font << /F1 2 0 R >> >> /Contents 3 0 R",
+      },
+      {
+        num: 2,
+        dict: "/Type /Font /Subtype /TrueType /BaseFont /Helvetica /Encoding /MacRomanEncoding",
+      },
+      {
+        num: 3,
+        dict: "/Length 0",
+        stream: `BT\n/F1 12 Tf\n100 700 Td\n(caf\x8e) Tj\nET`,
+      },
+    ]);
+    expect(extractPdfText(pdf, "song.pdf")).toBe("café");
+  });
+
+  it("prefers a simple (1-byte) font's own ToUnicode CMap over guessing an encoding", () => {
+    const cmap = "1 beginbfchar\n<21> <00e9>\nendbfchar";
+    const pdf = buildPdf([
+      {
+        num: 1,
+        dict: "/Type /Page /Resources << /Font << /F1 2 0 R >> >> /Contents 4 0 R",
+      },
+      {
+        num: 2,
+        dict: "/Type /Font /Subtype /TrueType /BaseFont /Helvetica /ToUnicode 3 0 R",
+      },
+      { num: 3, dict: "/Length 0", stream: cmap },
+      // 0x21 is "!" in every standard encoding, but this font's ToUnicode
+      // remaps it to "é" - only trusting ToUnicode gets this right.
+      {
+        num: 4,
+        dict: "/Length 0",
+        stream: "BT\n/F1 12 Tf\n100 700 Td\n(!) Tj\nET",
+      },
+    ]);
+    expect(extractPdfText(pdf, "song.pdf")).toBe("é");
+  });
+
+  it("does not fragment one visual line across multiple same-Y Tm-positioned runs", () => {
+    // A PDF writer that substitutes a glyph (e.g. a ligature) via a second,
+    // separately-positioned run re-issues Tm at the same Y mid-line -
+    // that must not read as a new line. Regression test for a real PDF that
+    // did exactly this around every "fi" ligature.
+    const pdf = simplePagePdf(
+      [
+        "BT 14 0 0 14 0 700 Tm /F1 1 Tf (Hello ) Tj ET",
+        "BT 14 0 0 14 50 700 Tm /F1 1 Tf (World) Tj ET",
+      ].join("\n"),
+    );
+    expect(extractPdfText(pdf, "song.pdf")).toBe("Hello World");
+  });
+
+  it("still breaks the line when Tm's Y actually changes", () => {
+    const pdf = simplePagePdf(
+      [
+        "BT 14 0 0 14 0 700 Tm /F1 1 Tf (Line one) Tj ET",
+        "BT 14 0 0 14 0 680 Tm /F1 1 Tf (Line two) Tj ET",
+      ].join("\n"),
+    );
+    expect(extractPdfText(pdf, "song.pdf")).toBe("Line one\nLine two");
+  });
+
   it("joins multiple pages with a blank line, in object-number order", () => {
     const pdf = buildPdf([
       {
