@@ -100,6 +100,7 @@ export const ptBR: TranslationDictionary = {
     discardBody: "Você tem alterações não salvas nesta música.",
     discardConfirm: "Descartar",
     keepEditing: "Continuar editando",
+    themeLink: "Quer alterar entre modo claro e escuro? Vá em configurações.",
   },
   presentation: {
     empty: "Este repertório não tem músicas para apresentar.",

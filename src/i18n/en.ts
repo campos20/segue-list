@@ -97,6 +97,7 @@ export const en = {
     discardBody: "You have unsaved changes to this song.",
     discardConfirm: "Discard",
     keepEditing: "Keep editing",
+    themeLink: "Want to change between light and dark mode? Go to Settings",
   },
   presentation: {
     empty: "This setlist has no songs to present.",

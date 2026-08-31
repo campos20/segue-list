@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "@/i18n";
 import type { ColorSpan } from "@/ui/lyricsColor";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Button } from "./Button";
+import { SettingsIcon } from "./MenuIcons";
 
 /** Shared by both the font-color and background-color rows, same as Word's quick color gallery reusing one grid for both tools. */
 const PALETTE = [
@@ -42,6 +44,7 @@ export function ColorPickerModal({
   onClose,
 }: ColorPickerModalProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -94,6 +97,27 @@ export function ColorPickerModal({
             onSelect={setBackground}
             noneLabel={t.song.colorNone}
           />
+
+          {/*
+            A whole tappable row, not text with a tiny icon-only link buried
+            in it - this exists specifically to stop someone from reaching
+            for these swatches when what they actually want is the app's
+            own dark/light theme (Settings), so it needs to read clearly
+            and be easy to hit on its own. The gap and divider below it are
+            just as deliberate: without real separation from Cancel/Apply,
+            a tap meant for Apply can land on this instead.
+          */}
+          <Pressable
+            onPress={() => router.push("/settings")}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.themeLink,
+              pressed && styles.pressed,
+            ]}
+          >
+            <SettingsIcon />
+            <Text style={styles.themeLinkText}>{t.song.themeLink}</Text>
+          </Pressable>
 
           <View style={styles.actions}>
             <Button variant="secondary" onPress={onClose}>
@@ -214,10 +238,32 @@ function createStyles(colors: ThemeColors) {
     pressed: {
       opacity: 0.7,
     },
+    // A distinct, tinted box (not just a line of text) so it visually reads
+    // as a separate note from the swatch pickers above it.
+    themeLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.md,
+      padding: spacing.sm,
+      borderRadius: radii.md,
+      backgroundColor: colors.panelRaised,
+    },
+    themeLinkText: {
+      flex: 1,
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    // A generous gap plus a hairline divider - not just whitespace - so a
+    // tap aimed at Apply can't land on the theme-link row above instead.
     actions: {
       flexDirection: "row",
       gap: spacing.sm,
-      marginTop: spacing.md,
+      marginTop: spacing.xl,
+      paddingTop: spacing.md,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
     },
   });
 }
