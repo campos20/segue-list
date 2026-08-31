@@ -16,6 +16,10 @@ jobs:
   check:
     name: Typecheck and lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Needed for the coverage-comment step to post/update its PR comment.
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v7
@@ -37,14 +41,10 @@ jobs:
       - name: Test
         run: npx jest --coverage --ci
 
-      # Badges are generated from the coverage report, not hand-edited (see
-      # the Testing section of the README). Regenerating here and diffing
-      # catches a README a contributor forgot to update after adding tests,
-      # without the workflow ever pushing a commit of its own.
-      - name: Verify coverage badges are up to date
-        run: |
-          npx istanbul-badges-readme
-          if ! git diff --exit-code README.md; then
-            echo "::error::README coverage badges are stale - run 'npm run test:coverage && npm run coverage:badges' and commit the result."
-            exit 1
-          fi
+      # Just a quick indicator on the PR itself - reads the json-summary
+      # report jest already produces, no README to keep in sync.
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: MishaKav/jest-coverage-comment@v1.0.29
+        with:
+          coverage-summary-path: coverage/coverage-summary.json
