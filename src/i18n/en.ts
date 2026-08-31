@@ -7,6 +7,7 @@ export const en = {
     cancel: "Cancel",
     save: "Save",
     back: "← Back",
+    apply: "Apply",
   },
   library: {
     eyebrow: "SEGUE LIST",
@@ -85,9 +86,13 @@ export const en = {
     lyricsPreviewLabel: "Preview",
     removeTag: (tag: string) => `Remove tag "${tag}"`,
     suggestedTags: "Suggested tags",
-    highlightToggle: "Highlight",
-    highlightHint:
-      "Select text above, then tap Highlight to mark it (e.g. backing vocals).",
+    colorButton: "Color",
+    colorHint:
+      "Select text above, then tap Color to set its font/background color (e.g. backing vocals).",
+    colorTitle: "Color",
+    textColorLabel: "Font color",
+    backgroundColorLabel: "Background color",
+    colorNone: "None",
     saved: "Saved.",
     discardTitle: "Discard changes?",
     discardBody: "You have unsaved changes to this song.",

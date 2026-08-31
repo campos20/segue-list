@@ -1,7 +1,11 @@
 import { strToU8, zipSync } from "fflate";
 import { File, Paths } from "expo-file-system";
 import type { SongManifest } from "@/types/song";
-import { parseLyricsHighlights, splitIntoLines } from "@/ui/lyricsHighlight";
+import {
+  parseLyricsColors,
+  splitIntoLines,
+  type ColorSpan,
+} from "@/ui/lyricsColor";
 import { isFileSystemAvailable } from "./paths";
 
 /**
@@ -29,12 +33,21 @@ function escapeXml(text: string): string {
 // Monospace, matching SongDetailScreen's lyrics editor - keeps chord charts
 // and any hand-spaced alignment intact when opened outside the app.
 const LYRICS_RUN_PROPS = `<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/>`;
-// Bold + a highlighter-yellow shade, mirroring the app's own highlighted
-// lyrics style (see lyricsHighlight.ts / PresentationScreen's `lyricsHighlight`
-// style) - a highlighted span shouldn't leak its `{{...}}` markers into an
-// exported document, it should read as visibly marked there too.
-const HIGHLIGHT_RUN_PROPS = `${LYRICS_RUN_PROPS}<w:b/><w:shd w:val="clear" w:fill="FFD54A"/>`;
 const NO_LYRICS_RUN_PROPS = `<w:i/><w:color w:val="888888"/>`;
+
+/**
+ * A colored span's font/background color shouldn't leak its raw
+ * `{{...}}` markers into an exported document - it should read as
+ * visibly colored there too, the same choice as picked in the app.
+ */
+function colorRunProps(span: ColorSpan | undefined): string {
+  if (!span) return LYRICS_RUN_PROPS;
+  const color = span.color ? `<w:color w:val="${span.color}"/>` : "";
+  const shading = span.background
+    ? `<w:shd w:val="clear" w:fill="${span.background}"/>`
+    : "";
+  return `${LYRICS_RUN_PROPS}${color}${shading}`;
+}
 
 function run(text: string, runProps: string): string {
   return `<w:r><w:rPr>${runProps}</w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
@@ -52,22 +65,17 @@ function textParagraph(
 
 /**
  * One `<w:p>` per line, so a blank line between verses stays a blank line -
- * and, within a line, one `<w:r>` per highlighted/plain run, so a
- * highlighted phrase renders bold-and-shaded instead of showing its raw
- * `{{...}}` markers.
+ * and, within a line, one `<w:r>` per colored/plain run, so a colored
+ * phrase renders with its own font/background color instead of showing its
+ * raw `{{...}}` markers.
  */
 function lyricsParagraphs(lyrics: string): string {
-  const lines = splitIntoLines(parseLyricsHighlights(lyrics));
+  const lines = splitIntoLines(parseLyricsColors(lyrics));
   return lines
     .map((line) => {
       if (line.length === 0) return "<w:p/>";
       const runs = line
-        .map((segment) =>
-          run(
-            segment.text,
-            segment.highlighted ? HIGHLIGHT_RUN_PROPS : LYRICS_RUN_PROPS,
-          ),
-        )
+        .map((segment) => run(segment.text, colorRunProps(segment.span)))
         .join("");
       return `<w:p>${runs}</w:p>`;
     })

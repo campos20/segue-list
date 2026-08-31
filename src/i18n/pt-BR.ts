@@ -9,6 +9,7 @@ export const ptBR: TranslationDictionary = {
     cancel: "Cancelar",
     save: "Salvar",
     back: "← Voltar",
+    apply: "Aplicar",
   },
   library: {
     eyebrow: "SEGUE LIST",
@@ -88,9 +89,13 @@ export const ptBR: TranslationDictionary = {
     addTag: "Adicionar",
     removeTag: (tag: string) => `Remover tag "${tag}"`,
     suggestedTags: "Sugeridas",
-    highlightToggle: "Destacar",
-    highlightHint:
-      "Selecione o texto acima e toque em Destacar para marcá-lo (ex.: backing vocal).",
+    colorButton: "Cor",
+    colorHint:
+      "Selecione o texto acima e toque em Cor para definir a cor da fonte/fundo (ex.: backing vocal).",
+    colorTitle: "Cor",
+    textColorLabel: "Cor da fonte",
+    backgroundColorLabel: "Cor de fundo",
+    colorNone: "Nenhuma",
     saved: "Salvo.",
     discardTitle: "Descartar alterações?",
     discardBody: "Você tem alterações não salvas nesta música.",

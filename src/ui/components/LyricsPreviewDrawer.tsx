@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useTranslation } from "@/i18n";
 import { useAppSelector } from "@/store/hooks";
-import { parseLyricsHighlights } from "@/ui/lyricsHighlight";
+import { parseLyricsColors } from "@/ui/lyricsColor";
 import {
   elevation,
   radii,
@@ -109,9 +109,19 @@ export function LyricsPreviewDrawer({
               <Text
                 style={[styles.lyricsText, allCaps && styles.lyricsUppercase]}
               >
-                {parseLyricsHighlights(lyrics).map((segment, index) =>
-                  segment.highlighted ? (
-                    <Text key={index} style={styles.highlight}>
+                {parseLyricsColors(lyrics).map((segment, index) =>
+                  segment.span ? (
+                    <Text
+                      key={index}
+                      style={{
+                        ...(segment.span.background && {
+                          backgroundColor: `#${segment.span.background}`,
+                        }),
+                        ...(segment.span.color && {
+                          color: `#${segment.span.color}`,
+                        }),
+                      }}
+                    >
                       {segment.text}
                     </Text>
                   ) : (
@@ -186,10 +196,6 @@ function createStyles(colors: ThemeColors) {
     },
     lyricsUppercase: {
       textTransform: "uppercase",
-    },
-    highlight: {
-      fontWeight: "800",
-      backgroundColor: colors.highlightBackground,
     },
     empty: {
       color: colors.textTertiary,

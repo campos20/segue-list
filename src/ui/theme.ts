@@ -16,8 +16,6 @@ export interface ThemeColors {
   accentText: string;
   danger: string;
   success: string;
-  /** Background for a highlighted lyrics span (e.g. marked backing vocals). */
-  highlightBackground: string;
 }
 
 /** Shared visual language for the app - a stage-friendly look with an amber accent for setlists, in a dark and a light variant. */
@@ -35,7 +33,6 @@ export const darkColors: ThemeColors = {
   accentText: "#1c1400",
   danger: "#ff453a",
   success: "#34d399",
-  highlightBackground: "rgba(251,191,36,0.28)",
 };
 
 // Same relationships as darkColors (panel darker than surface, tertiary <
@@ -56,7 +53,6 @@ export const lightColors: ThemeColors = {
   accentText: "#fff6e6",
   danger: "#c81e37",
   success: "#0f8f5a",
-  highlightBackground: "rgba(161,92,0,0.22)",
 };
 
 export const radii = {

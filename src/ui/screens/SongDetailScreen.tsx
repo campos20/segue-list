@@ -16,9 +16,10 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import { Button } from "@/ui/components/Button";
+import { ColorPickerModal } from "@/ui/components/ColorPickerModal";
 import { LyricsPreviewDrawer } from "@/ui/components/LyricsPreviewDrawer";
 import { TextField } from "@/ui/components/TextField";
-import { toggleHighlightAt } from "@/ui/lyricsHighlight";
+import { applyColorAt, getSpanAt, type ColorSpan } from "@/ui/lyricsColor";
 import {
   elevation,
   radii,
@@ -57,15 +58,20 @@ export function SongDetailScreen() {
   const [lyrics, setLyrics] = useState("");
   const [lyricsSelection, setLyricsSelection] = useState({ start: 0, end: 0 });
   // Mirrors lyricsSelection but updated synchronously (no render lag), so
-  // handleToggleHighlight always reads the true latest selection even if
-  // the user taps Highlight right after finishing a selection, before
-  // React has re-rendered with the state from that selection change - a
-  // stale-closure race that showed up as "have to tap Highlight twice".
+  // handleOpenColorPicker always reads the true latest selection even if
+  // the user taps Color right after finishing a selection, before React
+  // has re-rendered with the state from that selection change - a
+  // stale-closure race that showed up as "have to tap twice".
   const lyricsSelectionRef = useRef({ start: 0, end: 0 });
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [saved, setSaved] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [colorPickerRange, setColorPickerRange] = useState({
+    start: 0,
+    end: 0,
+  });
 
   // Adjusted during render rather than in an effect: resets the draft when
   // the song first becomes available (hydration can land after this screen
@@ -82,18 +88,26 @@ export function SongDetailScreen() {
   }
 
   /**
-   * Wraps (or unwraps) the current text selection in highlight markers -
-   * see lyricsHighlight.ts. The selection is read from the ref (not the
-   * state variable) so it's never a render behind: reading state here would
-   * capture whatever `lyricsSelection` was as of the last render, which can
-   * still be the pre-selection value if this fires before that render
-   * commits. The selection is never fed back as a controlled `selection`
-   * prop either way: round-tripping selection through state is a known
-   * source of cursor-jump bugs on native TextInput, so this only ever reads it.
+   * Opens the color picker for the current text selection - captured from
+   * the ref (not the state variable) so it's never a render behind: reading
+   * state here would capture whatever `lyricsSelection` was as of the last
+   * render, which can still be the pre-selection value if this fires before
+   * that render commits (the same stale-closure race that used to require
+   * tapping twice). The selection is never fed back as a controlled
+   * `selection` prop either way: round-tripping selection through state is
+   * a known source of cursor-jump bugs on native TextInput, so this only
+   * ever reads it.
    */
-  function handleToggleHighlight() {
-    const { start, end } = lyricsSelectionRef.current;
-    setLyrics((current) => toggleHighlightAt(current, start, end));
+  function handleOpenColorPicker() {
+    setColorPickerRange(lyricsSelectionRef.current);
+    setColorPickerOpen(true);
+  }
+
+  /** Applies (or clears, for `span: null`) color across the range captured when the picker opened - see lyricsColor.ts. */
+  function handleApplyColor(span: ColorSpan | null) {
+    const { start, end } = colorPickerRange;
+    setLyrics((current) => applyColorAt(current, start, end, span));
+    setColorPickerOpen(false);
     lyricsSelectionRef.current = { start: 0, end: 0 };
     setLyricsSelection({ start: 0, end: 0 });
   }
@@ -253,14 +267,14 @@ export function SongDetailScreen() {
             <Text style={styles.label}>{t.song.lyricsLabel}</Text>
             <Button
               variant="secondary"
-              onPress={handleToggleHighlight}
+              onPress={handleOpenColorPicker}
               disabled={lyricsSelection.start === lyricsSelection.end}
-              style={styles.highlightButton}
+              style={styles.colorButton}
             >
-              {t.song.highlightToggle}
+              {t.song.colorButton}
             </Button>
           </View>
-          <Text style={styles.hint}>{t.song.highlightHint}</Text>
+          <Text style={styles.hint}>{t.song.colorHint}</Text>
         </View>
 
         <View style={styles.lyricsSection}>
@@ -328,6 +342,17 @@ export function SongDetailScreen() {
         lyrics={lyrics}
         onClose={() => setPreviewOpen(false)}
       />
+
+      <ColorPickerModal
+        visible={colorPickerOpen}
+        initialSpan={getSpanAt(
+          lyrics,
+          colorPickerRange.start,
+          colorPickerRange.end,
+        )}
+        onApply={handleApplyColor}
+        onClose={() => setColorPickerOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -381,7 +406,7 @@ function createStyles(colors: ThemeColors) {
       gap: spacing.sm,
       marginTop: spacing.lg,
     },
-    highlightButton: {
+    colorButton: {
       paddingVertical: 6,
       paddingHorizontal: spacing.md,
     },
