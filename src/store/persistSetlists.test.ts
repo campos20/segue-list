@@ -263,6 +263,17 @@ describe("reorderSetlistSongs", () => {
         ?.songs,
     ).toEqual(["song-a", "song-b"]);
   });
+
+  it("does not write when the given order matches the current order", () => {
+    const store = createAppStore();
+    const setlist = seedSetlist(store, ["song-a", "song-b", "song-c"]);
+
+    store.dispatch(
+      reorderSetlistSongs(setlist.id, ["song-a", "song-b", "song-c"]),
+    );
+
+    expect(setlistLibrary.writeSetlist).not.toHaveBeenCalled();
+  });
 });
 
 describe("removeSongFromAllSetlists", () => {

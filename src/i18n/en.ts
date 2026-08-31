@@ -80,7 +80,7 @@ export const en = {
     nameLabel: "Song name",
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",
-    tagsPlaceholder: "Comma-separated tags",
+    tagsPlaceholder: "Add a tag...",
     addTag: "Add tag",
     lyricsPlaceholder: "Type or paste the lyrics...",
     removeTag: (tag: string) => `Remove tag "${tag}"`,

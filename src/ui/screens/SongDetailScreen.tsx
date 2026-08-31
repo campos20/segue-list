@@ -74,12 +74,18 @@ export function SongDetailScreen() {
   // so tagging the same way twice doesn't require retyping (and doesn't
   // drift into near-duplicates like "live" vs "Live").
   const suggestedTags = useMemo(() => {
-    const known = new Set<string>();
+    // Keyed by lowercase so "live" and "Live" from different songs collapse
+    // into one suggestion, and a tag the current song already has (in any
+    // casing) is excluded rather than offered as a no-op tap - see addTag's
+    // own case-insensitive duplicate check.
+    const known = new Map<string, string>();
     for (const candidate of allSongs) {
-      for (const tag of candidate.tags ?? []) known.add(tag);
+      for (const tag of candidate.tags ?? []) {
+        known.set(tag.toLowerCase(), tag);
+      }
     }
-    for (const tag of tags) known.delete(tag);
-    return Array.from(known).sort((a, b) => a.localeCompare(b));
+    for (const tag of tags) known.delete(tag.toLowerCase());
+    return Array.from(known.values()).sort((a, b) => a.localeCompare(b));
   }, [allSongs, tags]);
 
   function addTag(raw: string) {
@@ -208,6 +214,7 @@ export function SongDetailScreen() {
                     <Pressable
                       key={tag}
                       onPress={() => addTag(tag)}
+                      accessibilityLabel={`${t.song.addTag} ${tag}`}
                       style={({ pressed }) => [
                         styles.tagSuggestionChip,
                         pressed && styles.pressed,

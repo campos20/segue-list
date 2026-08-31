@@ -198,6 +198,11 @@ export function buildEditorHtml(
   var editor = document.getElementById("editor");
 
   function post(type, payload) {
+    // window.ReactNativeWebView only exists inside the actual native
+    // WebView bridge - guarded so the HTML this builds stays loadable
+    // directly in a plain browser (see buildEditorHtml's doc comment)
+    // instead of throwing on the first selection change or edit.
+    if (!window.ReactNativeWebView) return;
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: type, payload: payload }));
   }
   ${RGB_TO_HEX_JS}

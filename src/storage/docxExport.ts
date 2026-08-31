@@ -37,7 +37,7 @@ const NO_LYRICS_RUN_PROPS = `<w:i/><w:color w:val="888888"/>`;
 
 /**
  * A colored span's font/background color shouldn't leak its raw
- * `{{...}}` markers into an exported document - it should read as
+ * `<span style="...">` markup into an exported document - it should read as
  * visibly colored there too, the same choice as picked in the app.
  */
 function colorRunProps(span: ColorSpan | undefined): string {
@@ -67,7 +67,7 @@ function textParagraph(
  * One `<w:p>` per line, so a blank line between verses stays a blank line -
  * and, within a line, one `<w:r>` per colored/plain run, so a colored
  * phrase renders with its own font/background color instead of showing its
- * raw `{{...}}` markers.
+ * raw `<span style="...">` markup.
  */
 function lyricsParagraphs(lyrics: string): string {
   const lines = splitIntoLines(parseLyricsColors(lyrics));

@@ -143,7 +143,10 @@ export function moveSongInSetlist(
  * Replaces a setlist's whole song order at once - the bulk counterpart to
  * `moveSongInSetlist`'s single step, used by the sort modal. `songIds` must
  * be a permutation of the setlist's current songs; anything else is a no-op
- * rather than a way to sneak a song in or out of the setlist.
+ * rather than a way to sneak a song in or out of the setlist. Also a no-op
+ * (no disk write, no `updatedAt` bump) if the order it produces is already
+ * the current order - e.g. an alphabetical sort applied to an already-sorted
+ * setlist.
  */
 export function reorderSetlistSongs(setlistId: string, songIds: string[]) {
   return (dispatch: AppDispatch, getState: () => RootState) => {
@@ -154,6 +157,8 @@ export function reorderSetlistSongs(setlistId: string, songIds: string[]) {
       new Set(songIds).size === setlist.songs.length &&
       setlist.songs.every((id) => songIds.includes(id));
     if (!sameSongs) return;
+    const unchanged = setlist.songs.every((id, index) => id === songIds[index]);
+    if (unchanged) return;
     patch(dispatch, getState, setlistId, { songs: songIds });
   };
 }
