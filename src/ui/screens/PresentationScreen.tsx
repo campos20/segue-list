@@ -8,6 +8,7 @@ import {
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
+import { parseLyricsColors } from "@/ui/lyricsColor";
 import {
   glow,
   radii,
@@ -33,7 +34,7 @@ const AUTO_SCROLL_INTERVAL_MS = 50;
 const MAX_AUTO_SCROLL_LEVEL = 3;
 
 const MIN_FONT_SIZE = 14;
-const MAX_FONT_SIZE = 32;
+const MAX_FONT_SIZE = 48;
 const FONT_SIZE_STEP = 2;
 /** Keeps line spacing proportional to size, matching the default 18/28 ratio. */
 const LYRICS_LINE_HEIGHT_RATIO = 28 / 18;
@@ -374,7 +375,25 @@ function PresentationView({
                 },
               ]}
             >
-              {current.lyrics}
+              {parseLyricsColors(current.lyrics).map((segment, index) =>
+                segment.span ? (
+                  <Text
+                    key={index}
+                    style={{
+                      ...(segment.span.background && {
+                        backgroundColor: `#${segment.span.background}`,
+                      }),
+                      ...(segment.span.color && {
+                        color: `#${segment.span.color}`,
+                      }),
+                    }}
+                  >
+                    {segment.text}
+                  </Text>
+                ) : (
+                  segment.text
+                ),
+              )}
             </Text>
           ) : (
             <Text style={styles.lyricsEmpty}>{t.presentation.noLyrics}</Text>

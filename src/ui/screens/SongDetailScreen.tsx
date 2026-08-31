@@ -1,14 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,8 +15,14 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import { Button } from "@/ui/components/Button";
+import { ColorPickerModal } from "@/ui/components/ColorPickerModal";
+import {
+  LyricsRichEditor,
+  type LyricsRichEditorHandle,
+} from "@/ui/components/LyricsRichEditor";
 import { TextField } from "@/ui/components/TextField";
-import { spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
+import type { ColorSpan } from "@/ui/lyricsColor";
+import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 export function SongDetailScreen() {
   const { songId } = useLocalSearchParams<{ songId: string }>();
@@ -31,10 +35,19 @@ export function SongDetailScreen() {
   const song = useAppSelector((state) =>
     songsSelectors.selectById(state.songs, songId),
   );
+  const allSongs = useAppSelector((state) =>
+    songsSelectors.selectAll(state.songs),
+  );
 
   const [name, setName] = useState("");
   const [lyrics, setLyrics] = useState("");
+  const [hasSelection, setHasSelection] = useState(false);
+  const [currentSpan, setCurrentSpan] = useState<ColorSpan | null>(null);
+  const editorRef = useRef<LyricsRichEditorHandle>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
   const [saved, setSaved] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
   // Adjusted during render rather than in an effect: resets the draft when
   // the song first becomes available (hydration can land after this screen
@@ -47,6 +60,44 @@ export function SongDetailScreen() {
     setSyncedSongId(song.id);
     setName(song.name);
     setLyrics(song.lyrics ?? "");
+    setTags(song.tags ?? []);
+  }
+
+  /** Applies (or clears, for `span: null`) color to whatever's currently selected inside the editor's WebView - see LyricsRichEditor.tsx. */
+  function handleApplyColor(span: ColorSpan | null) {
+    if (span) editorRef.current?.applyColor(span);
+    else editorRef.current?.clearColor();
+    setColorPickerOpen(false);
+  }
+
+  // Every tag used anywhere in the library, offered as one-tap suggestions
+  // so tagging the same way twice doesn't require retyping (and doesn't
+  // drift into near-duplicates like "live" vs "Live").
+  const suggestedTags = useMemo(() => {
+    // Keyed by lowercase so "live" and "Live" from different songs collapse
+    // into one suggestion, and a tag the current song already has (in any
+    // casing) is excluded rather than offered as a no-op tap - see addTag's
+    // own case-insensitive duplicate check.
+    const known = new Map<string, string>();
+    for (const candidate of allSongs) {
+      for (const tag of candidate.tags ?? []) {
+        known.set(tag.toLowerCase(), tag);
+      }
+    }
+    for (const tag of tags) known.delete(tag.toLowerCase());
+    return Array.from(known.values()).sort((a, b) => a.localeCompare(b));
+  }, [allSongs, tags]);
+
+  function addTag(raw: string) {
+    const trimmed = raw.trim();
+    setTagDraft("");
+    if (!trimmed) return;
+    if (tags.some((tag) => tag.toLowerCase() === trimmed.toLowerCase())) return;
+    setTags([...tags, trimmed]);
+  }
+
+  function removeTag(tag: string) {
+    setTags(tags.filter((candidate) => candidate !== tag));
   }
 
   if (!song) {
@@ -60,12 +111,19 @@ export function SongDetailScreen() {
   function handleSave() {
     if (!song || !name.trim()) return;
     dispatch(
-      updateSong(song.id, { name: name.trim(), lyrics: lyrics.trim() || null }),
+      updateSong(song.id, {
+        name: name.trim(),
+        lyrics: lyrics.trim() || null,
+        tags,
+      }),
     );
     setSaved(true);
   }
 
-  const isDirty = name !== song.name || lyrics !== (song.lyrics ?? "");
+  const isDirty =
+    name !== song.name ||
+    lyrics !== (song.lyrics ?? "") ||
+    JSON.stringify(tags) !== JSON.stringify(song.tags ?? []);
 
   /** Confirms before leaving an unsaved edit behind - a lyrics rewrite is the kind of thing you don't want to accidentally lose. */
   function confirmDiscardIfDirty(proceed: () => void) {
@@ -85,7 +143,14 @@ export function SongDetailScreen() {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scroll}>
+        {/*
+          Fixed header (name, tags, the Color row) and fixed footer
+          (Save/Present) never scroll away - only the lyrics box in between
+          is flex: 1, so it's the one thing that shrinks/grows and scrolls
+          internally. That's a deliberate layout choice: on a real stage,
+          losing sight of Save mid-edit is worse than a shorter text box.
+        */}
+        <View style={styles.header}>
           <Pressable
             onPress={() => confirmDiscardIfDirty(() => router.back())}
             hitSlop={8}
@@ -102,21 +167,96 @@ export function SongDetailScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>{t.song.lyricsLabel}</Text>
-            <TextInput
-              value={lyrics}
-              onChangeText={setLyrics}
-              multiline
-              numberOfLines={20}
-              textAlignVertical="top"
-              placeholder={t.song.lyricsPlaceholder}
-              placeholderTextColor={colors.textTertiary}
-              style={styles.lyricsInput}
-            />
+            <Text style={styles.label}>{t.song.tagsLabel}</Text>
+            {tags.length > 0 && (
+              <View style={styles.tagRow}>
+                {tags.map((tag) => (
+                  <Pressable
+                    key={tag}
+                    onPress={() => removeTag(tag)}
+                    accessibilityLabel={t.song.removeTag(tag)}
+                    style={({ pressed }) => [
+                      styles.tagChip,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.tagChipText}>{tag}</Text>
+                    <Text style={styles.tagChipRemove}>×</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            <View style={styles.tagInputRow}>
+              <View style={styles.tagInputField}>
+                <TextField
+                  value={tagDraft}
+                  onChangeText={setTagDraft}
+                  placeholder={t.song.tagsPlaceholder}
+                  onSubmitEditing={() => addTag(tagDraft)}
+                  returnKeyType="done"
+                />
+              </View>
+              <Button
+                variant="secondary"
+                onPress={() => addTag(tagDraft)}
+                disabled={!tagDraft.trim()}
+              >
+                {t.song.addTag}
+              </Button>
+            </View>
+            {suggestedTags.length > 0 && (
+              <View style={styles.tagSuggestions}>
+                <Text style={styles.suggestionsLabel}>
+                  {t.song.suggestedTags}
+                </Text>
+                <View style={styles.tagRow}>
+                  {suggestedTags.map((tag) => (
+                    <Pressable
+                      key={tag}
+                      onPress={() => addTag(tag)}
+                      accessibilityLabel={`${t.song.addTag} ${tag}`}
+                      style={({ pressed }) => [
+                        styles.tagSuggestionChip,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={styles.tagSuggestionText}>{tag}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
-          {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
+          <View style={styles.lyricsHeaderRow}>
+            <Text style={styles.label}>{t.song.lyricsLabel}</Text>
+            <Button
+              variant="secondary"
+              onPress={() => setColorPickerOpen(true)}
+              disabled={!hasSelection}
+              style={styles.colorButton}
+            >
+              {t.song.colorButton}
+            </Button>
+          </View>
+          <Text style={styles.hint}>{t.song.colorHint}</Text>
+        </View>
 
+        <View style={styles.lyricsSection}>
+          <LyricsRichEditor
+            ref={editorRef}
+            value={lyrics}
+            onChangeText={setLyrics}
+            onSelectionChange={(selected, span) => {
+              setHasSelection(selected);
+              setCurrentSpan(span);
+            }}
+            placeholder={t.song.lyricsPlaceholder}
+          />
+        </View>
+
+        <View style={styles.footer}>
+          {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
           <View style={styles.actionsRow}>
             <Button onPress={handleSave} disabled={!name.trim()}>
               {t.common.save}
@@ -135,8 +275,15 @@ export function SongDetailScreen() {
               {t.setlist.present}
             </Button>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
+
+      <ColorPickerModal
+        visible={colorPickerOpen}
+        initialSpan={currentSpan}
+        onApply={handleApplyColor}
+        onClose={() => setColorPickerOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -147,9 +294,28 @@ function createStyles(colors: ThemeColors) {
       flex: 1,
       backgroundColor: colors.background,
     },
-    scroll: {
-      padding: spacing.lg,
-      paddingBottom: spacing.xl,
+    // Never scrolls - name, tags, and the Color row stay on screen the
+    // whole time you're editing.
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+      gap: spacing.xs,
+    },
+    // The one part of the screen that grows/shrinks with available space
+    // and scrolls internally (via the TextInput's own native scrolling) -
+    // see lyricsInput below.
+    lyricsSection: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    // Never scrolls either - Save/Present are always reachable.
+    footer: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
     },
     notFound: {
       color: colors.danger,
@@ -163,36 +329,92 @@ function createStyles(colors: ThemeColors) {
       marginTop: spacing.lg,
       gap: spacing.xs,
     },
+    lyricsHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+      marginTop: spacing.lg,
+    },
+    colorButton: {
+      paddingVertical: 6,
+      paddingHorizontal: spacing.md,
+    },
+    hint: {
+      color: colors.textTertiary,
+      fontSize: 11,
+    },
     label: {
       color: colors.textSecondary,
       fontSize: 12,
       fontWeight: "700",
     },
-    lyricsInput: {
-      minHeight: 320,
-      borderRadius: 12,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-      color: colors.textPrimary,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      fontSize: 15,
-      lineHeight: 22,
-      fontFamily: Platform.select({
-        ios: "Menlo",
-        android: "monospace",
-        default: "monospace",
-      }),
-    },
     savedText: {
       color: colors.success,
       fontSize: 13,
-      marginTop: spacing.md,
     },
     actionsRow: {
       flexDirection: "row",
       gap: spacing.sm,
+    },
+    tagRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.xs,
+    },
+    tagChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      borderRadius: radii.pill,
+      backgroundColor: colors.panelRaised,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+    },
+    tagChipText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    tagChipRemove: {
+      color: colors.textTertiary,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    tagInputRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    tagInputField: {
+      flex: 1,
+    },
+    tagSuggestions: {
+      marginTop: spacing.sm,
+      gap: spacing.xs,
+    },
+    suggestionsLabel: {
+      color: colors.textTertiary,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    tagSuggestionChip: {
+      borderRadius: radii.pill,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+    },
+    tagSuggestionText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    pressed: {
+      opacity: 0.7,
     },
   });
 }

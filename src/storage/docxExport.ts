@@ -1,6 +1,11 @@
 import { strToU8, zipSync } from "fflate";
 import { File, Paths } from "expo-file-system";
 import type { SongManifest } from "@/types/song";
+import {
+  parseLyricsColors,
+  splitIntoLines,
+  type ColorSpan,
+} from "@/ui/lyricsColor";
 import { isFileSystemAvailable } from "./paths";
 
 /**
@@ -30,6 +35,24 @@ function escapeXml(text: string): string {
 const LYRICS_RUN_PROPS = `<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:cs="Courier New"/>`;
 const NO_LYRICS_RUN_PROPS = `<w:i/><w:color w:val="888888"/>`;
 
+/**
+ * A colored span's font/background color shouldn't leak its raw
+ * `<span style="...">` markup into an exported document - it should read as
+ * visibly colored there too, the same choice as picked in the app.
+ */
+function colorRunProps(span: ColorSpan | undefined): string {
+  if (!span) return LYRICS_RUN_PROPS;
+  const color = span.color ? `<w:color w:val="${span.color}"/>` : "";
+  const shading = span.background
+    ? `<w:shd w:val="clear" w:fill="${span.background}"/>`
+    : "";
+  return `${LYRICS_RUN_PROPS}${color}${shading}`;
+}
+
+function run(text: string, runProps: string): string {
+  return `<w:r><w:rPr>${runProps}</w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
+}
+
 function textParagraph(
   text: string,
   runProps: string,
@@ -37,14 +60,25 @@ function textParagraph(
 ): string {
   if (text.length === 0) return "<w:p/>";
   const pPr = paragraphProps ? `<w:pPr>${paragraphProps}</w:pPr>` : "";
-  return `<w:p>${pPr}<w:r><w:rPr>${runProps}</w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
+  return `<w:p>${pPr}${run(text, runProps)}</w:p>`;
 }
 
-/** One `<w:p>` per line, so a blank line between verses stays a blank line. */
+/**
+ * One `<w:p>` per line, so a blank line between verses stays a blank line -
+ * and, within a line, one `<w:r>` per colored/plain run, so a colored
+ * phrase renders with its own font/background color instead of showing its
+ * raw `<span style="...">` markup.
+ */
 function lyricsParagraphs(lyrics: string): string {
-  return lyrics
-    .split("\n")
-    .map((line) => textParagraph(line, LYRICS_RUN_PROPS))
+  const lines = splitIntoLines(parseLyricsColors(lyrics));
+  return lines
+    .map((line) => {
+      if (line.length === 0) return "<w:p/>";
+      const runs = line
+        .map((segment) => run(segment.text, colorRunProps(segment.span)))
+        .join("");
+      return `<w:p>${runs}</w:p>`;
+    })
     .join("");
 }
 

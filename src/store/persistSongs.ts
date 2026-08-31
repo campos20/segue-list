@@ -7,6 +7,7 @@ import {
 } from "@/storage/songLibrary";
 import type { SongManifest } from "@/types/song";
 import { songKey } from "@/ui/libraryTree";
+import { plainTextToLyricsHtml } from "@/ui/lyricsColor";
 import type { AppDispatch, RootState } from "./index";
 import { persistLibraryOrder } from "./persistLibrary";
 import { removeSongFromAllSetlists } from "./persistSetlists";
@@ -108,7 +109,10 @@ export function importSongsFromLyricsFiles(
           new File(uri),
           fileName,
         );
-        const song = createSongFile(name, lyrics || null);
+        const song = createSongFile(
+          name,
+          lyrics ? plainTextToLyricsHtml(lyrics) : null,
+        );
         dispatch(songAdded(song));
         imported.push(song);
       } catch (error) {

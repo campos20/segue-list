@@ -1,6 +1,5 @@
 # Segue List
 
-![Statements](https://img.shields.io/badge/statements-71.75%25-red.svg?style=flat) ![Branches](https://img.shields.io/badge/branches-63.79%25-red.svg?style=flat) ![Functions](https://img.shields.io/badge/functions-64.63%25-red.svg?style=flat) ![Lines](https://img.shields.io/badge/lines-72.3%25-red.svg?style=flat)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/campos20)
 
 A setlist app for musicians: write your songs' lyrics once, group them into
@@ -95,17 +94,8 @@ Coverage is unit tests over the pure logic and Redux thunks in `src/store/`
 and `src/ui/`'s top-level files (`reorder.ts`, `libraryTree.ts`, ...) - not
 `ui/components/`, `ui/screens/`, or `app/` (see [Stability over
 appearance](AGENTS.md) for why UI correctness here leans on manual device
-testing instead). The badges above are generated from the coverage report,
-not hand-edited:
-
-```bash
-npm run test:coverage && npm run coverage:badges
-```
-
-CI re-generates them on every pull request into `main` (and on manual
-dispatch) and fails if the README's badges don't match a fresh run, so a
-badge here is never stale - if you add or change tests, run the command
-above and commit the result.
+testing instead). CI posts the current numbers as a comment on every pull
+request into `main`, so there's nothing here to regenerate or keep in sync.
 
 ## Downloading a release
 

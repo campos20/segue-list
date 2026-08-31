@@ -9,6 +9,7 @@ import {
   removeSongFromAllSetlists,
   removeSongFromSetlist,
   renameSetlist,
+  reorderSetlistSongs,
 } from "./persistSetlists";
 import { setlistsSelectors } from "./setlistsSlice";
 
@@ -230,6 +231,46 @@ describe("moveSongInSetlist", () => {
     const setlist = seedSetlist(store, ["song-a", "song-b"]);
 
     store.dispatch(moveSongInSetlist(setlist.id, 0, "up"));
+
+    expect(setlistLibrary.writeSetlist).not.toHaveBeenCalled();
+  });
+});
+
+describe("reorderSetlistSongs", () => {
+  it("replaces the setlist's song order with the given permutation", () => {
+    const store = createAppStore();
+    const setlist = seedSetlist(store, ["song-a", "song-b", "song-c"]);
+
+    store.dispatch(
+      reorderSetlistSongs(setlist.id, ["song-c", "song-a", "song-b"]),
+    );
+
+    expect(
+      setlistsSelectors.selectById(store.getState().setlists, setlist.id)
+        ?.songs,
+    ).toEqual(["song-c", "song-a", "song-b"]);
+  });
+
+  it("does not write when the given ids aren't a permutation of the current songs", () => {
+    const store = createAppStore();
+    const setlist = seedSetlist(store, ["song-a", "song-b"]);
+
+    store.dispatch(reorderSetlistSongs(setlist.id, ["song-a", "song-c"]));
+
+    expect(setlistLibrary.writeSetlist).not.toHaveBeenCalled();
+    expect(
+      setlistsSelectors.selectById(store.getState().setlists, setlist.id)
+        ?.songs,
+    ).toEqual(["song-a", "song-b"]);
+  });
+
+  it("does not write when the given order matches the current order", () => {
+    const store = createAppStore();
+    const setlist = seedSetlist(store, ["song-a", "song-b", "song-c"]);
+
+    store.dispatch(
+      reorderSetlistSongs(setlist.id, ["song-a", "song-b", "song-c"]),
+    );
 
     expect(setlistLibrary.writeSetlist).not.toHaveBeenCalled();
   });
