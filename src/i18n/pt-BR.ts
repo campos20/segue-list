@@ -83,7 +83,6 @@ export const ptBR: TranslationDictionary = {
     nameLabel: "Nome da música",
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
-    lyricsPreviewLabel: "Pré-visualização",
     tagsLabel: "Tags",
     tagsPlaceholder: "Adicionar uma tag...",
     addTag: "Adicionar",

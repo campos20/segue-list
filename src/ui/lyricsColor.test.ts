@@ -1,7 +1,8 @@
 import {
-  applyColorAt,
-  getSpanAt,
+  buildLyricsHtml,
   parseLyricsColors,
+  plainTextToLyricsHtml,
+  sanitizeLyricsHtml,
   splitIntoLines,
 } from "./lyricsColor";
 
@@ -10,54 +11,69 @@ describe("parseLyricsColors", () => {
     expect(parseLyricsColors("Hello world")).toEqual([{ text: "Hello world" }]);
   });
 
-  it("splits out a span with both background and font color", () => {
-    expect(
-      parseLyricsColors("Lead {{FBBF24,1C1400}}Ooh ooh{{/}} lead"),
-    ).toEqual([
+  it("splits out a span with both font color and background color", () => {
+    const source =
+      'Lead <span style="color:#1C1400;background-color:#FBBF24;">Ooh ooh</span> lead';
+    expect(parseLyricsColors(source)).toEqual([
       { text: "Lead " },
-      { text: "Ooh ooh", span: { background: "FBBF24", color: "1C1400" } },
+      { text: "Ooh ooh", span: { color: "1C1400", background: "FBBF24" } },
       { text: " lead" },
     ]);
   });
 
   it("supports background-only and font-color-only spans", () => {
-    expect(parseLyricsColors("{{FBBF24,}}a{{/}} {{,1C1400}}b{{/}}")).toEqual([
-      { text: "a", span: { background: "FBBF24", color: undefined } },
+    const source =
+      '<span style="background-color:#FBBF24;">a</span> <span style="color:#1C1400;">b</span>';
+    expect(parseLyricsColors(source)).toEqual([
+      { text: "a", span: { color: undefined, background: "FBBF24" } },
       { text: " " },
-      { text: "b", span: { background: undefined, color: "1C1400" } },
+      { text: "b", span: { color: "1C1400", background: undefined } },
     ]);
   });
 
   it("handles back-to-back spans", () => {
-    expect(parseLyricsColors("{{FF0000,}}a{{/}}{{00FF00,}}b{{/}}")).toEqual([
-      { text: "a", span: { background: "FF0000", color: undefined } },
-      { text: "b", span: { background: "00FF00", color: undefined } },
+    const source =
+      '<span style="color:#FF0000;">a</span><span style="color:#00FF00;">b</span>';
+    expect(parseLyricsColors(source)).toEqual([
+      { text: "a", span: { color: "FF0000", background: undefined } },
+      { text: "b", span: { color: "00FF00", background: undefined } },
+    ]);
+  });
+
+  it("decodes escaped text within and around spans", () => {
+    const source =
+      'Rock &amp; roll <span style="color:#FF0000;">&lt;solo&gt;</span>';
+    expect(parseLyricsColors(source)).toEqual([
+      { text: "Rock & roll " },
+      { text: "<solo>", span: { color: "FF0000", background: undefined } },
     ]);
   });
 
   it("treats an unmatched opening tag as plain text, restoring its own markup", () => {
-    expect(parseLyricsColors("Lead {{FBBF24,}}Ooh lead")).toEqual([
+    const source = 'Lead <span style="color:#FF0000;">Ooh lead';
+    expect(parseLyricsColors(source)).toEqual([
       { text: "Lead " },
-      { text: "{{FBBF24,}}Ooh lead" },
+      { text: '<span style="color:#FF0000;">Ooh lead' },
     ]);
   });
 
   it("treats a stray close tag with nothing open as plain text", () => {
-    expect(parseLyricsColors("Lead {{/}} lead")).toEqual([
-      { text: "Lead {{/}} lead" },
+    expect(parseLyricsColors("Lead </span> lead")).toEqual([
+      { text: "Lead </span> lead" },
+    ]);
+  });
+
+  it("does not trust an arbitrary foreign tag as a span - it's left as literal text", () => {
+    // A hostile .seguelist file trying to sneak in something other than
+    // our own <span style="color:...;background-color:...;"> shape.
+    const source = '<img src=x onerror="alert(1)">Ooh ooh';
+    expect(parseLyricsColors(source)).toEqual([
+      { text: '<img src=x onerror="alert(1)">Ooh ooh' },
     ]);
   });
 
   it("returns nothing for an empty string", () => {
     expect(parseLyricsColors("")).toEqual([]);
-  });
-
-  it("strips markers from the rendered text (this is for display, not round-tripping)", () => {
-    const source = "Lead {{FBBF24,1C1400}}Ooh ooh{{/}} lead";
-    const rendered = parseLyricsColors(source)
-      .map((segment) => segment.text)
-      .join("");
-    expect(rendered).toBe("Lead Ooh ooh lead");
   });
 });
 
@@ -71,10 +87,12 @@ describe("splitIntoLines", () => {
   });
 
   it("splits a colored span that crosses a line break, carrying its span onto both lines", () => {
-    const segments = parseLyricsColors("{{FBBF24,}}Ooh\nahh{{/}}");
+    const segments = parseLyricsColors(
+      '<span style="background-color:#FBBF24;">Ooh\nahh</span>',
+    );
     expect(splitIntoLines(segments)).toEqual([
-      [{ text: "Ooh", span: { background: "FBBF24", color: undefined } }],
-      [{ text: "ahh", span: { background: "FBBF24", color: undefined } }],
+      [{ text: "Ooh", span: { color: undefined, background: "FBBF24" } }],
+      [{ text: "ahh", span: { color: undefined, background: "FBBF24" } }],
     ]);
   });
 
@@ -88,76 +106,61 @@ describe("splitIntoLines", () => {
   });
 });
 
-describe("getSpanAt", () => {
-  const text = "Lead {{FBBF24,1C1400}}Ooh ooh{{/}} lead";
-  // Indices: "Lead " = 0..5, open tag "{{FBBF24,1C1400}}" = 5..22 (17 chars),
-  // "Ooh ooh" = 22..29, close "{{/}}" = 29..34.
-
-  it("returns the span when the selection exactly matches the inner content, markers excluded", () => {
-    expect(getSpanAt(text, 22, 29)).toEqual({
-      background: "FBBF24",
-      color: "1C1400",
-    });
+describe("buildLyricsHtml", () => {
+  it("renders a plain segment as escaped text with no tag", () => {
+    expect(buildLyricsHtml([{ text: "Rock & roll" }])).toBe("Rock &amp; roll");
   });
 
-  it("returns the span when the selection exactly matches the tag, markers included", () => {
-    expect(getSpanAt(text, 5, 34)).toEqual({
-      background: "FBBF24",
-      color: "1C1400",
-    });
+  it("renders a colored segment wrapped in a span, color before background", () => {
+    expect(
+      buildLyricsHtml([
+        { text: "Ooh ooh", span: { color: "1C1400", background: "FBBF24" } },
+      ]),
+    ).toBe(
+      '<span style="color:#1C1400;background-color:#FBBF24;">Ooh ooh</span>',
+    );
   });
 
-  it("returns null for a selection that doesn't align with any span boundary", () => {
-    expect(getSpanAt(text, 23, 28)).toBeNull();
-    expect(getSpanAt(text, 0, 4)).toBeNull();
-  });
-
-  it("returns null for an empty (cursor-only) selection", () => {
-    expect(getSpanAt(text, 22, 22)).toBeNull();
+  it("omits the span entirely when the span object has neither color set", () => {
+    expect(buildLyricsHtml([{ text: "plain", span: {} }])).toBe("plain");
   });
 });
 
-describe("applyColorAt", () => {
-  it("wraps a plain selection in a new tag", () => {
-    const text = "Lead Ooh ooh lead";
-    expect(applyColorAt(text, 5, 12, { background: "FBBF24" })).toBe(
-      "Lead {{FBBF24,}}Ooh ooh{{/}} lead",
+describe("sanitizeLyricsHtml", () => {
+  it("round-trips well-formed markup unchanged in meaning", () => {
+    const source = 'Lead <span style="color:#FF0000;">Ooh</span> lead';
+    expect(sanitizeLyricsHtml(source)).toBe(source);
+  });
+
+  it("escapes anything that isn't our own span shape into inert text, defusing a hostile .seguelist import", () => {
+    const source = '<img src=x onerror="alert(1)">Ooh ooh';
+    const sanitized = sanitizeLyricsHtml(source);
+    // The dangerous "<" that would make this a live tag if re-injected as
+    // innerHTML is gone - what's left is the literal word "onerror" as
+    // harmless text, same as any other word would be.
+    expect(sanitized).not.toMatch(/<img/i);
+    expect(sanitized).toContain("&lt;img");
+    expect(sanitized).toContain("Ooh ooh");
+  });
+});
+
+describe("plainTextToLyricsHtml", () => {
+  it("escapes HTML-special characters so imported text can't be read back as markup", () => {
+    expect(plainTextToLyricsHtml("Rock & Roll <encore>")).toBe(
+      "Rock &amp; Roll &lt;encore&gt;",
     );
   });
 
-  it("does nothing for an empty (cursor-only) selection", () => {
-    expect(
-      applyColorAt("Lead Ooh ooh lead", 5, 5, { background: "FF0000" }),
-    ).toBe("Lead Ooh ooh lead");
-  });
-
-  it("does nothing when clearing a plain selection that has no color", () => {
-    const text = "Lead Ooh ooh lead";
-    expect(applyColorAt(text, 5, 12, null)).toBe(text);
-  });
-
-  it("clears a span when the selection exactly bounds its inner content, markers excluded", () => {
-    const text = "Lead {{FBBF24,1C1400}}Ooh ooh{{/}} lead";
-    expect(applyColorAt(text, 22, 29, null)).toBe("Lead Ooh ooh lead");
-  });
-
-  it("clears a span when the selection exactly bounds the tag, markers included", () => {
-    const text = "Lead {{FBBF24,1C1400}}Ooh ooh{{/}} lead";
-    expect(applyColorAt(text, 5, 34, null)).toBe("Lead Ooh ooh lead");
-  });
-
-  it("recolors an existing span in place (markers excluded) without touching the rest", () => {
-    const text = "Lead {{FBBF24,1C1400}}Ooh ooh{{/}} lead";
-    expect(applyColorAt(text, 22, 29, { background: "00FF00" })).toBe(
-      "Lead {{00FF00,}}Ooh ooh{{/}} lead",
+  it("leaves newlines untouched", () => {
+    expect(plainTextToLyricsHtml("line one\nline two")).toBe(
+      "line one\nline two",
     );
   });
 
-  it("round-trips: wrapping then clearing the same selection removes it again", () => {
-    const original = "Lead Ooh ooh lead";
-    const wrapped = applyColorAt(original, 5, 12, { color: "1C1400" });
-    const innerStart = wrapped.indexOf("Ooh");
-    const innerEnd = innerStart + "Ooh ooh".length;
-    expect(applyColorAt(wrapped, innerStart, innerEnd, null)).toBe(original);
+  it("round-trips back to the original text through parseLyricsColors", () => {
+    const original = "Rock & Roll <encore>\nnext line";
+    const stored = plainTextToLyricsHtml(original);
+    const segments = parseLyricsColors(stored);
+    expect(segments.map((s) => s.text).join("")).toBe(original);
   });
 });

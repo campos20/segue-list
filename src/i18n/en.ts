@@ -83,7 +83,6 @@ export const en = {
     tagsPlaceholder: "Comma-separated tags",
     addTag: "Add tag",
     lyricsPlaceholder: "Type or paste the lyrics...",
-    lyricsPreviewLabel: "Preview",
     removeTag: (tag: string) => `Remove tag "${tag}"`,
     suggestedTags: "Suggested tags",
     colorButton: "Color",

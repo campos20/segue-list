@@ -7,7 +7,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,27 +16,13 @@ import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import { Button } from "@/ui/components/Button";
 import { ColorPickerModal } from "@/ui/components/ColorPickerModal";
-import { LyricsPreviewDrawer } from "@/ui/components/LyricsPreviewDrawer";
-import { TextField } from "@/ui/components/TextField";
-import { applyColorAt, getSpanAt, type ColorSpan } from "@/ui/lyricsColor";
 import {
-  elevation,
-  radii,
-  spacing,
-  useThemeColors,
-  type ThemeColors,
-} from "@/ui/theme";
-
-// Matches the presentation screen's own lyrics style (PresentationScreen.tsx's
-// default fontSize/lineHeight and font family), so the editor reads as a
-// stand-in for the stage view rather than a plain form field.
-const LYRICS_FONT_SIZE = 18;
-const LYRICS_LINE_HEIGHT = 28;
-const LYRICS_FONT_FAMILY = Platform.select({
-  ios: "Menlo",
-  android: "monospace",
-  default: "monospace",
-});
+  LyricsRichEditor,
+  type LyricsRichEditorHandle,
+} from "@/ui/components/LyricsRichEditor";
+import { TextField } from "@/ui/components/TextField";
+import type { ColorSpan } from "@/ui/lyricsColor";
+import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 export function SongDetailScreen() {
   const { songId } = useLocalSearchParams<{ songId: string }>();
@@ -56,22 +41,13 @@ export function SongDetailScreen() {
 
   const [name, setName] = useState("");
   const [lyrics, setLyrics] = useState("");
-  const [lyricsSelection, setLyricsSelection] = useState({ start: 0, end: 0 });
-  // Mirrors lyricsSelection but updated synchronously (no render lag), so
-  // handleOpenColorPicker always reads the true latest selection even if
-  // the user taps Color right after finishing a selection, before React
-  // has re-rendered with the state from that selection change - a
-  // stale-closure race that showed up as "have to tap twice".
-  const lyricsSelectionRef = useRef({ start: 0, end: 0 });
+  const [hasSelection, setHasSelection] = useState(false);
+  const [currentSpan, setCurrentSpan] = useState<ColorSpan | null>(null);
+  const editorRef = useRef<LyricsRichEditorHandle>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [saved, setSaved] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [colorPickerRange, setColorPickerRange] = useState({
-    start: 0,
-    end: 0,
-  });
 
   // Adjusted during render rather than in an effect: resets the draft when
   // the song first becomes available (hydration can land after this screen
@@ -87,29 +63,11 @@ export function SongDetailScreen() {
     setTags(song.tags ?? []);
   }
 
-  /**
-   * Opens the color picker for the current text selection - captured from
-   * the ref (not the state variable) so it's never a render behind: reading
-   * state here would capture whatever `lyricsSelection` was as of the last
-   * render, which can still be the pre-selection value if this fires before
-   * that render commits (the same stale-closure race that used to require
-   * tapping twice). The selection is never fed back as a controlled
-   * `selection` prop either way: round-tripping selection through state is
-   * a known source of cursor-jump bugs on native TextInput, so this only
-   * ever reads it.
-   */
-  function handleOpenColorPicker() {
-    setColorPickerRange(lyricsSelectionRef.current);
-    setColorPickerOpen(true);
-  }
-
-  /** Applies (or clears, for `span: null`) color across the range captured when the picker opened - see lyricsColor.ts. */
+  /** Applies (or clears, for `span: null`) color to whatever's currently selected inside the editor's WebView - see LyricsRichEditor.tsx. */
   function handleApplyColor(span: ColorSpan | null) {
-    const { start, end } = colorPickerRange;
-    setLyrics((current) => applyColorAt(current, start, end, span));
+    if (span) editorRef.current?.applyColor(span);
+    else editorRef.current?.clearColor();
     setColorPickerOpen(false);
-    lyricsSelectionRef.current = { start: 0, end: 0 };
-    setLyricsSelection({ start: 0, end: 0 });
   }
 
   // Every tag used anywhere in the library, offered as one-tap suggestions
@@ -180,7 +138,7 @@ export function SongDetailScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/*
-          Fixed header (name, tags, the Highlight row) and fixed footer
+          Fixed header (name, tags, the Color row) and fixed footer
           (Save/Present) never scroll away - only the lyrics box in between
           is flex: 1, so it's the one thing that shrinks/grows and scrolls
           internally. That's a deliberate layout choice: on a real stage,
@@ -267,8 +225,8 @@ export function SongDetailScreen() {
             <Text style={styles.label}>{t.song.lyricsLabel}</Text>
             <Button
               variant="secondary"
-              onPress={handleOpenColorPicker}
-              disabled={lyricsSelection.start === lyricsSelection.end}
+              onPress={() => setColorPickerOpen(true)}
+              disabled={!hasSelection}
               style={styles.colorButton}
             >
               {t.song.colorButton}
@@ -278,40 +236,16 @@ export function SongDetailScreen() {
         </View>
 
         <View style={styles.lyricsSection}>
-          <TextInput
+          <LyricsRichEditor
+            ref={editorRef}
             value={lyrics}
             onChangeText={setLyrics}
-            onSelectionChange={(event) => {
-              lyricsSelectionRef.current = event.nativeEvent.selection;
-              setLyricsSelection(event.nativeEvent.selection);
+            onSelectionChange={(selected, span) => {
+              setHasSelection(selected);
+              setCurrentSpan(span);
             }}
-            multiline
-            textAlignVertical="top"
             placeholder={t.song.lyricsPlaceholder}
-            placeholderTextColor={colors.textTertiary}
-            selectionColor={colors.accent}
-            cursorColor={colors.accent}
-            style={styles.lyricsInput}
           />
-
-          {/*
-            Anchored to lyricsSection (not the whole screen) so it's always
-            centered on the lyrics box itself, regardless of how tall the
-            header ends up (more tags = taller header = lyricsSection starts
-            lower) - a screen-relative percentage would drift into the
-            header on a tag-heavy song.
-          */}
-          <Pressable
-            onPress={() => setPreviewOpen(true)}
-            style={({ pressed }) => [
-              styles.previewTab,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.previewTabText}>
-              {t.song.lyricsPreviewLabel}
-            </Text>
-          </Pressable>
         </View>
 
         <View style={styles.footer}>
@@ -337,19 +271,9 @@ export function SongDetailScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      <LyricsPreviewDrawer
-        visible={previewOpen}
-        lyrics={lyrics}
-        onClose={() => setPreviewOpen(false)}
-      />
-
       <ColorPickerModal
         visible={colorPickerOpen}
-        initialSpan={getSpanAt(
-          lyrics,
-          colorPickerRange.start,
-          colorPickerRange.end,
-        )}
+        initialSpan={currentSpan}
         onApply={handleApplyColor}
         onClose={() => setColorPickerOpen(false)}
       />
@@ -363,7 +287,7 @@ function createStyles(colors: ThemeColors) {
       flex: 1,
       backgroundColor: colors.background,
     },
-    // Never scrolls - name, tags, and the Highlight row stay on screen the
+    // Never scrolls - name, tags, and the Color row stay on screen the
     // whole time you're editing.
     header: {
       paddingHorizontal: spacing.lg,
@@ -376,7 +300,6 @@ function createStyles(colors: ThemeColors) {
     // see lyricsInput below.
     lyricsSection: {
       flex: 1,
-      position: "relative",
       paddingHorizontal: spacing.lg,
       paddingBottom: spacing.sm,
     },
@@ -417,44 +340,6 @@ function createStyles(colors: ThemeColors) {
     label: {
       color: colors.textSecondary,
       fontSize: 12,
-      fontWeight: "700",
-    },
-    // A plain text field - a styled inline overlay was tried and found hard
-    // to read, so the styled/highlighted rendering only lives in the
-    // LyricsPreviewDrawer now. Still sized to match the presentation
-    // screen's own lyrics font, so it at least *feels* like editing the
-    // real thing. flex: 1 (both here and on lyricsSection) is what makes
-    // this the one part of the screen that grows/shrinks - it scrolls
-    // internally rather than pushing the header or footer off screen.
-    lyricsInput: {
-      flex: 1,
-      borderRadius: radii.md,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.background,
-      color: colors.textPrimary,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.lg,
-      fontSize: LYRICS_FONT_SIZE,
-      lineHeight: LYRICS_LINE_HEIGHT,
-      fontFamily: LYRICS_FONT_FAMILY,
-    },
-    // A tab pinned to the right edge of the lyrics box specifically (see
-    // lyricsSection's position: relative) - opens LyricsPreviewDrawer.
-    previewTab: {
-      position: "absolute",
-      right: 0,
-      top: "50%",
-      backgroundColor: colors.accent,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      borderTopLeftRadius: radii.md,
-      borderBottomLeftRadius: radii.md,
-      ...elevation,
-    },
-    previewTabText: {
-      color: colors.accentText,
-      fontSize: 13,
       fontWeight: "700",
     },
     savedText: {
