@@ -5,6 +5,9 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**/README.md"
+      - "docs/**"
   workflow_dispatch:
 
 # Superseded runs on the same branch are pointless once a newer commit lands.
