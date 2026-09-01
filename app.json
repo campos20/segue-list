@@ -14,7 +14,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.campos20.seguelist"
+      "package": "com.github.campos20.seguelist"
     },
     "web": {
       "output": "static",
@@ -37,6 +37,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e521dfe7-fe2a-49b6-a95f-89467a822e4f"
+      }
+    },
+    "owner": "campos20"
   }
 }
