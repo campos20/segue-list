@@ -2,6 +2,19 @@
 
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/campos20)
 
+[![CI](https://img.shields.io/github/actions/workflow/status/campos20/segue-list/ci.yaml?branch=main&label=CI)](https://github.com/campos20/segue-list/actions/workflows/ci.yaml)
+[![Release](https://img.shields.io/github/v/release/campos20/segue-list?include_prereleases&sort=semver&label=release)](https://github.com/campos20/segue-list/releases/latest)
+[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Android-lightgrey)](#running-the-app)
+[![Expo SDK](https://img.shields.io/badge/Expo-SDK%2057-000020?logo=expo&logoColor=white)](https://docs.expo.dev/versions/v57.0.0/)
+
+<!-- The CI and release badges read live GitHub state, so until the first
+     workflow run and the first tagged release they read "no status" and "no
+     releases found". Both fill themselves in - nothing to change here. -->
+
+> This app is currently in closed testing on Google Play. If you'd like to
+> use it, reach out and I'll send you instructions to join.
+
 A setlist app for musicians: write your songs' lyrics once, group them into
 setlists, and read them on a phone or tablet during a show. No account, no
 backend - everything lives on your device, and you back it up or hand it to
