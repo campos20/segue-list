@@ -210,6 +210,9 @@ function PresentationView({
               onPress={() => setIsPanelOpen((open) => !open)}
               style={styles.headerHamburgerButton}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t.presentation.menuToggleLabel(isPanelOpen)}
+              accessibilityState={{ expanded: isPanelOpen }}
             >
               <Text style={styles.railGlyph}>{isPanelOpen ? "‹" : "☰"}</Text>
             </Pressable>
@@ -328,6 +331,8 @@ function PresentationView({
         <Pressable
           style={styles.backdrop}
           onPress={() => setIsPanelOpen(false)}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
         />
       )}
 

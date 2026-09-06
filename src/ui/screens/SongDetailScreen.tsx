@@ -178,6 +178,9 @@ export function SongDetailScreen() {
                 pressed && styles.pressed,
               ]}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t.song.tagsToggleLabel(tagsExpanded)}
+              accessibilityState={{ expanded: tagsExpanded }}
             >
               <Text style={styles.label}>{t.song.tagsLabel}</Text>
               <Text

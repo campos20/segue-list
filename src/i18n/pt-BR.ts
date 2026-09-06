@@ -85,6 +85,8 @@ export const ptBR: TranslationDictionary = {
     lyricsPlaceholder: "Digite ou cole a letra...",
     tagsLabel: "Tags",
     noTags: "Nenhuma tag ainda",
+    tagsToggleLabel: (expanded: boolean) =>
+      expanded ? "Recolher tags" : "Expandir tags",
     tagsPlaceholder: "Adicionar uma tag...",
     addTag: "Adicionar",
     removeTag: (tag: string) => `Remover tag "${tag}"`,
@@ -111,6 +113,8 @@ export const ptBR: TranslationDictionary = {
     noMatch: "Nenhuma música encontrada.",
     noLyrics: "Sem letra para esta música.",
     edit: "Editar",
+    menuToggleLabel: (open: boolean): string =>
+      open ? "Fechar menu de músicas" : "Abrir menu de músicas",
   },
   menu: {
     about: "Sobre",

@@ -81,6 +81,8 @@ export const en = {
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",
     noTags: "No tags yet",
+    tagsToggleLabel: (expanded: boolean): string =>
+      expanded ? "Collapse tags" : "Expand tags",
     tagsPlaceholder: "Add a tag...",
     addTag: "Add tag",
     lyricsPlaceholder: "Type or paste the lyrics...",
@@ -108,6 +110,8 @@ export const en = {
     noMatch: "No matching song.",
     noLyrics: "No lyrics for this song.",
     edit: "Edit",
+    menuToggleLabel: (open: boolean): string =>
+      open ? "Close song menu" : "Open song menu",
   },
   menu: {
     about: "About",
