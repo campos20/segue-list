@@ -80,6 +80,7 @@ export const en = {
     nameLabel: "Song name",
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",
+    noTags: "No tags yet",
     tagsPlaceholder: "Add a tag...",
     addTag: "Add tag",
     lyricsPlaceholder: "Type or paste the lyrics...",

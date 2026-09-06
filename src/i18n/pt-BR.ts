@@ -84,6 +84,7 @@ export const ptBR: TranslationDictionary = {
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
     tagsLabel: "Tags",
+    noTags: "Nenhuma tag ainda",
     tagsPlaceholder: "Adicionar uma tag...",
     addTag: "Adicionar",
     removeTag: (tag: string) => `Remover tag "${tag}"`,
