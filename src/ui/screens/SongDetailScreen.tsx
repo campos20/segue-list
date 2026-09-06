@@ -46,6 +46,10 @@ export function SongDetailScreen() {
   const editorRef = useRef<LyricsRichEditorHandle>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  // Collapsed by default so the name field and lyrics box get most of the
+  // screen - tags are secondary metadata, not something edited every time
+  // this screen opens. Tapping the summary row expands the full editor.
+  const [tagsExpanded, setTagsExpanded] = useState(false);
   const [saved, setSaved] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
@@ -167,64 +171,89 @@ export function SongDetailScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>{t.song.tagsLabel}</Text>
-            {tags.length > 0 && (
-              <View style={styles.tagRow}>
-                {tags.map((tag) => (
-                  <Pressable
-                    key={tag}
-                    onPress={() => removeTag(tag)}
-                    accessibilityLabel={t.song.removeTag(tag)}
-                    style={({ pressed }) => [
-                      styles.tagChip,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={styles.tagChipText}>{tag}</Text>
-                    <Text style={styles.tagChipRemove}>×</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-            <View style={styles.tagInputRow}>
-              <View style={styles.tagInputField}>
-                <TextField
-                  value={tagDraft}
-                  onChangeText={setTagDraft}
-                  placeholder={t.song.tagsPlaceholder}
-                  onSubmitEditing={() => addTag(tagDraft)}
-                  returnKeyType="done"
-                />
-              </View>
-              <Button
-                variant="secondary"
-                onPress={() => addTag(tagDraft)}
-                disabled={!tagDraft.trim()}
+            <Pressable
+              onPress={() => setTagsExpanded((expanded) => !expanded)}
+              style={({ pressed }) => [
+                styles.tagsSummaryRow,
+                pressed && styles.pressed,
+              ]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t.song.tagsToggleLabel(tagsExpanded)}
+              accessibilityState={{ expanded: tagsExpanded }}
+            >
+              <Text style={styles.label}>{t.song.tagsLabel}</Text>
+              <Text
+                style={styles.tagsSummaryText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
-                {t.song.addTag}
-              </Button>
-            </View>
-            {suggestedTags.length > 0 && (
-              <View style={styles.tagSuggestions}>
-                <Text style={styles.suggestionsLabel}>
-                  {t.song.suggestedTags}
-                </Text>
-                <View style={styles.tagRow}>
-                  {suggestedTags.map((tag) => (
-                    <Pressable
-                      key={tag}
-                      onPress={() => addTag(tag)}
-                      accessibilityLabel={`${t.song.addTag} ${tag}`}
-                      style={({ pressed }) => [
-                        styles.tagSuggestionChip,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Text style={styles.tagSuggestionText}>{tag}</Text>
-                    </Pressable>
-                  ))}
+                {tags.length > 0 ? tags.join(", ") : t.song.noTags}
+              </Text>
+              <Text style={styles.tagsChevron}>{tagsExpanded ? "▲" : "▼"}</Text>
+            </Pressable>
+
+            {tagsExpanded && (
+              <>
+                {tags.length > 0 && (
+                  <View style={styles.tagRow}>
+                    {tags.map((tag) => (
+                      <Pressable
+                        key={tag}
+                        onPress={() => removeTag(tag)}
+                        accessibilityLabel={t.song.removeTag(tag)}
+                        style={({ pressed }) => [
+                          styles.tagChip,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text style={styles.tagChipText}>{tag}</Text>
+                        <Text style={styles.tagChipRemove}>×</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+                <View style={styles.tagInputRow}>
+                  <View style={styles.tagInputField}>
+                    <TextField
+                      value={tagDraft}
+                      onChangeText={setTagDraft}
+                      placeholder={t.song.tagsPlaceholder}
+                      onSubmitEditing={() => addTag(tagDraft)}
+                      returnKeyType="done"
+                    />
+                  </View>
+                  <Button
+                    variant="secondary"
+                    onPress={() => addTag(tagDraft)}
+                    disabled={!tagDraft.trim()}
+                  >
+                    {t.song.addTag}
+                  </Button>
                 </View>
-              </View>
+                {suggestedTags.length > 0 && (
+                  <View style={styles.tagSuggestions}>
+                    <Text style={styles.suggestionsLabel}>
+                      {t.song.suggestedTags}
+                    </Text>
+                    <View style={styles.tagRow}>
+                      {suggestedTags.map((tag) => (
+                        <Pressable
+                          key={tag}
+                          onPress={() => addTag(tag)}
+                          accessibilityLabel={`${t.song.addTag} ${tag}`}
+                          style={({ pressed }) => [
+                            styles.tagSuggestionChip,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text style={styles.tagSuggestionText}>{tag}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </>
             )}
           </View>
 
@@ -348,6 +377,21 @@ function createStyles(colors: ThemeColors) {
       color: colors.textSecondary,
       fontSize: 12,
       fontWeight: "700",
+    },
+    tagsSummaryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: 4,
+    },
+    tagsSummaryText: {
+      flex: 1,
+      color: colors.textTertiary,
+      fontSize: 13,
+    },
+    tagsChevron: {
+      color: colors.textTertiary,
+      fontSize: 10,
     },
     savedText: {
       color: colors.success,

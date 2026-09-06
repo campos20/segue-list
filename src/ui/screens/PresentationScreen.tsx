@@ -127,8 +127,9 @@ function PresentationView({
   }
   const [played, setPlayed] = useState<Set<string>>(new Set());
   // Collapsed by default: the lyrics of the current song should fill the
-  // screen when presentation mode starts, not compete with the track list
-  // for space. The ☰ button still opens it for quick switching.
+  // screen when presentation mode starts. The floating ☰ button opens an
+  // overlay (song switcher + controls) on top of the lyrics rather than
+  // reserving permanent width for it.
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [panelQuery, setPanelQuery] = useState("");
   // Persisted across sessions - remembered how you last left it, not reset
@@ -202,136 +203,19 @@ function PresentationView({
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={[styles.rail, isPanelOpen && styles.railOpen]}>
-        {multipleSongs && (
-          <Pressable
-            onPress={() => setIsPanelOpen((open) => !open)}
-            style={styles.railButton}
-          >
-            <Text style={styles.railGlyph}>{isPanelOpen ? "‹" : "☰"}</Text>
-          </Pressable>
-        )}
-        <Pressable
-          onPress={() => dispatch(persistPresentationAllCaps(!allCaps))}
-          style={styles.railButton}
-        >
-          <Text style={[styles.railText, allCaps && styles.railActive]}>
-            AA
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() =>
-            dispatch(
-              persistPresentationFontSize(
-                Math.min(fontSize + FONT_SIZE_STEP, MAX_FONT_SIZE),
-              ),
-            )
-          }
-          disabled={fontSize >= MAX_FONT_SIZE}
-          style={styles.railButton}
-        >
-          <Text
-            style={[
-              styles.railText,
-              fontSize >= MAX_FONT_SIZE && styles.railDisabled,
-            ]}
-          >
-            A+
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() =>
-            dispatch(
-              persistPresentationFontSize(
-                Math.max(fontSize - FONT_SIZE_STEP, MIN_FONT_SIZE),
-              ),
-            )
-          }
-          disabled={fontSize <= MIN_FONT_SIZE}
-          style={styles.railButton}
-        >
-          <Text
-            style={[
-              styles.railText,
-              fontSize <= MIN_FONT_SIZE && styles.railDisabled,
-            ]}
-          >
-            A−
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() =>
-            dispatch(
-              persistPresentationAutoScrollLevel(
-                (autoScrollLevel + 1) % (MAX_AUTO_SCROLL_LEVEL + 1),
-              ),
-            )
-          }
-          style={styles.railButton}
-        >
-          <Text
-            style={[styles.railGlyph, autoScrollLevel > 0 && styles.railActive]}
-          >
-            {autoScrollLevel > 0 ? `⇩${autoScrollLevel}` : "⇩"}
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => router.back()} style={styles.railButton}>
-          <Text style={styles.railGlyph}>✕</Text>
-        </Pressable>
-
-        {multipleSongs && isPanelOpen && (
-          <View style={styles.panel}>
-            <TextInput
-              value={panelQuery}
-              onChangeText={setPanelQuery}
-              placeholder={t.presentation.searchPlaceholder}
-              placeholderTextColor={colors.textTertiary}
-              style={styles.panelSearch}
-            />
-            <ScrollView style={styles.panelList}>
-              {filteredSongs.length === 0 && (
-                <Text style={styles.panelEmpty}>{t.presentation.noMatch}</Text>
-              )}
-              {filteredSongs.map((song) => {
-                const songIndex = songIndexById.get(song.id)!;
-                const isCurrent = songIndex === index;
-                const isPlayed = played.has(song.id);
-                return (
-                  <Pressable
-                    key={song.id}
-                    onPress={() => {
-                      setIndex(songIndex);
-                      setPanelQuery("");
-                    }}
-                    style={[
-                      styles.panelRow,
-                      isCurrent && styles.panelRowActive,
-                    ]}
-                  >
-                    <Text style={styles.panelPosition}>{songIndex + 1}</Text>
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.panelSongName,
-                        isCurrent
-                          ? styles.panelSongNameCurrent
-                          : isPlayed && styles.panelSongNamePlayed,
-                      ]}
-                    >
-                      {song.name}
-                    </Text>
-                    {isPlayed && <Text style={styles.panelCheck}>✓</Text>}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-      </View>
-
       <View style={styles.main}>
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
+            <Pressable
+              onPress={() => setIsPanelOpen((open) => !open)}
+              style={styles.headerHamburgerButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t.presentation.menuToggleLabel(isPanelOpen)}
+              accessibilityState={{ expanded: isPanelOpen }}
+            >
+              <Text style={styles.railGlyph}>{isPanelOpen ? "‹" : "☰"}</Text>
+            </Pressable>
             <Text numberOfLines={1} style={styles.songTitle}>
               {current.name}
             </Text>
@@ -442,6 +326,144 @@ function PresentationView({
           </View>
         </View>
       </View>
+
+      {isPanelOpen && (
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setIsPanelOpen(false)}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      )}
+
+      {isPanelOpen && (
+        <View style={styles.panel}>
+          <View style={styles.panelControlsRow}>
+            <Pressable
+              onPress={() => dispatch(persistPresentationAllCaps(!allCaps))}
+              style={styles.railButton}
+            >
+              <Text style={[styles.railText, allCaps && styles.railActive]}>
+                AA
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                dispatch(
+                  persistPresentationFontSize(
+                    Math.min(fontSize + FONT_SIZE_STEP, MAX_FONT_SIZE),
+                  ),
+                )
+              }
+              disabled={fontSize >= MAX_FONT_SIZE}
+              style={styles.railButton}
+            >
+              <Text
+                style={[
+                  styles.railText,
+                  fontSize >= MAX_FONT_SIZE && styles.railDisabled,
+                ]}
+              >
+                A+
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                dispatch(
+                  persistPresentationFontSize(
+                    Math.max(fontSize - FONT_SIZE_STEP, MIN_FONT_SIZE),
+                  ),
+                )
+              }
+              disabled={fontSize <= MIN_FONT_SIZE}
+              style={styles.railButton}
+            >
+              <Text
+                style={[
+                  styles.railText,
+                  fontSize <= MIN_FONT_SIZE && styles.railDisabled,
+                ]}
+              >
+                A−
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                dispatch(
+                  persistPresentationAutoScrollLevel(
+                    (autoScrollLevel + 1) % (MAX_AUTO_SCROLL_LEVEL + 1),
+                  ),
+                )
+              }
+              style={styles.railButton}
+            >
+              <Text
+                style={[
+                  styles.railGlyph,
+                  autoScrollLevel > 0 && styles.railActive,
+                ]}
+              >
+                {autoScrollLevel > 0 ? `⇩${autoScrollLevel}` : "⇩"}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => router.back()} style={styles.railButton}>
+              <Text style={styles.railGlyph}>✕</Text>
+            </Pressable>
+          </View>
+
+          {multipleSongs && (
+            <>
+              <TextInput
+                value={panelQuery}
+                onChangeText={setPanelQuery}
+                placeholder={t.presentation.searchPlaceholder}
+                placeholderTextColor={colors.textTertiary}
+                style={styles.panelSearch}
+              />
+              <ScrollView style={styles.panelList}>
+                {filteredSongs.length === 0 && (
+                  <Text style={styles.panelEmpty}>
+                    {t.presentation.noMatch}
+                  </Text>
+                )}
+                {filteredSongs.map((song) => {
+                  const songIndex = songIndexById.get(song.id)!;
+                  const isCurrent = songIndex === index;
+                  const isPlayed = played.has(song.id);
+                  return (
+                    <Pressable
+                      key={song.id}
+                      onPress={() => {
+                        setIndex(songIndex);
+                        setPanelQuery("");
+                        setIsPanelOpen(false);
+                      }}
+                      style={[
+                        styles.panelRow,
+                        isCurrent && styles.panelRowActive,
+                      ]}
+                    >
+                      <Text style={styles.panelPosition}>{songIndex + 1}</Text>
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.panelSongName,
+                          isCurrent
+                            ? styles.panelSongNameCurrent
+                            : isPlayed && styles.panelSongNamePlayed,
+                        ]}
+                      >
+                        {song.name}
+                      </Text>
+                      {isPlayed && <Text style={styles.panelCheck}>✓</Text>}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -465,24 +487,32 @@ function createStyles(colors: ThemeColors) {
     },
     container: {
       flex: 1,
-      flexDirection: "row",
       backgroundColor: colors.background,
     },
-    rail: {
-      width: 48,
-      flexShrink: 0,
-      borderRightWidth: StyleSheet.hairlineWidth,
-      borderRightColor: colors.borderLight,
+    backdrop: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      zIndex: 10,
     },
-    railOpen: {
-      width: 220,
+    headerHamburgerButton: {
+      flexShrink: 0,
+      width: 32,
+      height: 32,
+      borderRadius: radii.pill,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
     },
     railButton: {
       height: 48,
       alignItems: "center",
       justifyContent: "center",
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
     },
     railGlyph: {
       fontSize: 18,
@@ -500,8 +530,31 @@ function createStyles(colors: ThemeColors) {
       opacity: 0.3,
     },
     panel: {
-      flex: 1,
+      position: "absolute",
+      top: spacing.sm,
+      left: spacing.sm,
+      bottom: spacing.lg,
+      width: 240,
+      maxWidth: "80%",
       padding: spacing.sm,
+      borderRadius: radii.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      zIndex: 15,
+      elevation: 6,
+      shadowColor: "#000",
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    panelControlsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+      marginBottom: spacing.sm,
     },
     panelSearch: {
       borderRadius: radii.md,
