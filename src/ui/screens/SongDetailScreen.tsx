@@ -187,9 +187,7 @@ export function SongDetailScreen() {
               >
                 {tags.length > 0 ? tags.join(", ") : t.song.noTags}
               </Text>
-              <Text style={styles.tagsChevron}>
-                {tagsExpanded ? "▲" : "▼"}
-              </Text>
+              <Text style={styles.tagsChevron}>{tagsExpanded ? "▲" : "▼"}</Text>
             </Pressable>
 
             {tagsExpanded && (
