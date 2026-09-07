@@ -26,7 +26,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const AUTO_SCROLL_INTERVAL_MS = 50;
 
@@ -96,6 +99,12 @@ function PresentationView({
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // The floating song-switcher panel is absolutely positioned, so it doesn't
+  // inherit the outer SafeAreaView's padding the way normal-flow content
+  // does - RN positions an absolute child from its parent's border box, not
+  // its padding box. Its own top/bottom offsets need the insets added
+  // explicitly or the ✕ button ends up under a notch/punch-hole camera.
+  const insets = useSafeAreaInsets();
 
   // The screen must never lock mid-song - there's no "wake it back up and
   // find your place" during a live show. `suppressDeactivateWarnings`
@@ -432,7 +441,15 @@ function PresentationView({
       )}
 
       {isPanelOpen && (
-        <View style={styles.panel}>
+        <View
+          style={[
+            styles.panel,
+            {
+              top: spacing.sm + insets.top,
+              bottom: spacing.lg + insets.bottom,
+            },
+          ]}
+        >
           <View style={styles.panelControlsRow}>
             <Pressable
               onPress={() => dispatch(persistPresentationAllCaps(!allCaps))}
@@ -607,9 +624,9 @@ function createStyles(colors: ThemeColors) {
     },
     panel: {
       position: "absolute",
-      top: spacing.sm,
+      // top/bottom are set inline per-render with the safe-area insets
+      // added in - see the panel's JSX.
       left: spacing.sm,
-      bottom: spacing.lg,
       width: 240,
       maxWidth: "80%",
       padding: spacing.sm,
