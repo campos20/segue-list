@@ -80,8 +80,6 @@ export const en = {
     nameLabel: "Song name",
     durationLabel: "Duration",
     durationPlaceholder: "m:ss",
-    durationHint:
-      "Approximate length, e.g. 3:45 - paces Presentation mode's auto-scroll.",
     durationInvalid: "Enter it as minutes:seconds, e.g. 3:45.",
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",

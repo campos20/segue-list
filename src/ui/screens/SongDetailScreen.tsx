@@ -186,43 +186,48 @@ export function SongDetailScreen() {
           </View>
 
           <View style={styles.section}>
-            <TextField
-              label={t.song.durationLabel}
-              value={durationText}
-              onChangeText={setDurationText}
-              placeholder={t.song.durationPlaceholder}
-              keyboardType="numbers-and-punctuation"
-              style={styles.durationInput}
-            />
-            <Text
-              style={durationInvalid ? styles.durationErrorHint : styles.hint}
-            >
-              {durationInvalid ? t.song.durationInvalid : t.song.durationHint}
-            </Text>
-          </View>
+            <View style={styles.durationTagsRow}>
+              <View style={styles.durationColumn}>
+                <TextField
+                  label={t.song.durationLabel}
+                  value={durationText}
+                  onChangeText={setDurationText}
+                  placeholder={t.song.durationPlaceholder}
+                  keyboardType="numbers-and-punctuation"
+                />
+                {durationInvalid && (
+                  <Text style={styles.durationErrorHint}>
+                    {t.song.durationInvalid}
+                  </Text>
+                )}
+              </View>
 
-          <View style={styles.section}>
-            <Pressable
-              onPress={() => setTagsExpanded((expanded) => !expanded)}
-              style={({ pressed }) => [
-                styles.tagsSummaryRow,
-                pressed && styles.pressed,
-              ]}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t.song.tagsToggleLabel(tagsExpanded)}
-              accessibilityState={{ expanded: tagsExpanded }}
-            >
-              <Text style={styles.label}>{t.song.tagsLabel}</Text>
-              <Text
-                style={styles.tagsSummaryText}
-                numberOfLines={1}
-                ellipsizeMode="tail"
+              <Pressable
+                onPress={() => setTagsExpanded((expanded) => !expanded)}
+                style={({ pressed }) => [
+                  styles.tagsColumn,
+                  pressed && styles.pressed,
+                ]}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t.song.tagsToggleLabel(tagsExpanded)}
+                accessibilityState={{ expanded: tagsExpanded }}
               >
-                {tags.length > 0 ? tags.join(", ") : t.song.noTags}
-              </Text>
-              <Text style={styles.tagsChevron}>{tagsExpanded ? "▲" : "▼"}</Text>
-            </Pressable>
+                <View style={styles.tagsSummaryRow}>
+                  <Text style={styles.label}>{t.song.tagsLabel}</Text>
+                  <Text style={styles.tagsChevron}>
+                    {tagsExpanded ? "▲" : "▼"}
+                  </Text>
+                </View>
+                <Text
+                  style={styles.tagsSummaryText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {tags.length > 0 ? tags.join(", ") : t.song.noTags}
+                </Text>
+              </Pressable>
+            </View>
 
             {tagsExpanded && (
               <>
@@ -407,10 +412,6 @@ function createStyles(colors: ThemeColors) {
       color: colors.textTertiary,
       fontSize: 11,
     },
-    durationInput: {
-      alignSelf: "flex-start",
-      minWidth: 96,
-    },
     durationErrorHint: {
       color: colors.danger,
       fontSize: 11,
@@ -420,14 +421,27 @@ function createStyles(colors: ThemeColors) {
       fontSize: 12,
       fontWeight: "700",
     },
+    durationTagsRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.md,
+    },
+    durationColumn: {
+      width: 108,
+    },
+    tagsColumn: {
+      flex: 1,
+      minWidth: 0,
+      paddingTop: 2,
+      gap: 4,
+    },
     tagsSummaryRow: {
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "space-between",
       gap: spacing.sm,
-      paddingVertical: 4,
     },
     tagsSummaryText: {
-      flex: 1,
       color: colors.textTertiary,
       fontSize: 13,
     },

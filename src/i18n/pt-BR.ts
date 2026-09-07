@@ -83,8 +83,6 @@ export const ptBR: TranslationDictionary = {
     nameLabel: "Nome da música",
     durationLabel: "Duração",
     durationPlaceholder: "m:ss",
-    durationHint:
-      "Duração aproximada, ex.: 3:45 - define o ritmo da rolagem automática no modo de apresentação.",
     durationInvalid: "Informe no formato minutos:segundos, ex.: 3:45.",
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
