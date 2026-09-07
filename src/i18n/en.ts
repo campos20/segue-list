@@ -78,6 +78,9 @@ export const en = {
     noLyricsYet: "No lyrics yet",
     notFound: "Song not found.",
     nameLabel: "Song name",
+    durationLabel: "Duration",
+    durationPlaceholder: "m:ss",
+    durationInvalid: "Enter it as minutes:seconds, e.g. 3:45.",
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",
     noTags: "No tags yet",
@@ -112,6 +115,10 @@ export const en = {
     edit: "Edit",
     menuToggleLabel: (open: boolean): string =>
       open ? "Close song menu" : "Open song menu",
+    scrollPlayLabel: (playing: boolean): string =>
+      playing ? "Pause auto-scroll" : "Play auto-scroll",
+    scrollStopLabel: "Stop auto-scroll",
+    noDurationHint: "Set a duration on this song to enable auto-scroll.",
   },
   menu: {
     about: "About",

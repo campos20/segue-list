@@ -81,6 +81,9 @@ export const ptBR: TranslationDictionary = {
     noLyricsYet: "Sem letra ainda",
     notFound: "Música não encontrada.",
     nameLabel: "Nome da música",
+    durationLabel: "Duração",
+    durationPlaceholder: "m:ss",
+    durationInvalid: "Informe no formato minutos:segundos, ex.: 3:45.",
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
     tagsLabel: "Tags",
@@ -115,6 +118,11 @@ export const ptBR: TranslationDictionary = {
     edit: "Editar",
     menuToggleLabel: (open: boolean): string =>
       open ? "Fechar menu de músicas" : "Abrir menu de músicas",
+    scrollPlayLabel: (playing: boolean): string =>
+      playing ? "Pausar rolagem automática" : "Iniciar rolagem automática",
+    scrollStopLabel: "Parar rolagem automática",
+    noDurationHint:
+      "Defina uma duração para esta música para habilitar a rolagem automática.",
   },
   menu: {
     about: "Sobre",

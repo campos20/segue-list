@@ -2,7 +2,6 @@ import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   persistPresentationAllCaps,
-  persistPresentationAutoScrollLevel,
   persistPresentationFontSize,
 } from "@/store/persistSettings";
 import { setlistsSelectors } from "@/store/setlistsSlice";
@@ -27,11 +26,12 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-const AUTO_SCROLL_STEP_PX = 1;
 const AUTO_SCROLL_INTERVAL_MS = 50;
-const MAX_AUTO_SCROLL_LEVEL = 3;
 
 const MIN_FONT_SIZE = 14;
 const MAX_FONT_SIZE = 48;
@@ -99,6 +99,12 @@ function PresentationView({
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // The floating song-switcher panel is absolutely positioned, so it doesn't
+  // inherit the outer SafeAreaView's padding the way normal-flow content
+  // does - RN positions an absolute child from its parent's border box, not
+  // its padding box. Its own top/bottom offsets need the insets added
+  // explicitly or the ✕ button ends up under a notch/punch-hole camera.
+  const insets = useSafeAreaInsets();
 
   // The screen must never lock mid-song - there's no "wake it back up and
   // find your place" during a live show. `suppressDeactivateWarnings`
@@ -138,11 +144,30 @@ function PresentationView({
   const fontSize = useAppSelector(
     (state) => state.settings.presentationFontSize,
   );
-  const autoScrollLevel = useAppSelector(
-    (state) => state.settings.presentationAutoScrollLevel,
-  );
   const lyricsScrollRef = useRef<ScrollView>(null);
   const lyricsOffsetRef = useRef(0);
+  // Measured live off the ScrollView itself (onLayout / onContentSizeChange)
+  // rather than derived from the song, since the same lyrics render at a
+  // different pixel height depending on font size and all-caps.
+  const lyricsViewportHeightRef = useRef(0);
+  const lyricsContentHeightRef = useRef(0);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  // Adjusted during render (same pattern as `syncedSongId` elsewhere) rather
+  // than in an effect, so switching songs stops auto-scroll without an extra
+  // render - see AGENTS.md.
+  const [autoScrollSyncedIndex, setAutoScrollSyncedIndex] = useState<
+    number | null
+  >(null);
+  if (autoScrollSyncedIndex !== index) {
+    setAutoScrollSyncedIndex(index);
+    if (isAutoScrolling) setIsAutoScrolling(false);
+  }
+
+  // `current` is needed by the auto-scroll effect below, so it's computed
+  // here rather than after the empty-songs early return further down. It can
+  // be undefined for a single render when `songs` is empty - every use below
+  // is optional-chained or guarded by that same early return.
+  const current = songs[Math.min(index, songs.length - 1)];
 
   useEffect(() => {
     lyricsOffsetRef.current = 0;
@@ -150,16 +175,34 @@ function PresentationView({
   }, [index]);
 
   useEffect(() => {
-    if (autoScrollLevel === 0) return;
+    if (!isAutoScrolling) return;
+    const durationSeconds = current?.durationSeconds;
+    if (!durationSeconds || durationSeconds <= 0) return;
+
+    // Re-measured every tick, not once when the interval is set up: the
+    // height refs can still be 0 at the instant Play is pressed (layout
+    // hasn't reported yet), and font size / all-caps can change the content
+    // height while already scrolling (via the still-open panel). Recomputing
+    // keeps the rate honest to "cover the current distance in the song's
+    // duration" instead of freezing a stale distance from effect-start.
     const interval = setInterval(() => {
-      lyricsOffsetRef.current += AUTO_SCROLL_STEP_PX * autoScrollLevel;
-      lyricsScrollRef.current?.scrollTo({
-        y: lyricsOffsetRef.current,
-        animated: false,
-      });
+      const totalDistance = Math.max(
+        0,
+        lyricsContentHeightRef.current - lyricsViewportHeightRef.current,
+      );
+      if (totalDistance <= 0) return;
+
+      const pxPerMs = totalDistance / (durationSeconds * 1000);
+      const next = Math.min(
+        lyricsOffsetRef.current + pxPerMs * AUTO_SCROLL_INTERVAL_MS,
+        totalDistance,
+      );
+      lyricsOffsetRef.current = next;
+      lyricsScrollRef.current?.scrollTo({ y: next, animated: false });
+      if (next >= totalDistance) setIsAutoScrolling(false);
     }, AUTO_SCROLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [autoScrollLevel, index]);
+  }, [isAutoScrolling, index, current?.durationSeconds]);
 
   if (songs.length === 0) {
     return (
@@ -172,7 +215,6 @@ function PresentationView({
     );
   }
 
-  const current = songs[Math.min(index, songs.length - 1)];
   const multipleSongs = songs.length > 1;
 
   const trimmedQuery = panelQuery.trim().toLowerCase();
@@ -199,6 +241,21 @@ function PresentationView({
       return next;
     });
     if (multipleSongs) goNext();
+  }
+
+  const canAutoScroll =
+    typeof current.durationSeconds === "number" &&
+    current.durationSeconds > 0 &&
+    Boolean(current.lyrics);
+
+  function toggleAutoScroll() {
+    setIsAutoScrolling((playing) => !playing);
+  }
+
+  function stopAutoScroll() {
+    setIsAutoScrolling(false);
+    lyricsOffsetRef.current = 0;
+    lyricsScrollRef.current?.scrollTo({ y: 0, animated: false });
   }
 
   return (
@@ -244,6 +301,12 @@ function PresentationView({
           onScroll={(event) => {
             lyricsOffsetRef.current = event.nativeEvent.contentOffset.y;
           }}
+          onLayout={(event) => {
+            lyricsViewportHeightRef.current = event.nativeEvent.layout.height;
+          }}
+          onContentSizeChange={(_width, height) => {
+            lyricsContentHeightRef.current = height;
+          }}
           scrollEventThrottle={16}
           style={styles.lyricsScroll}
           contentContainerStyle={styles.lyricsContent}
@@ -286,43 +349,87 @@ function PresentationView({
 
         <View style={styles.footer}>
           <View style={styles.transportRow}>
-            <Pressable
-              onPress={goPrev}
-              disabled={!multipleSongs || index === 0}
-              style={[
-                styles.transportButton,
-                (!multipleSongs || index === 0) && styles.transportDisabled,
-              ]}
-            >
-              <Text style={styles.transportGlyph}>←</Text>
-            </Pressable>
-            <Pressable
-              onPress={togglePlayedAndAdvance}
-              style={[
-                styles.transportButton,
-                played.has(current.id) && styles.transportButtonPlayed,
-              ]}
-            >
-              <Text
+            <View style={styles.navControlGroup}>
+              <Pressable
+                onPress={goPrev}
+                disabled={!multipleSongs || index === 0}
                 style={[
-                  styles.transportGlyph,
-                  played.has(current.id) && styles.transportGlyphPlayed,
+                  styles.transportButton,
+                  (!multipleSongs || index === 0) && styles.transportDisabled,
                 ]}
               >
-                ✓
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={goNext}
-              disabled={!multipleSongs || index === songs.length - 1}
-              style={[
-                styles.transportButtonPrimary,
-                (!multipleSongs || index === songs.length - 1) &&
-                  styles.transportDisabled,
-              ]}
-            >
-              <Text style={styles.transportGlyphPrimary}>→</Text>
-            </Pressable>
+                <Text style={styles.transportGlyph}>←</Text>
+              </Pressable>
+              <Pressable
+                onPress={togglePlayedAndAdvance}
+                style={[
+                  styles.transportButton,
+                  played.has(current.id) && styles.transportButtonPlayed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.transportGlyph,
+                    played.has(current.id) && styles.transportGlyphPlayed,
+                  ]}
+                >
+                  ✓
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={goNext}
+                disabled={!multipleSongs || index === songs.length - 1}
+                style={[
+                  styles.transportButtonPrimary,
+                  (!multipleSongs || index === songs.length - 1) &&
+                    styles.transportDisabled,
+                ]}
+              >
+                <Text style={styles.transportGlyphPrimary}>→</Text>
+              </Pressable>
+            </View>
+            <View style={styles.scrollControlGroup}>
+              <Pressable
+                onPress={stopAutoScroll}
+                disabled={!canAutoScroll}
+                accessibilityRole="button"
+                accessibilityLabel={t.presentation.scrollStopLabel}
+                accessibilityHint={
+                  canAutoScroll ? undefined : t.presentation.noDurationHint
+                }
+                style={[
+                  styles.transportButton,
+                  !canAutoScroll && styles.transportDisabled,
+                ]}
+              >
+                <Text style={styles.transportGlyph}>⏹</Text>
+              </Pressable>
+              <Pressable
+                onPress={toggleAutoScroll}
+                disabled={!canAutoScroll}
+                accessibilityRole="button"
+                accessibilityLabel={t.presentation.scrollPlayLabel(
+                  isAutoScrolling,
+                )}
+                accessibilityHint={
+                  canAutoScroll ? undefined : t.presentation.noDurationHint
+                }
+                style={[
+                  styles.transportButton,
+                  isAutoScrolling && styles.transportButtonPlayed,
+                  !canAutoScroll && styles.transportDisabled,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.transportGlyph,
+                    isAutoScrolling && styles.transportGlyphPlayed,
+                  ]}
+                >
+                  {isAutoScrolling ? "⏸" : "▶"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
@@ -337,7 +444,15 @@ function PresentationView({
       )}
 
       {isPanelOpen && (
-        <View style={styles.panel}>
+        <View
+          style={[
+            styles.panel,
+            {
+              top: spacing.sm + insets.top,
+              bottom: spacing.lg + insets.bottom,
+            },
+          ]}
+        >
           <View style={styles.panelControlsRow}>
             <Pressable
               onPress={() => dispatch(persistPresentationAllCaps(!allCaps))}
@@ -385,25 +500,6 @@ function PresentationView({
                 ]}
               >
                 A−
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() =>
-                dispatch(
-                  persistPresentationAutoScrollLevel(
-                    (autoScrollLevel + 1) % (MAX_AUTO_SCROLL_LEVEL + 1),
-                  ),
-                )
-              }
-              style={styles.railButton}
-            >
-              <Text
-                style={[
-                  styles.railGlyph,
-                  autoScrollLevel > 0 && styles.railActive,
-                ]}
-              >
-                {autoScrollLevel > 0 ? `⇩${autoScrollLevel}` : "⇩"}
               </Text>
             </Pressable>
             <Pressable onPress={() => router.back()} style={styles.railButton}>
@@ -531,9 +627,9 @@ function createStyles(colors: ThemeColors) {
     },
     panel: {
       position: "absolute",
-      top: spacing.sm,
+      // top/bottom are set inline per-render with the safe-area insets
+      // added in - see the panel's JSX.
       left: spacing.sm,
-      bottom: spacing.lg,
       width: 240,
       maxWidth: "80%",
       padding: spacing.sm,
@@ -708,6 +804,16 @@ function createStyles(colors: ThemeColors) {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    scrollControlGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    navControlGroup: {
+      flexDirection: "row",
+      alignItems: "center",
       gap: spacing.md,
     },
     transportButton: {

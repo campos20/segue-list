@@ -12,8 +12,6 @@ interface SettingsState {
   themeOverride: ThemeOverride;
   presentationAllCaps: boolean;
   presentationFontSize: number;
-  /** 0 is off, 1-3 are slow to fast. */
-  presentationAutoScrollLevel: number;
 }
 
 // Read once - `readAppSettings()` is a synchronous disk read, and each of
@@ -29,7 +27,6 @@ const initialState: SettingsState = {
   presentationAllCaps: persisted.presentationAllCaps ?? false,
   presentationFontSize:
     persisted.presentationFontSize ?? DEFAULT_PRESENTATION_FONT_SIZE,
-  presentationAutoScrollLevel: persisted.presentationAutoScrollLevel ?? 0,
 };
 
 const settingsSlice = createSlice({
@@ -51,9 +48,6 @@ const settingsSlice = createSlice({
     presentationFontSizeSet(state, action: PayloadAction<number>) {
       state.presentationFontSize = action.payload;
     },
-    presentationAutoScrollLevelSet(state, action: PayloadAction<number>) {
-      state.presentationAutoScrollLevel = action.payload;
-    },
   },
 });
 
@@ -63,6 +57,5 @@ export const {
   themeOverrideSet,
   presentationAllCapsSet,
   presentationFontSizeSet,
-  presentationAutoScrollLevelSet,
 } = settingsSlice.actions;
 export default settingsSlice.reducer;

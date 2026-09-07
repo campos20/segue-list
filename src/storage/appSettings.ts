@@ -20,8 +20,6 @@ export interface PersistedAppSettings {
   presentationAllCaps?: boolean;
   /** Presentation mode's lyrics font size in points, remembered across sessions. */
   presentationFontSize?: number;
-  /** Presentation mode's auto-scroll speed: 0 is off, 1-3 are slow to fast. */
-  presentationAutoScrollLevel?: number;
 }
 
 /**
