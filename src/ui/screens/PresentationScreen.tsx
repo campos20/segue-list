@@ -179,17 +179,20 @@ function PresentationView({
     const durationSeconds = current?.durationSeconds;
     if (!durationSeconds || durationSeconds <= 0) return;
 
-    const totalDistance = Math.max(
-      0,
-      lyricsContentHeightRef.current - lyricsViewportHeightRef.current,
-    );
-    if (totalDistance <= 0) {
-      setIsAutoScrolling(false);
-      return;
-    }
-    const pxPerMs = totalDistance / (durationSeconds * 1000);
-
+    // Re-measured every tick, not once when the interval is set up: the
+    // height refs can still be 0 at the instant Play is pressed (layout
+    // hasn't reported yet), and font size / all-caps can change the content
+    // height while already scrolling (via the still-open panel). Recomputing
+    // keeps the rate honest to "cover the current distance in the song's
+    // duration" instead of freezing a stale distance from effect-start.
     const interval = setInterval(() => {
+      const totalDistance = Math.max(
+        0,
+        lyricsContentHeightRef.current - lyricsViewportHeightRef.current,
+      );
+      if (totalDistance <= 0) return;
+
+      const pxPerMs = totalDistance / (durationSeconds * 1000);
       const next = Math.min(
         lyricsOffsetRef.current + pxPerMs * AUTO_SCROLL_INTERVAL_MS,
         totalDistance,

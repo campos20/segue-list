@@ -135,6 +135,11 @@ export function SongDetailScreen() {
 
   const isDirty =
     name !== song.name ||
+    // An invalid duration always counts as dirty even if it happens to
+    // parse to the same value as the saved one (e.g. both null) - it's
+    // unsaved text sitting in the field either way, and without this an
+    // invalid edit could be navigated away from with no discard prompt.
+    durationInvalid ||
     parsedDuration !== (song.durationSeconds ?? null) ||
     lyrics !== (song.lyrics ?? "") ||
     JSON.stringify(tags) !== JSON.stringify(song.tags ?? []);
