@@ -21,6 +21,7 @@ import {
   type LyricsRichEditorHandle,
 } from "@/ui/components/LyricsRichEditor";
 import { TextField } from "@/ui/components/TextField";
+import { formatDuration, parseDurationInput } from "@/ui/duration";
 import type { ColorSpan } from "@/ui/lyricsColor";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
@@ -40,6 +41,7 @@ export function SongDetailScreen() {
   );
 
   const [name, setName] = useState("");
+  const [durationText, setDurationText] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [hasSelection, setHasSelection] = useState(false);
   const [currentSpan, setCurrentSpan] = useState<ColorSpan | null>(null);
@@ -63,9 +65,15 @@ export function SongDetailScreen() {
   if (song && song.id !== syncedSongId) {
     setSyncedSongId(song.id);
     setName(song.name);
+    setDurationText(
+      song.durationSeconds != null ? formatDuration(song.durationSeconds) : "",
+    );
     setLyrics(song.lyrics ?? "");
     setTags(song.tags ?? []);
   }
+
+  const parsedDuration = parseDurationInput(durationText);
+  const durationInvalid = durationText.trim() !== "" && parsedDuration === null;
 
   /** Applies (or clears, for `span: null`) color to whatever's currently selected inside the editor's WebView - see LyricsRichEditor.tsx. */
   function handleApplyColor(span: ColorSpan | null) {
@@ -113,10 +121,11 @@ export function SongDetailScreen() {
   }
 
   function handleSave() {
-    if (!song || !name.trim()) return;
+    if (!song || !name.trim() || durationInvalid) return;
     dispatch(
       updateSong(song.id, {
         name: name.trim(),
+        durationSeconds: parsedDuration,
         lyrics: lyrics.trim() || null,
         tags,
       }),
@@ -126,6 +135,7 @@ export function SongDetailScreen() {
 
   const isDirty =
     name !== song.name ||
+    parsedDuration !== (song.durationSeconds ?? null) ||
     lyrics !== (song.lyrics ?? "") ||
     JSON.stringify(tags) !== JSON.stringify(song.tags ?? []);
 
@@ -168,6 +178,22 @@ export function SongDetailScreen() {
               value={name}
               onChangeText={setName}
             />
+          </View>
+
+          <View style={styles.section}>
+            <TextField
+              label={t.song.durationLabel}
+              value={durationText}
+              onChangeText={setDurationText}
+              placeholder={t.song.durationPlaceholder}
+              keyboardType="numbers-and-punctuation"
+              style={styles.durationInput}
+            />
+            <Text
+              style={durationInvalid ? styles.durationErrorHint : styles.hint}
+            >
+              {durationInvalid ? t.song.durationInvalid : t.song.durationHint}
+            </Text>
           </View>
 
           <View style={styles.section}>
@@ -287,7 +313,10 @@ export function SongDetailScreen() {
         <View style={styles.footer}>
           {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
           <View style={styles.actionsRow}>
-            <Button onPress={handleSave} disabled={!name.trim()}>
+            <Button
+              onPress={handleSave}
+              disabled={!name.trim() || durationInvalid}
+            >
               {t.common.save}
             </Button>
             <Button
@@ -371,6 +400,14 @@ function createStyles(colors: ThemeColors) {
     },
     hint: {
       color: colors.textTertiary,
+      fontSize: 11,
+    },
+    durationInput: {
+      alignSelf: "flex-start",
+      minWidth: 96,
+    },
+    durationErrorHint: {
+      color: colors.danger,
       fontSize: 11,
     },
     label: {

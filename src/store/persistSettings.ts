@@ -5,7 +5,6 @@ import type { AppDispatch } from "./index";
 import {
   languageOverrideSet,
   presentationAllCapsSet,
-  presentationAutoScrollLevelSet,
   presentationFontSizeSet,
   themeOverrideSet,
 } from "./settingsSlice";
@@ -39,13 +38,5 @@ export function persistPresentationFontSize(value: number) {
   return (dispatch: AppDispatch) => {
     dispatch(presentationFontSizeSet(value));
     writeAppSettings({ presentationFontSize: value });
-  };
-}
-
-/** Sets Presentation mode's auto-scroll speed (0 off, 1-3 slow to fast) and persists it. */
-export function persistPresentationAutoScrollLevel(value: number) {
-  return (dispatch: AppDispatch) => {
-    dispatch(presentationAutoScrollLevelSet(value));
-    writeAppSettings({ presentationAutoScrollLevel: value });
   };
 }
