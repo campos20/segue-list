@@ -87,6 +87,11 @@ export const ptBR: TranslationDictionary = {
       "Somente números, ex.: 300 vira 3:00. Deixe em branco para usar 3:00 como padrão.",
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
+    chordsLabel: "Cifra",
+    chordsPlaceholder:
+      "Digite os acordes acima da linha da letra correspondente, usando espaços para alinhar...",
+    chordsHint:
+      "Cada linha é a cifra da linha da letra mostrada logo abaixo - use espaços para posicionar o acorde sobre sua sílaba. Somente acordes reconhecidos são mantidos.",
     tagsLabel: "Tags",
     noTags: "Nenhuma tag ainda",
     tagsToggleLabel: (expanded: boolean) =>
@@ -124,6 +129,8 @@ export const ptBR: TranslationDictionary = {
     scrollStopLabel: "Parar rolagem automática",
     noLyricsHint:
       "Adicione a letra desta música para habilitar a rolagem automática.",
+    chordsToggleLabel: (visible: boolean): string =>
+      visible ? "Ocultar cifra" : "Mostrar cifra",
   },
   menu: {
     about: "Sobre",

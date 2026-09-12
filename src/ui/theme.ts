@@ -16,6 +16,10 @@ export interface ThemeColors {
   accentText: string;
   danger: string;
   success: string;
+  /** Chord line text, presented as a distinct layer above the lyrics it annotates. */
+  chordText: string;
+  /** Subtle tinted band behind chords - in the editor and in Presentation mode - so they read as their own layer rather than more lyric text. */
+  chordBackground: string;
 }
 
 /** Shared visual language for the app - a stage-friendly look with an amber accent for setlists, in a dark and a light variant. */
@@ -33,6 +37,8 @@ export const darkColors: ThemeColors = {
   accentText: "#1c1400",
   danger: "#ff453a",
   success: "#34d399",
+  chordText: "#7dd3fc",
+  chordBackground: "rgba(56,189,248,0.14)",
 };
 
 // Same relationships as darkColors (panel darker than surface, tertiary <
@@ -53,6 +59,8 @@ export const lightColors: ThemeColors = {
   accentText: "#fff6e6",
   danger: "#c81e37",
   success: "#0f8f5a",
+  chordText: "#0369a1",
+  chordBackground: "rgba(14,165,233,0.12)",
 };
 
 export const radii = {

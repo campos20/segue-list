@@ -5,8 +5,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +16,7 @@ import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
+import { sanitizeChordsText } from "@/ui/chordValidation";
 import { Button } from "@/ui/components/Button";
 import { ColorPickerModal } from "@/ui/components/ColorPickerModal";
 import {
@@ -26,7 +29,11 @@ import {
   formatDurationDigits,
   parseDurationDigits,
 } from "@/ui/duration";
-import type { ColorSpan } from "@/ui/lyricsColor";
+import {
+  parseLyricsColors,
+  splitIntoLines,
+  type ColorSpan,
+} from "@/ui/lyricsColor";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 export function SongDetailScreen() {
@@ -49,6 +56,7 @@ export function SongDetailScreen() {
   // display by formatDurationDigits. See duration.ts.
   const [durationDigits, setDurationDigits] = useState("");
   const [lyrics, setLyrics] = useState("");
+  const [chords, setChords] = useState("");
   const [hasSelection, setHasSelection] = useState(false);
   const [currentSpan, setCurrentSpan] = useState<ColorSpan | null>(null);
   const editorRef = useRef<LyricsRichEditorHandle>(null);
@@ -77,10 +85,29 @@ export function SongDetailScreen() {
         : "",
     );
     setLyrics(song.lyrics ?? "");
+    setChords(song.chords ?? "");
     setTags(song.tags ?? []);
   }
 
   const parsedDuration = parseDurationDigits(durationDigits);
+
+  // One chord line is tied to the lyric line at the same index, purely by
+  // position - see chordsHint. Recomputed from `lyrics`/`chords` on every
+  // render rather than kept as its own state, so editing lyrics elsewhere
+  // (which can add or remove lines) immediately reflows how many chord rows
+  // there are without a separate sync step.
+  const lyricLineTexts = splitIntoLines(parseLyricsColors(lyrics)).map(
+    (segments) => segments.map((segment) => segment.text).join(""),
+  );
+  const chordLines = chords.split("\n");
+  const chordRowCount = Math.max(lyricLineTexts.length, chordLines.length);
+
+  function setChordLine(index: number, text: string) {
+    const next = [...chordLines];
+    while (next.length <= index) next.push("");
+    next[index] = text;
+    setChords(next.join("\n"));
+  }
 
   /** Applies (or clears, for `span: null`) color to whatever's currently selected inside the editor's WebView - see LyricsRichEditor.tsx. */
   function handleApplyColor(span: ColorSpan | null) {
@@ -129,14 +156,20 @@ export function SongDetailScreen() {
 
   function handleSave() {
     if (!song || !name.trim()) return;
+    // Sanitized here too, not just on the field's onBlur, so Save always
+    // persists only recognized chords even if the field is still focused
+    // (onBlur hasn't fired yet) when Save is tapped.
+    const cleanedChords = sanitizeChordsText(chords);
     dispatch(
       updateSong(song.id, {
         name: name.trim(),
         durationSeconds: parsedDuration,
         lyrics: lyrics.trim() || null,
+        chords: cleanedChords.trim() || null,
         tags,
       }),
     );
+    setChords(cleanedChords);
     setSaved(true);
   }
 
@@ -144,6 +177,7 @@ export function SongDetailScreen() {
     name !== song.name ||
     parsedDuration !== (song.durationSeconds ?? null) ||
     lyrics !== (song.lyrics ?? "") ||
+    chords !== (song.chords ?? "") ||
     JSON.stringify(tags) !== JSON.stringify(song.tags ?? []);
 
   /** Confirms before leaving an unsaved edit behind - a lyrics rewrite is the kind of thing you don't want to accidentally lose. */
@@ -311,17 +345,58 @@ export function SongDetailScreen() {
           <Text style={styles.hint}>{t.song.colorHint}</Text>
         </View>
 
-        <View style={styles.lyricsSection}>
-          <LyricsRichEditor
-            ref={editorRef}
-            value={lyrics}
-            onChangeText={setLyrics}
-            onSelectionChange={(selected, span) => {
-              setHasSelection(selected);
-              setCurrentSpan(span);
-            }}
-            placeholder={t.song.lyricsPlaceholder}
-          />
+        <View style={styles.middleSection}>
+          <View style={styles.lyricsSection}>
+            <LyricsRichEditor
+              ref={editorRef}
+              value={lyrics}
+              onChangeText={setLyrics}
+              onSelectionChange={(selected, span) => {
+                setHasSelection(selected);
+                setCurrentSpan(span);
+              }}
+              placeholder={t.song.lyricsPlaceholder}
+            />
+          </View>
+
+          <View style={styles.chordsSection}>
+            <Text style={styles.label}>{t.song.chordsLabel}</Text>
+            <Text style={styles.hint}>{t.song.chordsHint}</Text>
+            <ScrollView
+              style={styles.chordsList}
+              keyboardShouldPersistTaps="handled"
+            >
+              {Array.from({ length: chordRowCount }, (_, index) => (
+                <View key={index} style={styles.chordLyricRow}>
+                  <TextInput
+                    style={styles.chordLineInput}
+                    value={chordLines[index] ?? ""}
+                    onChangeText={(text) => setChordLine(index, text)}
+                    onBlur={() =>
+                      setChordLine(
+                        index,
+                        sanitizeChordsText(chordLines[index] ?? ""),
+                      )
+                    }
+                    placeholder={
+                      index === 0 ? t.song.chordsPlaceholder : undefined
+                    }
+                    placeholderTextColor={colors.textTertiary}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                  />
+                  <Text
+                    style={styles.chordLyricReference}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {lyricLineTexts[index] || " "}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -371,13 +446,56 @@ function createStyles(colors: ThemeColors) {
       paddingBottom: spacing.xs,
       gap: spacing.xs,
     },
-    // The one part of the screen that grows/shrinks with available space
-    // and scrolls internally (via the TextInput's own native scrolling) -
-    // see lyricsInput below.
+    // The one part of the screen that grows/shrinks with available space -
+    // lyrics and chords split it between them, each scrolling on its own
+    // (via their own native scrolling).
+    middleSection: {
+      flex: 1,
+    },
     lyricsSection: {
+      flex: 2,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    chordsSection: {
       flex: 1,
       paddingHorizontal: spacing.lg,
       paddingBottom: spacing.sm,
+      gap: 2,
+    },
+    chordsList: {
+      flex: 1,
+    },
+    // Each row pairs one chord line with a read-only preview of the lyric
+    // line at the same index, stacked so the chord visibly sits above the
+    // words it goes with - editing the two as one big blob of text each
+    // made it too easy to lose count of which chord belonged to which line.
+    chordLyricRow: {
+      marginBottom: 2,
+    },
+    chordLineInput: {
+      backgroundColor: colors.chordBackground,
+      color: colors.chordText,
+      fontFamily: "monospace",
+      fontSize: 14,
+      lineHeight: 18,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+      borderTopLeftRadius: radii.sm,
+      borderTopRightRadius: radii.sm,
+    },
+    // Never editable here - the lyrics themselves are only ever edited in
+    // the rich editor above; this is purely alignment context.
+    chordLyricReference: {
+      backgroundColor: colors.surface,
+      color: colors.textSecondary,
+      fontFamily: "monospace",
+      fontSize: 14,
+      lineHeight: 18,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+      borderBottomLeftRadius: radii.sm,
+      borderBottomRightRadius: radii.sm,
     },
     // Never scrolls either - Save/Present are always reachable.
     footer: {

@@ -9,7 +9,7 @@ import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
 import { DEFAULT_DURATION_SECONDS } from "@/ui/duration";
-import { parseLyricsColors } from "@/ui/lyricsColor";
+import { parseLyricsColors, splitIntoLines } from "@/ui/lyricsColor";
 import {
   glow,
   radii,
@@ -40,6 +40,8 @@ const MAX_FONT_SIZE = 48;
 const FONT_SIZE_STEP = 2;
 /** Keeps line spacing proportional to size, matching the default 18/28 ratio. */
 const LYRICS_LINE_HEIGHT_RATIO = 28 / 18;
+/** Chords render smaller than the lyric line they annotate, like a real chord chart. */
+const CHORD_FONT_SIZE_RATIO = 0.8;
 
 /** Presents every song in a setlist, in order, with quick switching between them. */
 export function SetlistPresentationScreen() {
@@ -258,6 +260,17 @@ function PresentationView({
   // (nothing to scroll through) disables it.
   const canAutoScroll = Boolean(current.lyrics);
 
+  const chordFontSize = Math.round(fontSize * CHORD_FONT_SIZE_RATIO);
+  const lyricLines = current.lyrics
+    ? splitIntoLines(parseLyricsColors(current.lyrics))
+    : [];
+  const chordLines =
+    presentationChords && current.chords ? current.chords.split("\n") : [];
+  // Iterating to the longer of the two means a chord-only trailing section
+  // (an instrumental with no lyrics left) still shows its chords, and lyric
+  // lines past the end of the chords block simply get no chord row above.
+  const lineCount = Math.max(lyricLines.length, chordLines.length);
+
   function toggleAutoScroll() {
     setIsAutoScrolling((playing) => !playing);
   }
@@ -321,37 +334,54 @@ function PresentationView({
           style={styles.lyricsScroll}
           contentContainerStyle={styles.lyricsContent}
         >
-          {current.lyrics ? (
-            <Text
-              style={[
-                styles.lyrics,
-                allCaps && styles.lyricsUppercase,
-                {
-                  fontSize,
-                  lineHeight: Math.round(fontSize * LYRICS_LINE_HEIGHT_RATIO),
-                },
-              ]}
-            >
-              {parseLyricsColors(current.lyrics).map((segment, index) =>
-                segment.span ? (
+          {lineCount > 0 ? (
+            Array.from({ length: lineCount }, (_, lineIndex) => {
+              const chordLine = chordLines[lineIndex] ?? "";
+              const segments = lyricLines[lineIndex] ?? [];
+              return (
+                <View key={lineIndex}>
+                  {chordLine.trim() !== "" && (
+                    <Text style={[styles.chords, { fontSize: chordFontSize }]}>
+                      {chordLine}
+                    </Text>
+                  )}
                   <Text
-                    key={index}
-                    style={{
-                      ...(segment.span.background && {
-                        backgroundColor: `#${segment.span.background}`,
-                      }),
-                      ...(segment.span.color && {
-                        color: `#${segment.span.color}`,
-                      }),
-                    }}
+                    style={[
+                      styles.lyrics,
+                      allCaps && styles.lyricsUppercase,
+                      {
+                        fontSize,
+                        lineHeight: Math.round(
+                          fontSize * LYRICS_LINE_HEIGHT_RATIO,
+                        ),
+                      },
+                    ]}
                   >
-                    {segment.text}
+                    {segments.length === 0
+                      ? " "
+                      : segments.map((segment, segmentIndex) =>
+                          segment.span ? (
+                            <Text
+                              key={segmentIndex}
+                              style={{
+                                ...(segment.span.background && {
+                                  backgroundColor: `#${segment.span.background}`,
+                                }),
+                                ...(segment.span.color && {
+                                  color: `#${segment.span.color}`,
+                                }),
+                              }}
+                            >
+                              {segment.text}
+                            </Text>
+                          ) : (
+                            segment.text
+                          ),
+                        )}
                   </Text>
-                ) : (
-                  segment.text
-                ),
-              )}
-            </Text>
+                </View>
+              );
+            })
           ) : (
             <Text style={styles.lyricsEmpty}>{t.presentation.noLyrics}</Text>
           )}
@@ -517,6 +547,11 @@ function PresentationView({
                 dispatch(persistPresentationChords(!presentationChords))
               }
               style={styles.railButton}
+              accessibilityRole="button"
+              accessibilityLabel={t.presentation.chordsToggleLabel(
+                presentationChords,
+              )}
+              accessibilityState={{ selected: presentationChords }}
             >
               <Text
                 style={[
@@ -779,6 +814,17 @@ function createStyles(colors: ThemeColors) {
       fontSize: 18,
       lineHeight: 28,
       fontFamily: "monospace",
+    },
+    // Never combined with lyricsUppercase - a chord like "Am" must never
+    // render as "AM" even when the lyrics' all-caps setting is on.
+    chords: {
+      alignSelf: "flex-start",
+      color: colors.chordText,
+      backgroundColor: colors.chordBackground,
+      fontFamily: "monospace",
+      fontWeight: "700",
+      borderRadius: radii.sm,
+      paddingHorizontal: 2,
     },
     lyricsUppercase: {
       textTransform: "uppercase",

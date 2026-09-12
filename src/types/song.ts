@@ -17,6 +17,12 @@ export interface SongManifest {
    * available, just untimed.
    */
   durationSeconds?: number | null;
+  /**
+   * Chord chart text, plain (no ChordPro `[Am]` brackets). Line N is meant
+   * to sit above lyrics line N in a monospace font, columns positioned by
+   * hand-typed spacing. Optional/nullable like `lyrics`.
+   */
+  chords?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -90,6 +90,11 @@ export const en = {
     tagsPlaceholder: "Add a tag...",
     addTag: "Add tag",
     lyricsPlaceholder: "Type or paste the lyrics...",
+    chordsLabel: "Chords",
+    chordsPlaceholder:
+      "Type chords above the lyric line they belong to, using spaces to line them up...",
+    chordsHint:
+      "Each row is the chords for the lyric line shown below it - use spaces to line a chord up over its syllable. Only recognized chords are kept.",
     removeTag: (tag: string) => `Remove tag "${tag}"`,
     suggestedTags: "Suggested tags",
     colorButton: "Color",
@@ -120,6 +125,8 @@ export const en = {
       playing ? "Pause auto-scroll" : "Play auto-scroll",
     scrollStopLabel: "Stop auto-scroll",
     noLyricsHint: "Add lyrics to this song to enable auto-scroll.",
+    chordsToggleLabel: (visible: boolean): string =>
+      visible ? "Hide chords" : "Show chords",
   },
   menu: {
     about: "About",

@@ -57,6 +57,7 @@ export function createSong(
     name,
     lyrics,
     tags: [],
+    chords: null,
     createdAt: now,
     updatedAt: now,
   };

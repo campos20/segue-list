@@ -115,6 +115,35 @@ describe("updateSong", () => {
 
     expect(songLibrary.writeSong).not.toHaveBeenCalled();
   });
+
+  it("applies a chords text change to the store when the write succeeds", () => {
+    const song = makeSong();
+    songLibrary.createSong.mockReturnValue(song);
+    const store = createAppStore();
+    store.dispatch(createSong());
+
+    store.dispatch(updateSong(song.id, { chords: "Am          C" }));
+
+    expect(
+      songsSelectors.selectById(store.getState().songs, song.id)?.chords,
+    ).toBe("Am          C");
+  });
+
+  it("leaves the store's chords unchanged when the write throws", () => {
+    const song = makeSong({ chords: "Am" });
+    songLibrary.createSong.mockReturnValue(song);
+    const store = createAppStore();
+    store.dispatch(createSong());
+    songLibrary.writeSong.mockImplementation(() => {
+      throw new Error("disk full");
+    });
+
+    store.dispatch(updateSong(song.id, { chords: "C" }));
+
+    expect(
+      songsSelectors.selectById(store.getState().songs, song.id)?.chords,
+    ).toBe("Am");
+  });
 });
 
 describe("deleteSong", () => {
