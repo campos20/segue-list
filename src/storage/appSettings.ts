@@ -1,6 +1,6 @@
-import { File, Paths } from "expo-file-system";
 import type { Locale } from "@/i18n";
 import type { ThemeOverride } from "@/types/theme";
+import { File, Paths } from "expo-file-system";
 import { isFileSystemAvailable } from "./paths";
 
 export interface PersistedAppSettings {
@@ -20,6 +20,8 @@ export interface PersistedAppSettings {
   presentationAllCaps?: boolean;
   /** Presentation mode's lyrics font size in points, remembered across sessions. */
   presentationFontSize?: number;
+  /** Whether or not to display chords in presentation mode */
+  presentationChords?: boolean;
 }
 
 /**

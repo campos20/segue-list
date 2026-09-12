@@ -1,7 +1,7 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { Locale } from "@/i18n";
 import { readAppSettings } from "@/storage/appSettings";
 import { isThemeOverride, type ThemeOverride } from "@/types/theme";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 export const DEFAULT_PRESENTATION_FONT_SIZE = 18;
 export type { ThemeOverride };
@@ -12,6 +12,7 @@ interface SettingsState {
   themeOverride: ThemeOverride;
   presentationAllCaps: boolean;
   presentationFontSize: number;
+  presentationChords: boolean;
 }
 
 // Read once - `readAppSettings()` is a synchronous disk read, and each of
@@ -27,6 +28,7 @@ const initialState: SettingsState = {
   presentationAllCaps: persisted.presentationAllCaps ?? false,
   presentationFontSize:
     persisted.presentationFontSize ?? DEFAULT_PRESENTATION_FONT_SIZE,
+  presentationChords: !!persisted.presentationChords,
 };
 
 const settingsSlice = createSlice({
@@ -48,14 +50,18 @@ const settingsSlice = createSlice({
     presentationFontSizeSet(state, action: PayloadAction<number>) {
       state.presentationFontSize = action.payload;
     },
+    presentationChordsDisplay(state, action: PayloadAction<boolean>) {
+      state.presentationChords = action.payload;
+    },
   },
 });
 
 export const {
   libraryOrderSet,
-  languageOverrideSet,
   themeOverrideSet,
+  languageOverrideSet,
   presentationAllCapsSet,
   presentationFontSizeSet,
+  presentationChordsDisplay,
 } = settingsSlice.actions;
 export default settingsSlice.reducer;

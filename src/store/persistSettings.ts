@@ -5,6 +5,7 @@ import type { AppDispatch } from "./index";
 import {
   languageOverrideSet,
   presentationAllCapsSet,
+  presentationChordsDisplay,
   presentationFontSizeSet,
   themeOverrideSet,
 } from "./settingsSlice";
@@ -38,5 +39,12 @@ export function persistPresentationFontSize(value: number) {
   return (dispatch: AppDispatch) => {
     dispatch(presentationFontSizeSet(value));
     writeAppSettings({ presentationFontSize: value });
+  };
+}
+
+export function persistPresentationChords(presentationChords: boolean) {
+  return (dispatch: AppDispatch) => {
+    dispatch(presentationChordsDisplay(presentationChords));
+    writeAppSettings({ presentationChords });
   };
 }

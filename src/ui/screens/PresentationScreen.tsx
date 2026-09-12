@@ -2,6 +2,7 @@ import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   persistPresentationAllCaps,
+  persistPresentationChords,
   persistPresentationFontSize,
 } from "@/store/persistSettings";
 import { setlistsSelectors } from "@/store/setlistsSlice";
@@ -142,6 +143,9 @@ function PresentationView({
   // Persisted across sessions - remembered how you last left it, not reset
   // every time you enter presentation mode.
   const allCaps = useAppSelector((state) => state.settings.presentationAllCaps);
+  const presentationChords = useAppSelector(
+    (state) => state.settings.presentationChords,
+  );
   const fontSize = useAppSelector(
     (state) => state.settings.presentationFontSize,
   );
@@ -506,6 +510,21 @@ function PresentationView({
                 ]}
               >
                 A−
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                dispatch(persistPresentationChords(!presentationChords))
+              }
+              style={styles.railButton}
+            >
+              <Text
+                style={[
+                  styles.railText,
+                  presentationChords && styles.railActive,
+                ]}
+              >
+                A#
               </Text>
             </Pressable>
             <Pressable onPress={() => router.back()} style={styles.railButton}>
