@@ -198,7 +198,11 @@ export function SongDetailScreen() {
                     // formatDurationDigits from whatever raw digits are
                     // typed - stripping non-digits here also throws away
                     // any colon this same onChangeText round-tripped back in.
-                    setDurationDigits(text.replace(/\D/g, "").slice(0, 4))
+                    // No length cap: durations aren't bounded elsewhere
+                    // (digitsFromDuration can produce more than 4 digits),
+                    // so truncating here would make long durations
+                    // unenterable and break round-tripping on reopen.
+                    setDurationDigits(text.replace(/\D/g, ""))
                   }
                   placeholder={t.song.durationPlaceholder}
                   keyboardType="number-pad"
