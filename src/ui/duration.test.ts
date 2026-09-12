@@ -1,43 +1,62 @@
-import { formatDuration, parseDurationInput } from "./duration";
+import {
+  digitsFromDuration,
+  formatDurationDigits,
+  parseDurationDigits,
+} from "./duration";
 
-describe("parseDurationInput", () => {
-  it("parses m:ss", () => {
-    expect(parseDurationInput("3:45")).toBe(225);
+describe("formatDurationDigits", () => {
+  it("leaves 1-2 digits as bare seconds", () => {
+    expect(formatDurationDigits("3")).toBe("3");
+    expect(formatDurationDigits("30")).toBe("30");
   });
 
-  it("parses a single-digit seconds part", () => {
-    expect(parseDurationInput("3:5")).toBe(185);
+  it("positions the colon before the last two digits once there's a minutes part", () => {
+    expect(formatDurationDigits("300")).toBe("3:00");
+    expect(formatDurationDigits("125")).toBe("1:25");
+    expect(formatDurationDigits("9959")).toBe("99:59");
   });
 
-  it("parses a bare number of seconds", () => {
-    expect(parseDurationInput("90")).toBe(90);
-  });
-
-  it("trims surrounding whitespace", () => {
-    expect(parseDurationInput("  3:45  ")).toBe(225);
-  });
-
-  it("returns null for a blank field", () => {
-    expect(parseDurationInput("")).toBeNull();
-    expect(parseDurationInput("   ")).toBeNull();
-  });
-
-  it("returns null for text that isn't a duration", () => {
-    expect(parseDurationInput("abc")).toBeNull();
-    expect(parseDurationInput("3:60")).toBeNull();
-    expect(parseDurationInput("3:456")).toBeNull();
+  it("passes through an empty string", () => {
+    expect(formatDurationDigits("")).toBe("");
   });
 });
 
-describe("formatDuration", () => {
-  it("formats seconds as m:ss with padded seconds", () => {
-    expect(formatDuration(225)).toBe("3:45");
-    expect(formatDuration(65)).toBe("1:05");
-    expect(formatDuration(5)).toBe("0:05");
+describe("parseDurationDigits", () => {
+  it("parses 1-2 digits as bare seconds", () => {
+    expect(parseDurationDigits("3")).toBe(3);
+    expect(parseDurationDigits("30")).toBe(30);
+  });
+
+  it("treats the last two digits as seconds once there's a minutes part", () => {
+    expect(parseDurationDigits("300")).toBe(180);
+    expect(parseDurationDigits("125")).toBe(85);
+  });
+
+  it("returns null for an empty field (not set)", () => {
+    expect(parseDurationDigits("")).toBeNull();
+  });
+});
+
+describe("digitsFromDuration", () => {
+  it("renders under a minute as bare seconds", () => {
+    expect(digitsFromDuration(3)).toBe("3");
+    expect(digitsFromDuration(45)).toBe("45");
+  });
+
+  it("renders a minutes part with zero-padded seconds", () => {
+    expect(digitsFromDuration(180)).toBe("300");
+    expect(digitsFromDuration(85)).toBe("125");
+    expect(digitsFromDuration(61)).toBe("101");
   });
 
   it("rounds and clamps negative input to zero", () => {
-    expect(formatDuration(4.6)).toBe("0:05");
-    expect(formatDuration(-10)).toBe("0:00");
+    expect(digitsFromDuration(4.6)).toBe("5");
+    expect(digitsFromDuration(-10)).toBe("0");
+  });
+
+  it("round-trips through parseDurationDigits", () => {
+    for (const seconds of [3, 30, 45, 61, 85, 180, 225, 5999]) {
+      expect(parseDurationDigits(digitsFromDuration(seconds))).toBe(seconds);
+    }
   });
 });

@@ -7,6 +7,7 @@ import {
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
+import { DEFAULT_DURATION_SECONDS } from "@/ui/duration";
 import { parseLyricsColors } from "@/ui/lyricsColor";
 import {
   glow,
@@ -176,8 +177,13 @@ function PresentationView({
 
   useEffect(() => {
     if (!isAutoScrolling) return;
-    const durationSeconds = current?.durationSeconds;
-    if (!durationSeconds || durationSeconds <= 0) return;
+    // A song with no duration entered still auto-scrolls, paced by
+    // DEFAULT_DURATION_SECONDS - see canAutoScroll below, which only checks
+    // for lyrics now, not for an explicit duration.
+    const durationSeconds =
+      current?.durationSeconds && current.durationSeconds > 0
+        ? current.durationSeconds
+        : DEFAULT_DURATION_SECONDS;
 
     // Re-measured every tick, not once when the interval is set up: the
     // height refs can still be 0 at the instant Play is pressed (layout
@@ -243,10 +249,10 @@ function PresentationView({
     if (multipleSongs) goNext();
   }
 
-  const canAutoScroll =
-    typeof current.durationSeconds === "number" &&
-    current.durationSeconds > 0 &&
-    Boolean(current.lyrics);
+  // Every song can auto-scroll, timed or not - an untimed one just uses
+  // DEFAULT_DURATION_SECONDS (see the effect above). Only missing lyrics
+  // (nothing to scroll through) disables it.
+  const canAutoScroll = Boolean(current.lyrics);
 
   function toggleAutoScroll() {
     setIsAutoScrolling((playing) => !playing);
@@ -395,7 +401,7 @@ function PresentationView({
                 accessibilityRole="button"
                 accessibilityLabel={t.presentation.scrollStopLabel}
                 accessibilityHint={
-                  canAutoScroll ? undefined : t.presentation.noDurationHint
+                  canAutoScroll ? undefined : t.presentation.noLyricsHint
                 }
                 style={[
                   styles.transportButton,
@@ -412,7 +418,7 @@ function PresentationView({
                   isAutoScrolling,
                 )}
                 accessibilityHint={
-                  canAutoScroll ? undefined : t.presentation.noDurationHint
+                  canAutoScroll ? undefined : t.presentation.noLyricsHint
                 }
                 style={[
                   styles.transportButton,

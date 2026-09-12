@@ -79,8 +79,9 @@ export const en = {
     notFound: "Song not found.",
     nameLabel: "Song name",
     durationLabel: "Duration",
-    durationPlaceholder: "m:ss",
-    durationInvalid: "Enter it as minutes:seconds, e.g. 3:45.",
+    durationPlaceholder: "300",
+    durationDefaultHint:
+      "Digits only, e.g. 300 becomes 3:00. Leave blank to default to 3:00.",
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",
     noTags: "No tags yet",
@@ -118,7 +119,7 @@ export const en = {
     scrollPlayLabel: (playing: boolean): string =>
       playing ? "Pause auto-scroll" : "Play auto-scroll",
     scrollStopLabel: "Stop auto-scroll",
-    noDurationHint: "Set a duration on this song to enable auto-scroll.",
+    noLyricsHint: "Add lyrics to this song to enable auto-scroll.",
   },
   menu: {
     about: "About",
