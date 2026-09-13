@@ -13,13 +13,17 @@ export const DEFAULT_DURATION_SECONDS = 180;
  * digits typed are always seconds, anything before them is minutes. This
  * formats a raw digit string (as typed, digits only) for display: "3" stays
  * "3" (3s), "30" stays "30" (30s), "300" becomes "3:00" - the colon is
- * positioned automatically once there's a minutes part to show.
+ * positioned automatically once there's a minutes part to show. A seconds
+ * part of 60 or more (e.g. "160") is carried into minutes so the result is
+ * always a valid mm:ss - never a display like "1:60".
  */
 export function formatDurationDigits(digits: string): string {
   if (digits.length <= 2) return digits;
-  const minutes = digits.slice(0, -2);
-  const seconds = digits.slice(-2);
-  return `${minutes}:${seconds}`;
+  const rawMinutes = Number(digits.slice(0, -2));
+  const rawSeconds = Number(digits.slice(-2));
+  const minutes = rawMinutes + Math.floor(rawSeconds / 60);
+  const seconds = rawSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 /**

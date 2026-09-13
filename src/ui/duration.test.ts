@@ -19,6 +19,11 @@ describe("formatDurationDigits", () => {
   it("passes through an empty string", () => {
     expect(formatDurationDigits("")).toBe("");
   });
+
+  it("carries a seconds part of 60 or more into minutes", () => {
+    expect(formatDurationDigits("160")).toBe("2:00");
+    expect(formatDurationDigits("199")).toBe("2:39");
+  });
 });
 
 describe("parseDurationDigits", () => {
