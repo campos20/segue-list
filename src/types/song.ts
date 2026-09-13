@@ -12,7 +12,9 @@ export interface SongManifest {
   /**
    * Approximate playing time in seconds, entered by hand (there is no audio
    * file to read it from). Paces Presentation mode's auto-scroll. Missing or
-   * null means "not set" - auto-scroll is simply unavailable for that song.
+   * null means "not set" - Presentation mode then falls back to
+   * DEFAULT_DURATION_SECONDS (see ui/duration.ts) so auto-scroll is always
+   * available, just untimed.
    */
   durationSeconds?: number | null;
   createdAt: string;

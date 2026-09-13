@@ -21,7 +21,11 @@ import {
   type LyricsRichEditorHandle,
 } from "@/ui/components/LyricsRichEditor";
 import { TextField } from "@/ui/components/TextField";
-import { formatDuration, parseDurationInput } from "@/ui/duration";
+import {
+  digitsFromDuration,
+  formatDurationDigits,
+  parseDurationDigits,
+} from "@/ui/duration";
 import type { ColorSpan } from "@/ui/lyricsColor";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
@@ -41,7 +45,9 @@ export function SongDetailScreen() {
   );
 
   const [name, setName] = useState("");
-  const [durationText, setDurationText] = useState("");
+  // Raw digits only, no colon - the colon is positioned automatically for
+  // display by formatDurationDigits. See duration.ts.
+  const [durationDigits, setDurationDigits] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [hasSelection, setHasSelection] = useState(false);
   const [currentSpan, setCurrentSpan] = useState<ColorSpan | null>(null);
@@ -65,15 +71,16 @@ export function SongDetailScreen() {
   if (song && song.id !== syncedSongId) {
     setSyncedSongId(song.id);
     setName(song.name);
-    setDurationText(
-      song.durationSeconds != null ? formatDuration(song.durationSeconds) : "",
+    setDurationDigits(
+      song.durationSeconds != null
+        ? digitsFromDuration(song.durationSeconds)
+        : "",
     );
     setLyrics(song.lyrics ?? "");
     setTags(song.tags ?? []);
   }
 
-  const parsedDuration = parseDurationInput(durationText);
-  const durationInvalid = durationText.trim() !== "" && parsedDuration === null;
+  const parsedDuration = parseDurationDigits(durationDigits);
 
   /** Applies (or clears, for `span: null`) color to whatever's currently selected inside the editor's WebView - see LyricsRichEditor.tsx. */
   function handleApplyColor(span: ColorSpan | null) {
@@ -121,7 +128,7 @@ export function SongDetailScreen() {
   }
 
   function handleSave() {
-    if (!song || !name.trim() || durationInvalid) return;
+    if (!song || !name.trim()) return;
     dispatch(
       updateSong(song.id, {
         name: name.trim(),
@@ -135,11 +142,6 @@ export function SongDetailScreen() {
 
   const isDirty =
     name !== song.name ||
-    // An invalid duration always counts as dirty even if it happens to
-    // parse to the same value as the saved one (e.g. both null) - it's
-    // unsaved text sitting in the field either way, and without this an
-    // invalid edit could be navigated away from with no discard prompt.
-    durationInvalid ||
     parsedDuration !== (song.durationSeconds ?? null) ||
     lyrics !== (song.lyrics ?? "") ||
     JSON.stringify(tags) !== JSON.stringify(song.tags ?? []);
@@ -190,16 +192,22 @@ export function SongDetailScreen() {
               <View style={styles.durationColumn}>
                 <TextField
                   label={t.song.durationLabel}
-                  value={durationText}
-                  onChangeText={setDurationText}
+                  value={formatDurationDigits(durationDigits)}
+                  onChangeText={(text) =>
+                    // Colon is display-only, positioned automatically by
+                    // formatDurationDigits from whatever raw digits are
+                    // typed - stripping non-digits here also throws away
+                    // any colon this same onChangeText round-tripped back in.
+                    // No length cap: durations aren't bounded elsewhere
+                    // (digitsFromDuration can produce more than 4 digits),
+                    // so truncating here would make long durations
+                    // unenterable and break round-tripping on reopen.
+                    setDurationDigits(text.replace(/\D/g, ""))
+                  }
                   placeholder={t.song.durationPlaceholder}
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType="number-pad"
                 />
-                {durationInvalid && (
-                  <Text style={styles.durationErrorHint}>
-                    {t.song.durationInvalid}
-                  </Text>
-                )}
+                <Text style={styles.hint}>{t.song.durationDefaultHint}</Text>
               </View>
 
               <Pressable
@@ -323,10 +331,7 @@ export function SongDetailScreen() {
         <View style={styles.footer}>
           {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
           <View style={styles.actionsRow}>
-            <Button
-              onPress={handleSave}
-              disabled={!name.trim() || durationInvalid}
-            >
+            <Button onPress={handleSave} disabled={!name.trim()}>
               {t.common.save}
             </Button>
             <Button
@@ -412,10 +417,6 @@ function createStyles(colors: ThemeColors) {
       color: colors.textTertiary,
       fontSize: 11,
     },
-    durationErrorHint: {
-      color: colors.danger,
-      fontSize: 11,
-    },
     label: {
       color: colors.textSecondary,
       fontSize: 12,
@@ -427,7 +428,8 @@ function createStyles(colors: ThemeColors) {
       gap: spacing.md,
     },
     durationColumn: {
-      width: 108,
+      width: 88,
+      gap: spacing.xs,
     },
     tagsColumn: {
       flex: 1,
