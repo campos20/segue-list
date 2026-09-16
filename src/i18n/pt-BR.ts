@@ -88,10 +88,17 @@ export const ptBR: TranslationDictionary = {
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
     chordsLabel: "Cifra",
+    chordsModeSectionLabel: "Letra & Cifra",
     chordsPlaceholder:
       "Digite os acordes acima da linha da letra correspondente, usando espaços para alinhar...",
     chordsHint:
-      "Cada linha é a cifra da linha da letra mostrada logo abaixo - use espaços para posicionar o acorde sobre sua sílaba. Somente acordes reconhecidos são mantidos.",
+      "Digite a letra em cada linha e a cifra logo acima dela - pressione Enter para começar uma nova linha, Backspace no início de uma linha para juntá-la com a anterior. Somente acordes reconhecidos são mantidos.",
+    richModeLabel: "Texto rico",
+    chordsModeLabel: "Cifra + letra",
+    switchToChordsTitle: "Mudar para o modo de cifra?",
+    switchToChordsBody:
+      "As cores da letra desta música serão removidas - o modo de cifra usa texto simples para manter cada acorde preso à sua linha.",
+    switchConfirm: "Mudar",
     tagsLabel: "Tags",
     noTags: "Nenhuma tag ainda",
     tagsToggleLabel: (expanded: boolean) =>

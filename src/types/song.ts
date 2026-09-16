@@ -23,6 +23,16 @@ export interface SongManifest {
    * hand-typed spacing. Optional/nullable like `lyrics`.
    */
   chords?: string | null;
+  /**
+   * Which editor this song's lyrics/chords are edited with - "rich" (the
+   * default, missing means "rich") is the WebView color-highlighting
+   * editor and has no chords; "chords" is the plain-text, line-paired
+   * editor where chords stay structurally attached to their lyric line.
+   * The two audiences don't overlap much (singers vs. players), so a song
+   * picks one rather than the editor trying to support both at once - see
+   * ChordsLyricsEditor.tsx's doc comment for why that split exists.
+   */
+  editorMode?: "rich" | "chords";
   createdAt: string;
   updatedAt: string;
 }

@@ -91,10 +91,17 @@ export const en = {
     addTag: "Add tag",
     lyricsPlaceholder: "Type or paste the lyrics...",
     chordsLabel: "Chords",
+    chordsModeSectionLabel: "Lyrics & Chords",
     chordsPlaceholder:
       "Type chords above the lyric line they belong to, using spaces to line them up...",
     chordsHint:
-      "Each row is the chords for the lyric line shown below it - use spaces to line a chord up over its syllable. Only recognized chords are kept.",
+      "Type the lyric on each line and its chords just above it - press Enter to start a new line, Backspace at the start of a line to join it with the one before. Only recognized chords are kept.",
+    richModeLabel: "Rich text",
+    chordsModeLabel: "Chords + lyrics",
+    switchToChordsTitle: "Switch to chords mode?",
+    switchToChordsBody:
+      "This song's lyric colors will be removed - chords mode uses plain text so each chord can stay locked to its line.",
+    switchConfirm: "Switch",
     removeTag: (tag: string) => `Remove tag "${tag}"`,
     suggestedTags: "Suggested tags",
     colorButton: "Color",
