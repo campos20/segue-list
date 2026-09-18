@@ -7,14 +7,20 @@
  */
 
 // A chord's "quality" - everything between the root and an optional slash
-// bass note: an optional structural quality, extension, and alteration.
-// Deliberately structural rather than a whitelist of every real chord name,
-// so it accepts uncommon-but-valid chords (F#m7b5, Bb7sus4, C6/9) while
-// still catching a nonsense suffix ("Cxyz"). Shared between the validating
-// regex below and the capturing one transposeChordToken uses, so the two
-// can't drift apart.
+// bass note: an optional structural quality, extension, alteration, and a
+// parenthesized extension. Deliberately structural rather than a whitelist
+// of every real chord name, so it accepts uncommon-but-valid chords
+// (F#m7b5, Bb7sus4, C6/9) while still catching a nonsense suffix ("Cxyz").
+// Shared between the validating regex below and the capturing one
+// transposeChordToken uses, so the two can't drift apart.
+//
+// "º"/"°" (diminished) and a bare/trailing "+" (augmented) are common
+// shorthand in Brazilian "cifra" notation (e.g. "Cº", "E5+"), and a
+// parenthesized extension ("E7(9)", "D(add9)") is common wherever chord
+// charts get pasted in from - added specifically so a pasted chart isn't
+// full of false "invalid chord" flags (see parseChordsAndLyrics).
 const CHORD_QUALITY_SRC =
-  "(?:maj|min|m|dim|aug)?(?:6\\/9|69|2|4|5|6|7|9|11|13)?(?:sus2|sus4|add2|add4|add9|add11|add13)?(?:[#b](?:5|9|11|13))?";
+  "(?:maj|min|m|dim|º|°|aug|5\\+|\\+)?(?:6\\/9|69|2|4|5|6|7|9|11|13)?(?:sus2|sus4|add2|add4|add9|add11|add13)?(?:[#b](?:5|9|11|13))?(?:\\((?:add)?[#b]?(?:2|4|5|6|7|9|11|13)\\))?";
 
 const CHORD_TOKEN_RE = new RegExp(
   `^[A-G](?:#|b)?${CHORD_QUALITY_SRC}(?:\\/[A-G](?:#|b)?)?$`,
@@ -145,6 +151,53 @@ export function transposeChordsText(chordsText: string, steps: number): string {
         .join(""),
     )
     .join("\n");
+}
+
+function isChordOnlyLine(line: string): boolean {
+  const tokens = line.trim().split(/\s+/).filter(Boolean);
+  return tokens.length > 0 && tokens.every(isValidChordToken);
+}
+
+/**
+ * Parses a pasted chord chart - a chord line, then the lyric line it goes
+ * with, repeating, as commonly copied from lyric/chord sites - into
+ * chords/lyrics text ready to drop straight into Chords mode's two fields
+ * (already paired 1:1 by line, same as alignChordsToLyricsLineCount's
+ * invariant). A line counts as a chord line only if EVERY space-separated
+ * token on it is a recognized chord (isValidChordToken) - column spacing
+ * within a chord line is preserved verbatim, since both the chords and
+ * lyrics fields render in the same monospace font stacked directly (see
+ * PresentationScreen), so a chord positioned over a specific syllable stays
+ * positioned over it. Anything that isn't a pure chord line - an actual
+ * lyric line, a section marker like "[Chorus]", or a blank separator line -
+ * becomes a lyrics line with a blank paired chord line.
+ *
+ * This is a heuristic, not a real parser: a lyric line that happens to be
+ * made up entirely of chord-shaped short words (a lone "A", or "Em" used as
+ * a real word) can misclassify as a chord line. The result lands in the
+ * same per-line editable rows as manual entry, so a misparse is exactly as
+ * easy to fix by hand afterward as a typo would be.
+ */
+export function parseChordsAndLyrics(source: string): {
+  chords: string;
+  lyrics: string;
+} {
+  const lines = source.replace(/\r\n?/g, "\n").split("\n");
+  const chordLines: string[] = [];
+  const lyricLines: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (isChordOnlyLine(lines[i])) {
+      chordLines.push(lines[i]);
+      lyricLines.push(lines[i + 1] ?? "");
+      i += 2;
+    } else {
+      chordLines.push("");
+      lyricLines.push(lines[i]);
+      i += 1;
+    }
+  }
+  return { chords: chordLines.join("\n"), lyrics: lyricLines.join("\n") };
 }
 
 export interface ChordLyricsLine {

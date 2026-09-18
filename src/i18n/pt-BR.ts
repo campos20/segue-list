@@ -122,6 +122,16 @@ export const ptBR: TranslationDictionary = {
     transposeReset: "Redefinir",
     transposeEditHint:
       "Os acordes são exibidos transpostos - redefina para o tom original para editá-los diretamente.",
+    pasteChordsButton: "Colar cifra",
+    pasteChordsTitle: "Colar cifra + letra",
+    pasteChordsHint:
+      "Cole uma cifra com uma linha de acordes acima de cada linha da letra - acordes e letra serão separados automaticamente.",
+    pasteChordsPlaceholder: "Cole aqui...",
+    pasteChordsImport: "Importar",
+    pasteChordsOverwriteTitle: "Substituir os acordes e a letra atuais?",
+    pasteChordsOverwriteBody:
+      "Esta música já tem acordes ou letra preenchidos aqui. Colar vai substituí-los.",
+    pasteChordsOverwriteConfirm: "Substituir",
     invalidChordsTitle: "Acordes inválidos",
     invalidChordsBody: (invalid: { line: number; token: string }[]) => {
       const shown = invalid

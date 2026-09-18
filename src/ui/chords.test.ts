@@ -3,6 +3,7 @@ import {
   findInvalidChordTokens,
   isValidChordToken,
   pairChordsWithLyrics,
+  parseChordsAndLyrics,
   transposeChordToken,
   transposeChordsText,
 } from "./chords";
@@ -45,6 +46,18 @@ describe("isValidChordToken", () => {
 
   it("rejects an empty string", () => {
     expect(isValidChordToken("")).toBe(false);
+  });
+
+  it("accepts Brazilian \"cifra\" shorthand: º/° for diminished, + for augmented", () => {
+    for (const token of ["Cº", "C°", "C+", "E5+"]) {
+      expect(isValidChordToken(token)).toBe(true);
+    }
+  });
+
+  it("accepts a parenthesized extension", () => {
+    for (const token of ["E7(9)", "D(add9)", "A7(#9)", "G(b13)"]) {
+      expect(isValidChordToken(token)).toBe(true);
+    }
   });
 });
 
@@ -170,5 +183,94 @@ describe("transposeChordsText", () => {
   it("is the exact inverse of the opposite step count, round-tripping back to the original", () => {
     const original = "C G\nAm F#m7b5";
     expect(transposeChordsText(transposeChordsText(original, 5), -5)).toBe(original);
+  });
+});
+
+describe("parseChordsAndLyrics", () => {
+  it("pairs a chord line with the lyric line right after it", () => {
+    expect(parseChordsAndLyrics("C G\nHello world")).toEqual({
+      chords: "C G",
+      lyrics: "Hello world",
+    });
+  });
+
+  it("preserves a chord line's column spacing exactly", () => {
+    expect(parseChordsAndLyrics("   C        G\nHello world")).toEqual({
+      chords: "   C        G",
+      lyrics: "Hello world",
+    });
+  });
+
+  it("gives a plain lyric line (no chords above it) a blank paired chord line", () => {
+    expect(parseChordsAndLyrics("Just lyrics, no chord line")).toEqual({
+      chords: "",
+      lyrics: "Just lyrics, no chord line",
+    });
+  });
+
+  it("treats a section marker as lyrics, not chords", () => {
+    expect(parseChordsAndLyrics("[Chorus]\nC G\nSing along")).toEqual({
+      chords: "\nC G",
+      lyrics: "[Chorus]\nSing along",
+    });
+  });
+
+  it("keeps blank separator lines as their own blank chord/lyric pair", () => {
+    expect(parseChordsAndLyrics("C\nLine one\n\nG\nLine two")).toEqual({
+      chords: "C\n\nG",
+      lyrics: "Line one\n\nLine two",
+    });
+  });
+
+  it("pairs a trailing chord line with a blank lyric line if nothing follows it", () => {
+    expect(parseChordsAndLyrics("Line one\nC G")).toEqual({
+      chords: "\nC G",
+      lyrics: "Line one\n",
+    });
+  });
+
+  it("normalizes CRLF line endings", () => {
+    expect(parseChordsAndLyrics("C G\r\nHello world")).toEqual({
+      chords: "C G",
+      lyrics: "Hello world",
+    });
+  });
+
+  it("always returns chords and lyrics with the same number of lines", () => {
+    const { chords, lyrics } = parseChordsAndLyrics(
+      "[Verse]\n\nC G\nLine one\nAm F\nLine two\n\n[Chorus]\nG\nLine three",
+    );
+    expect(chords.split("\n").length).toBe(lyrics.split("\n").length);
+  });
+
+  it("parses a full multi-section chart with no invalid chords left over", () => {
+    const source = [
+      "[Primeira Parte]",
+      "",
+      "           E                  B/D#",
+      "Quando eu digo que deixei de te amar",
+      "         C#m7    E7(9)  E6  E7",
+      "É porque eu te amo",
+      " Cº",
+      "Coração",
+      "",
+      "[Refrão]",
+      "",
+      "              E5+",
+      "Diz que é verdade que tem",
+    ].join("\n");
+    const { chords, lyrics } = parseChordsAndLyrics(source);
+    expect(findInvalidChordTokens(chords)).toEqual([]);
+    expect(lyrics.split("\n")).toEqual([
+      "[Primeira Parte]",
+      "",
+      "Quando eu digo que deixei de te amar",
+      "É porque eu te amo",
+      "Coração",
+      "",
+      "[Refrão]",
+      "",
+      "Diz que é verdade que tem",
+    ]);
   });
 });

@@ -119,6 +119,16 @@ export const en = {
     transposeReset: "Reset",
     transposeEditHint:
       "Chords are shown transposed - reset to the original pitch to edit them directly.",
+    pasteChordsButton: "Paste chords",
+    pasteChordsTitle: "Paste chords + lyrics",
+    pasteChordsHint:
+      "Paste a chord chart with a chord line above each lyric line - chords and lyrics will be split apart automatically.",
+    pasteChordsPlaceholder: "Paste here...",
+    pasteChordsImport: "Import",
+    pasteChordsOverwriteTitle: "Replace current chords and lyrics?",
+    pasteChordsOverwriteBody:
+      "This song already has chords or lyrics entered here. Pasting will replace them.",
+    pasteChordsOverwriteConfirm: "Replace",
     invalidChordsTitle: "Invalid chords",
     invalidChordsBody: (invalid: { line: number; token: string }[]) => {
       const shown = invalid

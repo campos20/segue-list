@@ -7,6 +7,7 @@ import {
   alignChordsToLyricsLineCount,
   findInvalidChordTokens,
   pairChordsWithLyrics,
+  parseChordsAndLyrics,
   transposeChordsText,
 } from "@/ui/chords";
 import { Button } from "@/ui/components/Button";
@@ -15,6 +16,7 @@ import {
   LyricsRichEditor,
   type LyricsRichEditorHandle,
 } from "@/ui/components/LyricsRichEditor";
+import { PasteChordsModal } from "@/ui/components/PasteChordsModal";
 import { TextField } from "@/ui/components/TextField";
 import {
   digitsFromDuration,
@@ -102,6 +104,7 @@ export function SongDetailScreen() {
   const [durationHintVisible, setDurationHintVisible] = useState(false);
   const [saved, setSaved] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [pasteChordsOpen, setPasteChordsOpen] = useState(false);
 
   // Adjusted during render rather than in an effect: resets the draft when
   // the song first becomes available (hydration can land after this screen
@@ -149,6 +152,35 @@ export function SongDetailScreen() {
   function switchToRichMode() {
     setLyrics(mergePlainLyricsEdit(lyrics, chordsLyricsDraft));
     dispatch(persistLyricsViewMode("rich"));
+  }
+
+  /** Splits a pasted chord chart into the two draft fields via parseChordsAndLyrics, replacing whatever Chords mode currently has - confirmed first if that would discard existing content. Also resets transposeSteps to 0: the pasted chart is the new "original" pitch, not a transposition of whatever was there before. */
+  function handlePasteChordsImport(pastedText: string) {
+    const parsed = parseChordsAndLyrics(pastedText);
+    function apply() {
+      setChords(parsed.chords);
+      setChordsLyricsDraft(parsed.lyrics);
+      setTransposeSteps(0);
+      setPasteChordsOpen(false);
+    }
+    const hasExistingContent =
+      chords.trim().length > 0 || chordsLyricsDraft.trim().length > 0;
+    if (hasExistingContent) {
+      Alert.alert(
+        t.song.pasteChordsOverwriteTitle,
+        t.song.pasteChordsOverwriteBody,
+        [
+          { text: t.song.keepEditing, style: "cancel" },
+          {
+            text: t.song.pasteChordsOverwriteConfirm,
+            style: "destructive",
+            onPress: apply,
+          },
+        ],
+      );
+    } else {
+      apply();
+    }
   }
 
   // Chords mode's combined editor renders one row per line - a chord field
@@ -285,8 +317,20 @@ export function SongDetailScreen() {
       .split("\n")
       .some((line) => line.trim().length > 0);
 
+    // Mirror exactly what gets dispatched below, or isDirty (which compares
+    // this local draft state against the saved song) can end up stuck
+    // true forever: an all-blank alignedChords still saves as chords:null,
+    // and .trim() above can shorten finalLyrics by a leading/trailing blank
+    // line that chordsLyricsDraft doesn't know about yet - either one left
+    // unreconciled means every future isDirty check reads true, which is
+    // silent on web (Alert.alert is a no-op there - see AGENTS.md) but on
+    // native means Present/Back show a "Discard changes?" prompt that never
+    // stops appearing, even right after a successful save.
     setLyrics(finalLyrics);
-    setChords(alignedChords);
+    setChords(hasChordContent ? alignedChords : "");
+    if (mode === "chords") {
+      setChordsLyricsDraft(plainTextFromLyrics(finalLyrics));
+    }
 
     dispatch(
       updateSong(song.id, {
@@ -531,6 +575,15 @@ export function SongDetailScreen() {
                 {t.song.colorButton}
               </Button>
             )}
+            {mode === "chords" && (
+              <Button
+                variant="secondary"
+                onPress={() => setPasteChordsOpen(true)}
+                style={styles.colorButton}
+              >
+                {t.song.pasteChordsButton}
+              </Button>
+            )}
           </View>
           <Text style={styles.hint}>
             {mode === "rich" ? t.song.colorHint : t.song.chordsModeHint}
@@ -702,6 +755,12 @@ export function SongDetailScreen() {
         initialSpan={currentSpan}
         onApply={handleApplyColor}
         onClose={() => setColorPickerOpen(false)}
+      />
+
+      <PasteChordsModal
+        visible={pasteChordsOpen}
+        onImport={handlePasteChordsImport}
+        onClose={() => setPasteChordsOpen(false)}
       />
     </SafeAreaView>
   );
