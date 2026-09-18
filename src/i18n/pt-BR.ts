@@ -85,6 +85,8 @@ export const ptBR: TranslationDictionary = {
     durationPlaceholder: "300",
     durationDefaultHint:
       "Somente números, ex.: 300 vira 3:00. Deixe em branco para usar 3:00 como padrão.",
+    durationHintToggleLabel: (visible: boolean) =>
+      visible ? "Ocultar dica de duração" : "Mostrar dica de duração",
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
     tagsLabel: "Tags",
@@ -102,7 +104,7 @@ export const ptBR: TranslationDictionary = {
     textColorLabel: "Cor da fonte",
     backgroundColorLabel: "Cor de fundo",
     colorNone: "Nenhuma",
-    richTextTab: "Texto rico",
+    richTextTab: "Texto",
     chordsTab: "Acordes",
     chordsLabel: "Acordes",
     chordsModeHint:

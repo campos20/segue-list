@@ -82,6 +82,8 @@ export const en = {
     durationPlaceholder: "300",
     durationDefaultHint:
       "Digits only, e.g. 300 becomes 3:00. Leave blank to default to 3:00.",
+    durationHintToggleLabel: (visible: boolean): string =>
+      visible ? "Hide duration hint" : "Show duration hint",
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",
     noTags: "No tags yet",
@@ -99,7 +101,7 @@ export const en = {
     textColorLabel: "Font color",
     backgroundColorLabel: "Background color",
     colorNone: "None",
-    richTextTab: "Rich text",
+    richTextTab: "Text",
     chordsTab: "Chords",
     chordsLabel: "Chords",
     chordsModeHint:

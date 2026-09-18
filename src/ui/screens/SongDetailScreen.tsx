@@ -1,17 +1,3 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { persistLyricsViewMode } from "@/store/persistSettings";
@@ -41,6 +27,20 @@ import {
   type ColorSpan,
 } from "@/ui/lyricsColor";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export function SongDetailScreen() {
   const { songId } = useLocalSearchParams<{ songId: string }>();
@@ -96,6 +96,10 @@ export function SongDetailScreen() {
   // screen - tags are secondary metadata, not something edited every time
   // this screen opens. Tapping the summary row expands the full editor.
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  // Hidden by default - the hint text was eating space every time this
+  // screen opened, for something only worth reading once. The ⓘ button
+  // reveals it on demand instead.
+  const [durationHintVisible, setDurationHintVisible] = useState(false);
   const [saved, setSaved] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
 
@@ -122,7 +126,8 @@ export function SongDetailScreen() {
     // local draft state that does need seeding here if this song happens to
     // load while Chords mode is already active (switchToChordsMode won't
     // run in that case, since no tab press triggers it).
-    if (mode === "chords") setChordsLyricsDraft(plainTextFromLyrics(song.lyrics ?? ""));
+    if (mode === "chords")
+      setChordsLyricsDraft(plainTextFromLyrics(song.lyrics ?? ""));
   }
 
   const parsedDuration = parseDurationDigits(durationDigits);
@@ -157,7 +162,8 @@ export function SongDetailScreen() {
   // so typing can never get tangled up with the transpose math.
   const chordLines = useMemo(() => {
     const paired = pairChordsWithLyrics(chords, chordsLyricsDraft);
-    const withAtLeastOne = paired.length > 0 ? paired : [{ chords: "", lyrics: "" }];
+    const withAtLeastOne =
+      paired.length > 0 ? paired : [{ chords: "", lyrics: "" }];
     return withAtLeastOne.map((line) => ({
       ...line,
       displayChords: transposeChordsText(line.chords, transposeSteps),
@@ -168,7 +174,8 @@ export function SongDetailScreen() {
     apply: (chordLines: string[], lyricLines: string[]) => void,
   ) {
     const chordArr = chords.length > 0 ? chords.split("\n") : [];
-    const lyricArr = chordsLyricsDraft.length > 0 ? chordsLyricsDraft.split("\n") : [];
+    const lyricArr =
+      chordsLyricsDraft.length > 0 ? chordsLyricsDraft.split("\n") : [];
     while (chordArr.length < chordLines.length) chordArr.push("");
     while (lyricArr.length < chordLines.length) lyricArr.push("");
     apply(chordArr, lyricArr);
@@ -257,14 +264,20 @@ export function SongDetailScreen() {
     // until now - fold it back into the canonical lyrics first, exactly
     // like leaving the mode normally would (switchToRichMode).
     const finalLyrics = (
-      mode === "chords" ? mergePlainLyricsEdit(lyrics, chordsLyricsDraft) : lyrics
+      mode === "chords"
+        ? mergePlainLyricsEdit(lyrics, chordsLyricsDraft)
+        : lyrics
     ).trim();
-    const lyricsLineCount = finalLyrics.length > 0 ? finalLyrics.split("\n").length : 0;
+    const lyricsLineCount =
+      finalLyrics.length > 0 ? finalLyrics.split("\n").length : 0;
     const alignedChords = alignChordsToLyricsLineCount(chords, lyricsLineCount);
 
     const invalidTokens = findInvalidChordTokens(alignedChords);
     if (invalidTokens.length > 0) {
-      Alert.alert(t.song.invalidChordsTitle, t.song.invalidChordsBody(invalidTokens));
+      Alert.alert(
+        t.song.invalidChordsTitle,
+        t.song.invalidChordsBody(invalidTokens),
+      );
       return;
     }
 
@@ -341,8 +354,23 @@ export function SongDetailScreen() {
           <View style={styles.section}>
             <View style={styles.durationTagsRow}>
               <View style={styles.durationColumn}>
+                <View style={styles.durationLabelRow}>
+                  <Text style={styles.label}>{t.song.durationLabel}</Text>
+                  <Pressable
+                    onPress={() =>
+                      setDurationHintVisible((visible) => !visible)
+                    }
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.song.durationHintToggleLabel(
+                      durationHintVisible,
+                    )}
+                    accessibilityState={{ expanded: durationHintVisible }}
+                  >
+                    <Text style={styles.infoIcon}>ⓘ</Text>
+                  </Pressable>
+                </View>
                 <TextField
-                  label={t.song.durationLabel}
                   value={formatDurationDigits(durationDigits)}
                   onChangeText={(text) =>
                     // Colon is display-only, positioned automatically by
@@ -358,7 +386,9 @@ export function SongDetailScreen() {
                   placeholder={t.song.durationPlaceholder}
                   keyboardType="number-pad"
                 />
-                <Text style={styles.hint}>{t.song.durationDefaultHint}</Text>
+                {durationHintVisible && (
+                  <Text style={styles.hint}>{t.song.durationDefaultHint}</Text>
+                )}
               </View>
 
               <Pressable
@@ -456,7 +486,10 @@ export function SongDetailScreen() {
             <View style={styles.modeTabRow}>
               <Pressable
                 onPress={() => mode !== "rich" && switchToRichMode()}
-                style={[styles.modeTab, mode === "rich" && styles.modeTabActive]}
+                style={[
+                  styles.modeTab,
+                  mode === "rich" && styles.modeTabActive,
+                ]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mode === "rich" }}
               >
@@ -471,7 +504,10 @@ export function SongDetailScreen() {
               </Pressable>
               <Pressable
                 onPress={() => mode !== "chords" && switchToChordsMode()}
-                style={[styles.modeTab, mode === "chords" && styles.modeTabActive]}
+                style={[
+                  styles.modeTab,
+                  mode === "chords" && styles.modeTabActive,
+                ]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mode === "chords" }}
               >
@@ -872,6 +908,15 @@ function createStyles(colors: ThemeColors) {
     durationColumn: {
       width: 88,
       gap: spacing.xs,
+    },
+    durationLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    infoIcon: {
+      color: colors.textTertiary,
+      fontSize: 13,
     },
     tagsColumn: {
       flex: 1,
