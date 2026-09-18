@@ -337,10 +337,12 @@ function PresentationView({
               plainTextFromLyrics(current.lyrics ?? ""),
             ).map((line, index) => (
               <View key={index} style={styles.chordsLyricsLine}>
+                {/* Never uppercased, even with allCaps on: chord case is
+                    meaningful (e.g. "m" for minor vs "M"/"maj"), not a
+                    stylistic choice the way lyrics capitalization is. */}
                 <Text
                   style={[
                     styles.chordLine,
-                    allCaps && styles.lyricsUppercase,
                     { fontSize: Math.round(fontSize * 0.85) },
                   ]}
                 >
