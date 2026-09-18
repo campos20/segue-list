@@ -352,7 +352,9 @@ function PresentationView({
                     allCaps && styles.lyricsUppercase,
                     {
                       fontSize,
-                      lineHeight: Math.round(fontSize * LYRICS_LINE_HEIGHT_RATIO),
+                      lineHeight: Math.round(
+                        fontSize * LYRICS_LINE_HEIGHT_RATIO,
+                      ),
                     },
                   ]}
                 >
@@ -551,7 +553,10 @@ function PresentationView({
                 A−
               </Text>
             </Pressable>
-            <Pressable onPress={() => router.back()} style={styles.railButton}>
+            <Pressable
+              onPress={() => router.navigate("/")}
+              style={styles.railButton}
+            >
               <Text style={styles.railGlyph}>✕</Text>
             </Pressable>
           </View>
