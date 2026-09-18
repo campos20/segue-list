@@ -7,8 +7,9 @@ import {
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
+import { pairChordsWithLyrics } from "@/ui/chords";
 import { DEFAULT_DURATION_SECONDS } from "@/ui/duration";
-import { parseLyricsColors } from "@/ui/lyricsColor";
+import { parseLyricsColors, plainTextFromLyrics } from "@/ui/lyricsColor";
 import {
   glow,
   radii,
@@ -144,6 +145,14 @@ function PresentationView({
   const allCaps = useAppSelector((state) => state.settings.presentationAllCaps);
   const fontSize = useAppSelector(
     (state) => state.settings.presentationFontSize,
+  );
+  // Shared with SongDetailScreen's editing tabs, not a Presentation-only
+  // setting - see settingsSlice.ts's LyricsViewMode and AGENTS.md. There is
+  // deliberately no switcher for this in Presentation mode itself: stage
+  // screen space goes to the lyrics/chords content, and showing whatever
+  // you were last editing is exactly what you want to present.
+  const showChords = useAppSelector(
+    (state) => state.settings.lyricsViewMode === "chords",
   );
   const lyricsScrollRef = useRef<ScrollView>(null);
   const lyricsOffsetRef = useRef(0);
@@ -317,7 +326,39 @@ function PresentationView({
           style={styles.lyricsScroll}
           contentContainerStyle={styles.lyricsContent}
         >
-          {current.lyrics ? (
+          {showChords && current.chords ? (
+            // Chords mode never shows or edits color (see chords.ts /
+            // SongDetailScreen) - lyrics here are always the plain-text
+            // extraction, same as what Chords mode's editor works with.
+            pairChordsWithLyrics(
+              current.chords,
+              plainTextFromLyrics(current.lyrics ?? ""),
+            ).map((line, index) => (
+              <View key={index} style={styles.chordsLyricsLine}>
+                <Text
+                  style={[
+                    styles.chordLine,
+                    allCaps && styles.lyricsUppercase,
+                    { fontSize: Math.round(fontSize * 0.85) },
+                  ]}
+                >
+                  {line.chords.length > 0 ? line.chords : " "}
+                </Text>
+                <Text
+                  style={[
+                    styles.lyrics,
+                    allCaps && styles.lyricsUppercase,
+                    {
+                      fontSize,
+                      lineHeight: Math.round(fontSize * LYRICS_LINE_HEIGHT_RATIO),
+                    },
+                  ]}
+                >
+                  {line.lyrics.length > 0 ? line.lyrics : " "}
+                </Text>
+              </View>
+            ))
+          ) : current.lyrics ? (
             <Text
               style={[
                 styles.lyrics,
@@ -767,6 +808,14 @@ function createStyles(colors: ThemeColors) {
     lyricsEmpty: {
       color: colors.textTertiary,
       fontSize: 14,
+    },
+    chordsLyricsLine: {
+      marginBottom: 2,
+    },
+    chordLine: {
+      color: colors.accent,
+      fontWeight: "700",
+      fontFamily: "monospace",
     },
     footer: {
       borderTopWidth: StyleSheet.hairlineWidth,

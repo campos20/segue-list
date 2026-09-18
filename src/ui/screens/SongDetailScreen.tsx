@@ -5,15 +5,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { persistLyricsViewMode } from "@/store/persistSettings";
 import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
+import {
+  alignChordsToLyricsLineCount,
+  findInvalidChordTokens,
+  pairChordsWithLyrics,
+} from "@/ui/chords";
 import { Button } from "@/ui/components/Button";
 import { ColorPickerModal } from "@/ui/components/ColorPickerModal";
 import {
@@ -26,7 +34,11 @@ import {
   formatDurationDigits,
   parseDurationDigits,
 } from "@/ui/duration";
-import type { ColorSpan } from "@/ui/lyricsColor";
+import {
+  mergePlainLyricsEdit,
+  plainTextFromLyrics,
+  type ColorSpan,
+} from "@/ui/lyricsColor";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 export function SongDetailScreen() {
@@ -49,6 +61,27 @@ export function SongDetailScreen() {
   // display by formatDurationDigits. See duration.ts.
   const [durationDigits, setDurationDigits] = useState("");
   const [lyrics, setLyrics] = useState("");
+  const [chords, setChords] = useState("");
+  // Global, shared with Presentation mode's display - not a per-song or
+  // per-visit choice. See settingsSlice.ts's LyricsViewMode and AGENTS.md.
+  const mode = useAppSelector((state) => state.settings.lyricsViewMode);
+  // The plain-text lyrics shown/edited in Chords mode - a separate draft
+  // from `lyrics` (which stays the color-marked-up canonical value) so Rich
+  // text mode never has to render or round-trip through plain text.
+  // Derived fresh from `lyrics` each time Chords mode is entered (see
+  // switchToChordsMode) and folded back on the way out (switchToRichMode /
+  // handleSave) - see lyricsColor.ts's mergePlainLyricsEdit.
+  const [chordsLyricsDraft, setChordsLyricsDraft] = useState("");
+  // Focuses a newly-inserted row's chord field once it exists (the top of
+  // the pair - matching the type-a-chord-line-then-Enter-into-its-lyric-line
+  // flow) - see addLineAfter, which sets this, and each row's onLayout
+  // below, which consumes it. A ref rather than state: the row's own native
+  // onLayout (fired once its TextInput exists) is the actual signal to
+  // focus, so there's no need to synchronize this through a render/effect
+  // cycle.
+  const pendingFocusIndexRef = useRef<number | null>(null);
+  const chordLineInputRefs = useRef<(TextInput | null)[]>([]);
+  const lyricLineInputRefs = useRef<(TextInput | null)[]>([]);
   const [hasSelection, setHasSelection] = useState(false);
   const [currentSpan, setCurrentSpan] = useState<ColorSpan | null>(null);
   const editorRef = useRef<LyricsRichEditorHandle>(null);
@@ -77,7 +110,13 @@ export function SongDetailScreen() {
         : "",
     );
     setLyrics(song.lyrics ?? "");
+    setChords(song.chords ?? "");
     setTags(song.tags ?? []);
+    // mode is global and doesn't reset per song, but chordsLyricsDraft is
+    // local draft state that does need seeding here if this song happens to
+    // load while Chords mode is already active (switchToChordsMode won't
+    // run in that case, since no tab press triggers it).
+    if (mode === "chords") setChordsLyricsDraft(plainTextFromLyrics(song.lyrics ?? ""));
   }
 
   const parsedDuration = parseDurationDigits(durationDigits);
@@ -87,6 +126,71 @@ export function SongDetailScreen() {
     if (span) editorRef.current?.applyColor(span);
     else editorRef.current?.clearColor();
     setColorPickerOpen(false);
+  }
+
+  /** Enters Chords mode (globally - see mode's declaration), deriving its plain-text lyrics draft fresh from the current (possibly colored) lyrics - see chordsLyricsDraft's declaration. */
+  function switchToChordsMode() {
+    setChordsLyricsDraft(plainTextFromLyrics(lyrics));
+    dispatch(persistLyricsViewMode("chords"));
+  }
+
+  /** Leaves Chords mode (globally), folding any plain-text lyrics edit back into the canonical lyrics before Rich text mode renders it again. */
+  function switchToRichMode() {
+    setLyrics(mergePlainLyricsEdit(lyrics, chordsLyricsDraft));
+    dispatch(persistLyricsViewMode("rich"));
+  }
+
+  // Chords mode's combined editor renders one row per line - a chord field
+  // stacked directly above its paired lyric field, matching how Presentation
+  // mode displays them - while `chords`/`chordsLyricsDraft` stay the two
+  // flat, newline-joined strings handleSave already knows how to align and
+  // validate. `chordLines` always has at least one row so a brand-new song
+  // has somewhere to start typing.
+  const chordLines = useMemo(() => {
+    const paired = pairChordsWithLyrics(chords, chordsLyricsDraft);
+    return paired.length > 0 ? paired : [{ chords: "", lyrics: "" }];
+  }, [chords, chordsLyricsDraft]);
+
+  function withPaddedLineArrays(
+    apply: (chordLines: string[], lyricLines: string[]) => void,
+  ) {
+    const chordArr = chords.length > 0 ? chords.split("\n") : [];
+    const lyricArr = chordsLyricsDraft.length > 0 ? chordsLyricsDraft.split("\n") : [];
+    while (chordArr.length < chordLines.length) chordArr.push("");
+    while (lyricArr.length < chordLines.length) lyricArr.push("");
+    apply(chordArr, lyricArr);
+    setChords(chordArr.join("\n"));
+    setChordsLyricsDraft(lyricArr.join("\n"));
+  }
+
+  /** A single-line field never contains "\n" (multiline is off), so this can't desync the line-array invariant the other helpers rely on. */
+  function updateChordLine(index: number, text: string) {
+    withPaddedLineArrays((chordArr) => {
+      chordArr[index] = text;
+    });
+  }
+
+  function updateLyricLine(index: number, text: string) {
+    withPaddedLineArrays((_chordArr, lyricArr) => {
+      lyricArr[index] = text;
+    });
+  }
+
+  /** Explicit action, not an Enter-key/newline interception - deterministic and easy to verify, in the spirit of this app's move-up/move-down buttons over a drag gesture (see AGENTS.md). */
+  function addLineAfter(index: number) {
+    withPaddedLineArrays((chordArr, lyricArr) => {
+      chordArr.splice(index + 1, 0, "");
+      lyricArr.splice(index + 1, 0, "");
+    });
+    pendingFocusIndexRef.current = index + 1;
+  }
+
+  function removeLine(index: number) {
+    if (chordLines.length <= 1) return;
+    withPaddedLineArrays((chordArr, lyricArr) => {
+      chordArr.splice(index, 1);
+      lyricArr.splice(index, 1);
+    });
   }
 
   // Every tag used anywhere in the library, offered as one-tap suggestions
@@ -129,11 +233,35 @@ export function SongDetailScreen() {
 
   function handleSave() {
     if (!song || !name.trim()) return;
+
+    // Chords mode's plain-text lyrics edit only lives in chordsLyricsDraft
+    // until now - fold it back into the canonical lyrics first, exactly
+    // like leaving the mode normally would (switchToRichMode).
+    const finalLyrics = (
+      mode === "chords" ? mergePlainLyricsEdit(lyrics, chordsLyricsDraft) : lyrics
+    ).trim();
+    const lyricsLineCount = finalLyrics.length > 0 ? finalLyrics.split("\n").length : 0;
+    const alignedChords = alignChordsToLyricsLineCount(chords, lyricsLineCount);
+
+    const invalidTokens = findInvalidChordTokens(alignedChords);
+    if (invalidTokens.length > 0) {
+      Alert.alert(t.song.invalidChordsTitle, t.song.invalidChordsBody(invalidTokens));
+      return;
+    }
+
+    const hasChordContent = alignedChords
+      .split("\n")
+      .some((line) => line.trim().length > 0);
+
+    setLyrics(finalLyrics);
+    setChords(alignedChords);
+
     dispatch(
       updateSong(song.id, {
         name: name.trim(),
         durationSeconds: parsedDuration,
-        lyrics: lyrics.trim() || null,
+        lyrics: finalLyrics || null,
+        chords: hasChordContent ? alignedChords : null,
         tags,
       }),
     );
@@ -144,6 +272,8 @@ export function SongDetailScreen() {
     name !== song.name ||
     parsedDuration !== (song.durationSeconds ?? null) ||
     lyrics !== (song.lyrics ?? "") ||
+    chords !== (song.chords ?? "") ||
+    (mode === "chords" && chordsLyricsDraft !== plainTextFromLyrics(lyrics)) ||
     JSON.stringify(tags) !== JSON.stringify(song.tags ?? []);
 
   /** Confirms before leaving an unsaved edit behind - a lyrics rewrite is the kind of thing you don't want to accidentally lose. */
@@ -302,31 +432,145 @@ export function SongDetailScreen() {
           </View>
 
           <View style={styles.lyricsHeaderRow}>
-            <Text style={styles.label}>{t.song.lyricsLabel}</Text>
-            <Button
-              variant="secondary"
-              onPress={() => setColorPickerOpen(true)}
-              disabled={!hasSelection}
-              style={styles.colorButton}
-            >
-              {t.song.colorButton}
-            </Button>
+            <View style={styles.modeTabRow}>
+              <Pressable
+                onPress={() => mode !== "rich" && switchToRichMode()}
+                style={[styles.modeTab, mode === "rich" && styles.modeTabActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mode === "rich" }}
+              >
+                <Text
+                  style={[
+                    styles.modeTabText,
+                    mode === "rich" && styles.modeTabTextActive,
+                  ]}
+                >
+                  {t.song.richTextTab}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => mode !== "chords" && switchToChordsMode()}
+                style={[styles.modeTab, mode === "chords" && styles.modeTabActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mode === "chords" }}
+              >
+                <Text
+                  style={[
+                    styles.modeTabText,
+                    mode === "chords" && styles.modeTabTextActive,
+                  ]}
+                >
+                  {t.song.chordsTab}
+                </Text>
+              </Pressable>
+            </View>
+            {mode === "rich" && (
+              <Button
+                variant="secondary"
+                onPress={() => setColorPickerOpen(true)}
+                disabled={!hasSelection}
+                style={styles.colorButton}
+              >
+                {t.song.colorButton}
+              </Button>
+            )}
           </View>
-          <Text style={styles.hint}>{t.song.colorHint}</Text>
+          <Text style={styles.hint}>
+            {mode === "rich" ? t.song.colorHint : t.song.chordsModeHint}
+          </Text>
         </View>
 
-        <View style={styles.lyricsSection}>
-          <LyricsRichEditor
-            ref={editorRef}
-            value={lyrics}
-            onChangeText={setLyrics}
-            onSelectionChange={(selected, span) => {
-              setHasSelection(selected);
-              setCurrentSpan(span);
-            }}
-            placeholder={t.song.lyricsPlaceholder}
-          />
-        </View>
+        {mode === "rich" ? (
+          <View style={styles.lyricsSection}>
+            <LyricsRichEditor
+              ref={editorRef}
+              value={lyrics}
+              onChangeText={setLyrics}
+              onSelectionChange={(selected, span) => {
+                setHasSelection(selected);
+                setCurrentSpan(span);
+              }}
+              placeholder={t.song.lyricsPlaceholder}
+            />
+          </View>
+        ) : (
+          <View style={styles.lyricsSection}>
+            <ScrollView
+              style={styles.combinedLinesScroll}
+              contentContainerStyle={styles.combinedLinesContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              {chordLines.map((line, index) => (
+                <View
+                  key={index}
+                  style={styles.lineRow}
+                  onLayout={() => {
+                    if (pendingFocusIndexRef.current !== index) return;
+                    pendingFocusIndexRef.current = null;
+                    chordLineInputRefs.current[index]?.focus();
+                  }}
+                >
+                  <View style={styles.lineInputs}>
+                    <TextInput
+                      ref={(el) => {
+                        chordLineInputRefs.current[index] = el;
+                      }}
+                      value={line.chords}
+                      onChangeText={(text) => updateChordLine(index, text)}
+                      placeholder={t.song.chordsLabel}
+                      placeholderTextColor={colors.textTertiary}
+                      returnKeyType="next"
+                      onSubmitEditing={() =>
+                        lyricLineInputRefs.current[index]?.focus()
+                      }
+                      submitBehavior="submit"
+                      style={styles.chordLineInput}
+                    />
+                    <TextInput
+                      ref={(el) => {
+                        lyricLineInputRefs.current[index] = el;
+                      }}
+                      value={line.lyrics}
+                      onChangeText={(text) => updateLyricLine(index, text)}
+                      placeholder={t.song.lyricsLabel}
+                      placeholderTextColor={colors.textTertiary}
+                      returnKeyType="next"
+                      onSubmitEditing={() => addLineAfter(index)}
+                      submitBehavior="submit"
+                      style={styles.lyricLineInput}
+                    />
+                  </View>
+                  <Pressable
+                    onPress={() => removeLine(index)}
+                    disabled={chordLines.length <= 1}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.song.removeLineLabel(index + 1)}
+                    style={styles.removeLineButton}
+                  >
+                    <Text
+                      style={[
+                        styles.removeLineText,
+                        chordLines.length <= 1 && styles.removeLineTextDisabled,
+                      ]}
+                    >
+                      ×
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+              <Pressable
+                onPress={() => addLineAfter(chordLines.length - 1)}
+                style={({ pressed }) => [
+                  styles.addLineButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.addLineText}>{t.song.addLine}</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        )}
 
         <View style={styles.footer}>
           {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
@@ -382,6 +626,74 @@ function createStyles(colors: ThemeColors) {
       flex: 1,
       paddingHorizontal: spacing.lg,
       paddingBottom: spacing.sm,
+      gap: spacing.xs,
+    },
+    // Chords mode's combined editor - one scrollable column of row pairs,
+    // each a chord field directly above its lyric field, matching how
+    // Presentation mode displays them (see chordLines in the component).
+    combinedLinesScroll: {
+      flex: 1,
+    },
+    combinedLinesContent: {
+      paddingBottom: spacing.lg,
+      gap: spacing.xs,
+    },
+    lineRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    lineInputs: {
+      flex: 1,
+      gap: 2,
+    },
+    chordLineInput: {
+      borderRadius: radii.sm,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      color: colors.accent,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      fontSize: 13,
+      fontWeight: "700",
+      fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }),
+    },
+    lyricLineInput: {
+      borderRadius: radii.sm,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      color: colors.textPrimary,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      fontSize: 14,
+      fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }),
+    },
+    removeLineButton: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    removeLineText: {
+      color: colors.textTertiary,
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    removeLineTextDisabled: {
+      opacity: 0.3,
+    },
+    addLineButton: {
+      alignSelf: "flex-start",
+      marginTop: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+    },
+    addLineText: {
+      color: colors.accent,
+      fontSize: 13,
+      fontWeight: "700",
     },
     // Never scrolls either - Save/Present are always reachable.
     footer: {
@@ -412,6 +724,29 @@ function createStyles(colors: ThemeColors) {
     colorButton: {
       paddingVertical: 6,
       paddingHorizontal: spacing.md,
+    },
+    modeTabRow: {
+      flexDirection: "row",
+      gap: spacing.xs,
+    },
+    modeTab: {
+      borderRadius: radii.pill,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+    },
+    modeTabActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    modeTabText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    modeTabTextActive: {
+      color: colors.accentText,
     },
     hint: {
       color: colors.textTertiary,

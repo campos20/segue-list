@@ -99,6 +99,22 @@ export const en = {
     textColorLabel: "Font color",
     backgroundColorLabel: "Background color",
     colorNone: "None",
+    richTextTab: "Rich text",
+    chordsTab: "Chords",
+    chordsLabel: "Chords",
+    chordsModeHint:
+      "Chords and lyrics line up by line number - chord line 1 pairs with lyrics line 1, and so on. Colors aren't editable here; switch to Rich text for that.",
+    addLine: "+ Add line",
+    removeLineLabel: (line: number) => `Remove line ${line}`,
+    invalidChordsTitle: "Invalid chords",
+    invalidChordsBody: (invalid: { line: number; token: string }[]) => {
+      const shown = invalid
+        .slice(0, 5)
+        .map((entry) => `"${entry.token}" (line ${entry.line})`)
+        .join(", ");
+      const remaining = invalid.length - 5;
+      return `Fix these before saving: ${shown}${remaining > 0 ? `, and ${remaining} more` : ""}.`;
+    },
     saved: "Saved.",
     discardTitle: "Discard changes?",
     discardBody: "You have unsaved changes to this song.",

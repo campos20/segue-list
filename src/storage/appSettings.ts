@@ -3,6 +3,14 @@ import type { Locale } from "@/i18n";
 import type { ThemeOverride } from "@/types/theme";
 import { isFileSystemAvailable } from "./paths";
 
+/**
+ * Whether lyrics are shown/edited as rich (colored) text or as plain text
+ * paired with a chords field. Defined here (rather than in settingsSlice,
+ * which reads this file) so both it and this file can reference the type
+ * without an import cycle.
+ */
+export type LyricsViewMode = "rich" | "chords";
+
 export interface PersistedAppSettings {
   /**
    * The Library's top-level order over *both* setlists and loose songs, as
@@ -18,6 +26,8 @@ export interface PersistedAppSettings {
   themeOverride?: ThemeOverride;
   /** Presentation mode's all-caps lyrics toggle, remembered across sessions. */
   presentationAllCaps?: boolean;
+  /** Shared by SongDetailScreen's editing tabs and Presentation mode's display - see LyricsViewMode. Absent means "rich". */
+  lyricsViewMode?: LyricsViewMode;
   /** Presentation mode's lyrics font size in points, remembered across sessions. */
   presentationFontSize?: number;
 }

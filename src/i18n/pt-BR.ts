@@ -102,6 +102,22 @@ export const ptBR: TranslationDictionary = {
     textColorLabel: "Cor da fonte",
     backgroundColorLabel: "Cor de fundo",
     colorNone: "Nenhuma",
+    richTextTab: "Texto rico",
+    chordsTab: "Acordes",
+    chordsLabel: "Acordes",
+    chordsModeHint:
+      "Acordes e letra se alinham por linha - a linha 1 dos acordes corresponde à linha 1 da letra, e assim por diante. Cores não são editáveis aqui; use Texto rico para isso.",
+    addLine: "+ Adicionar linha",
+    removeLineLabel: (line: number) => `Remover linha ${line}`,
+    invalidChordsTitle: "Acordes inválidos",
+    invalidChordsBody: (invalid: { line: number; token: string }[]) => {
+      const shown = invalid
+        .slice(0, 5)
+        .map((entry) => `"${entry.token}" (linha ${entry.line})`)
+        .join(", ");
+      const remaining = invalid.length - 5;
+      return `Corrija antes de salvar: ${shown}${remaining > 0 ? `, e mais ${remaining}` : ""}.`;
+    },
     saved: "Salvo.",
     discardTitle: "Descartar alterações?",
     discardBody: "Você tem alterações não salvas nesta música.",
