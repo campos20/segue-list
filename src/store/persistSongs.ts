@@ -10,7 +10,7 @@ import { songKey } from "@/ui/libraryTree";
 import { plainTextToLyricsHtml } from "@/ui/lyricsColor";
 import type { AppDispatch, RootState } from "./index";
 import { persistLibraryOrder } from "./persistLibrary";
-import { removeSongFromAllSetlists } from "./persistSetlists";
+import { addSongToSetlist, removeSongFromAllSetlists } from "./persistSetlists";
 import {
   songAdded,
   songRemoved,
@@ -43,6 +43,29 @@ export function createSong(name?: string) {
         ...getState().settings.libraryOrder,
       ]),
     );
+    return song;
+  };
+}
+
+/**
+ * Creates a song already inside `setlistId`, instead of loose at the top of
+ * the Library the way plain createSong does - the point is to skip the
+ * separate "create, then Add to <setlist>" round trip. Deliberately does
+ * NOT touch libraryOrder: buildLibraryTree (ui/libraryTree.ts) already
+ * excludes any song a setlist references from the top-level loose list, so
+ * a libraryOrder entry here would just be dead, never-rendered state.
+ */
+export function createSongInSetlist(setlistId: string, name?: string) {
+  return (dispatch: AppDispatch): SongManifest | null => {
+    let song: SongManifest;
+    try {
+      song = createSongFile(name);
+    } catch (error) {
+      console.warn("Failed to create a song", error);
+      return null;
+    }
+    dispatch(songAdded(song));
+    dispatch(addSongToSetlist(setlistId, song.id));
     return song;
   };
 }
