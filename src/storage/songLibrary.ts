@@ -57,6 +57,7 @@ export function createSong(
     name,
     lyrics,
     chords: null,
+    transposeSteps: 0,
     tags: [],
     createdAt: now,
     updatedAt: now,

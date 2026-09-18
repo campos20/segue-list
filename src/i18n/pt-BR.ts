@@ -109,6 +109,17 @@ export const ptBR: TranslationDictionary = {
       "Acordes e letra se alinham por linha - a linha 1 dos acordes corresponde à linha 1 da letra, e assim por diante. Cores não são editáveis aqui; use Texto rico para isso.",
     addLine: "+ Adicionar linha",
     removeLineLabel: (line: number) => `Remover linha ${line}`,
+    transposeOriginal: "Tom original",
+    transposeLabel: (steps: number) => {
+      const sign = steps > 0 ? "+" : "";
+      const unit = Math.abs(steps) === 1 ? "semitom" : "semitons";
+      return `${sign}${steps} ${unit}`;
+    },
+    transposeDownLabel: "Transpor meio tom abaixo",
+    transposeUpLabel: "Transpor meio tom acima",
+    transposeReset: "Redefinir",
+    transposeEditHint:
+      "Os acordes são exibidos transpostos - redefina para o tom original para editá-los diretamente.",
     invalidChordsTitle: "Acordes inválidos",
     invalidChordsBody: (invalid: { line: number; token: string }[]) => {
       const shown = invalid

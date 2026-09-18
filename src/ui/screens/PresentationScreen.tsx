@@ -7,7 +7,7 @@ import {
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
-import { pairChordsWithLyrics } from "@/ui/chords";
+import { pairChordsWithLyrics, transposeChordsText } from "@/ui/chords";
 import { DEFAULT_DURATION_SECONDS } from "@/ui/duration";
 import { parseLyricsColors, plainTextFromLyrics } from "@/ui/lyricsColor";
 import {
@@ -330,8 +330,10 @@ function PresentationView({
             // Chords mode never shows or edits color (see chords.ts /
             // SongDetailScreen) - lyrics here are always the plain-text
             // extraction, same as what Chords mode's editor works with.
+            // Chords are transposed for display only - the stored chords
+            // stay at their original pitch (see transposeSteps).
             pairChordsWithLyrics(
-              current.chords,
+              transposeChordsText(current.chords, current.transposeSteps ?? 0),
               plainTextFromLyrics(current.lyrics ?? ""),
             ).map((line, index) => (
               <View key={index} style={styles.chordsLyricsLine}>

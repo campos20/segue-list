@@ -17,6 +17,14 @@ export interface SongManifest {
    * rather than an all-blank-lines string.
    */
   chords?: string | null;
+  /**
+   * Semitones ("half steps") to transpose `chords` by for display - never
+   * bakes into `chords` itself, so the original pitch `chords` was written
+   * in is always one tap ("Reset") away. Positive is up, negative is down.
+   * Missing means 0 (no transposition). See ui/chords.ts's
+   * transposeChordsText.
+   */
+  transposeSteps?: number;
   /** Optional so a manifest written before tags existed still parses; treat a missing value as `[]`. */
   tags?: string[];
   /**

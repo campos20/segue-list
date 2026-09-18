@@ -21,6 +21,7 @@ import {
   alignChordsToLyricsLineCount,
   findInvalidChordTokens,
   pairChordsWithLyrics,
+  transposeChordsText,
 } from "@/ui/chords";
 import { Button } from "@/ui/components/Button";
 import { ColorPickerModal } from "@/ui/components/ColorPickerModal";
@@ -62,6 +63,10 @@ export function SongDetailScreen() {
   const [durationDigits, setDurationDigits] = useState("");
   const [lyrics, setLyrics] = useState("");
   const [chords, setChords] = useState("");
+  // Semitones to transpose `chords` by for display - the stored `chords`
+  // text is never rewritten by this, so it's always one Reset away from the
+  // original pitch. See types/song.ts's transposeSteps.
+  const [transposeSteps, setTransposeSteps] = useState(0);
   // Global, shared with Presentation mode's display - not a per-song or
   // per-visit choice. See settingsSlice.ts's LyricsViewMode and AGENTS.md.
   const mode = useAppSelector((state) => state.settings.lyricsViewMode);
@@ -111,6 +116,7 @@ export function SongDetailScreen() {
     );
     setLyrics(song.lyrics ?? "");
     setChords(song.chords ?? "");
+    setTransposeSteps(song.transposeSteps ?? 0);
     setTags(song.tags ?? []);
     // mode is global and doesn't reset per song, but chordsLyricsDraft is
     // local draft state that does need seeding here if this song happens to
@@ -145,11 +151,18 @@ export function SongDetailScreen() {
   // mode displays them - while `chords`/`chordsLyricsDraft` stay the two
   // flat, newline-joined strings handleSave already knows how to align and
   // validate. `chordLines` always has at least one row so a brand-new song
-  // has somewhere to start typing.
+  // has somewhere to start typing. `displayChords` is `chords` transposed
+  // for on-screen preview only - the chord field shows and (when
+  // transposeSteps is 0) edits `chords` itself, never a transposed value,
+  // so typing can never get tangled up with the transpose math.
   const chordLines = useMemo(() => {
     const paired = pairChordsWithLyrics(chords, chordsLyricsDraft);
-    return paired.length > 0 ? paired : [{ chords: "", lyrics: "" }];
-  }, [chords, chordsLyricsDraft]);
+    const withAtLeastOne = paired.length > 0 ? paired : [{ chords: "", lyrics: "" }];
+    return withAtLeastOne.map((line) => ({
+      ...line,
+      displayChords: transposeChordsText(line.chords, transposeSteps),
+    }));
+  }, [chords, chordsLyricsDraft, transposeSteps]);
 
   function withPaddedLineArrays(
     apply: (chordLines: string[], lyricLines: string[]) => void,
@@ -163,7 +176,13 @@ export function SongDetailScreen() {
     setChordsLyricsDraft(lyricArr.join("\n"));
   }
 
-  /** A single-line field never contains "\n" (multiline is off), so this can't desync the line-array invariant the other helpers rely on. */
+  /**
+   * A single-line field never contains "\n" (multiline is off), so this
+   * can't desync the line-array invariant the other helpers rely on. Only
+   * called while transposeSteps is 0 - the chord field is read-only
+   * whenever it isn't (see its `editable` prop below), showing a transposed
+   * preview instead of the editable original.
+   */
   function updateChordLine(index: number, text: string) {
     withPaddedLineArrays((chordArr) => {
       chordArr[index] = text;
@@ -262,6 +281,7 @@ export function SongDetailScreen() {
         durationSeconds: parsedDuration,
         lyrics: finalLyrics || null,
         chords: hasChordContent ? alignedChords : null,
+        transposeSteps,
         tags,
       }),
     );
@@ -273,6 +293,7 @@ export function SongDetailScreen() {
     parsedDuration !== (song.durationSeconds ?? null) ||
     lyrics !== (song.lyrics ?? "") ||
     chords !== (song.chords ?? "") ||
+    transposeSteps !== (song.transposeSteps ?? 0) ||
     (mode === "chords" && chordsLyricsDraft !== plainTextFromLyrics(lyrics)) ||
     JSON.stringify(tags) !== JSON.stringify(song.tags ?? []);
 
@@ -478,6 +499,47 @@ export function SongDetailScreen() {
           <Text style={styles.hint}>
             {mode === "rich" ? t.song.colorHint : t.song.chordsModeHint}
           </Text>
+          {mode === "chords" && (
+            <View style={styles.transposeRow}>
+              <Pressable
+                onPress={() => setTransposeSteps((steps) => steps - 1)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t.song.transposeDownLabel}
+                style={styles.transposeButton}
+              >
+                <Text style={styles.transposeButtonText}>−½</Text>
+              </Pressable>
+              <Text style={styles.transposeValue}>
+                {transposeSteps === 0
+                  ? t.song.transposeOriginal
+                  : t.song.transposeLabel(transposeSteps)}
+              </Text>
+              <Pressable
+                onPress={() => setTransposeSteps((steps) => steps + 1)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t.song.transposeUpLabel}
+                style={styles.transposeButton}
+              >
+                <Text style={styles.transposeButtonText}>+½</Text>
+              </Pressable>
+              {transposeSteps !== 0 && (
+                <Pressable
+                  onPress={() => setTransposeSteps(0)}
+                  hitSlop={8}
+                  style={styles.transposeResetButton}
+                >
+                  <Text style={styles.transposeResetText}>
+                    {t.song.transposeReset}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+          {mode === "chords" && transposeSteps !== 0 && (
+            <Text style={styles.hint}>{t.song.transposeEditHint}</Text>
+          )}
         </View>
 
         {mode === "rich" ? (
@@ -515,8 +577,9 @@ export function SongDetailScreen() {
                       ref={(el) => {
                         chordLineInputRefs.current[index] = el;
                       }}
-                      value={line.chords}
+                      value={line.displayChords}
                       onChangeText={(text) => updateChordLine(index, text)}
+                      editable={transposeSteps === 0}
                       placeholder={t.song.chordsLabel}
                       placeholderTextColor={colors.textTertiary}
                       returnKeyType="next"
@@ -524,7 +587,10 @@ export function SongDetailScreen() {
                         lyricLineInputRefs.current[index]?.focus()
                       }
                       submitBehavior="submit"
-                      style={styles.chordLineInput}
+                      style={[
+                        styles.chordLineInput,
+                        transposeSteps !== 0 && styles.chordLineInputReadOnly,
+                      ]}
                     />
                     <TextInput
                       ref={(el) => {
@@ -659,6 +725,11 @@ function createStyles(colors: ThemeColors) {
       fontWeight: "700",
       fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }),
     },
+    // While transposed, the chord field shows a preview it can't be typed
+    // into (see the `editable` prop) - dimmed so that's legible at a glance.
+    chordLineInputReadOnly: {
+      opacity: 0.6,
+    },
     lyricLineInput: {
       borderRadius: radii.sm,
       borderWidth: StyleSheet.hairlineWidth,
@@ -728,6 +799,42 @@ function createStyles(colors: ThemeColors) {
     modeTabRow: {
       flexDirection: "row",
       gap: spacing.xs,
+    },
+    // Chords mode only - transposeSteps is a per-song setting (see
+    // types/song.ts) that never rewrites the stored `chords` text, so
+    // "Reset" always returns to the original pitch.
+    transposeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    transposeButton: {
+      borderRadius: radii.pill,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 4,
+    },
+    transposeButtonText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    transposeValue: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: "700",
+      minWidth: 84,
+      textAlign: "center",
+    },
+    transposeResetButton: {
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 4,
+    },
+    transposeResetText: {
+      color: colors.accent,
+      fontSize: 12,
+      fontWeight: "700",
     },
     modeTab: {
       borderRadius: radii.pill,

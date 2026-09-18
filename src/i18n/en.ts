@@ -106,6 +106,17 @@ export const en = {
       "Chords and lyrics line up by line number - chord line 1 pairs with lyrics line 1, and so on. Colors aren't editable here; switch to Rich text for that.",
     addLine: "+ Add line",
     removeLineLabel: (line: number) => `Remove line ${line}`,
+    transposeOriginal: "Original pitch",
+    transposeLabel: (steps: number) => {
+      const sign = steps > 0 ? "+" : "";
+      const unit = Math.abs(steps) === 1 ? "semitone" : "semitones";
+      return `${sign}${steps} ${unit}`;
+    },
+    transposeDownLabel: "Transpose down a half step",
+    transposeUpLabel: "Transpose up a half step",
+    transposeReset: "Reset",
+    transposeEditHint:
+      "Chords are shown transposed - reset to the original pitch to edit them directly.",
     invalidChordsTitle: "Invalid chords",
     invalidChordsBody: (invalid: { line: number; token: string }[]) => {
       const shown = invalid

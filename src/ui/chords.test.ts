@@ -3,6 +3,8 @@ import {
   findInvalidChordTokens,
   isValidChordToken,
   pairChordsWithLyrics,
+  transposeChordToken,
+  transposeChordsText,
 } from "./chords";
 
 describe("isValidChordToken", () => {
@@ -109,5 +111,64 @@ describe("pairChordsWithLyrics", () => {
 
   it("returns an empty array for two empty strings", () => {
     expect(pairChordsWithLyrics("", "")).toEqual([]);
+  });
+});
+
+describe("transposeChordToken", () => {
+  it("returns the token unchanged for 0 steps", () => {
+    expect(transposeChordToken("C", 0)).toBe("C");
+  });
+
+  it("shifts a plain root up and down, respelling on the sharps scale", () => {
+    expect(transposeChordToken("C", 1)).toBe("C#");
+    expect(transposeChordToken("C", -1)).toBe("B");
+    expect(transposeChordToken("Db", 1)).toBe("D");
+  });
+
+  it("wraps around the octave in both directions", () => {
+    expect(transposeChordToken("B", 1)).toBe("C");
+    expect(transposeChordToken("C", -1)).toBe("B");
+    expect(transposeChordToken("C", 12)).toBe("C");
+    expect(transposeChordToken("C", -12)).toBe("C");
+    expect(transposeChordToken("C", 13)).toBe("C#");
+  });
+
+  it("carries the quality through unchanged", () => {
+    expect(transposeChordToken("Am7", 2)).toBe("Bm7");
+    expect(transposeChordToken("F#m7b5", 1)).toBe("Gm7b5");
+    expect(transposeChordToken("Bb7sus4", 2)).toBe("C7sus4");
+  });
+
+  it("transposes a slash bass note along with the root", () => {
+    expect(transposeChordToken("G/B", 2)).toBe("A/C#");
+    expect(transposeChordToken("D/F#", -2)).toBe("C/E");
+  });
+
+  it("returns an unrecognized or blank token unchanged", () => {
+    expect(transposeChordToken("Cxyz", 2)).toBe("Cxyz");
+    expect(transposeChordToken("", 2)).toBe("");
+  });
+});
+
+describe("transposeChordsText", () => {
+  it("returns the text unchanged for 0 steps", () => {
+    expect(transposeChordsText("C G\nAm F", 0)).toBe("C G\nAm F");
+  });
+
+  it("transposes every token on every line, preserving line breaks", () => {
+    expect(transposeChordsText("C G\nAm F", 2)).toBe("D A\nBm G");
+  });
+
+  it("preserves exact inter-token spacing", () => {
+    expect(transposeChordsText("C    G", 2)).toBe("D    A");
+  });
+
+  it("leaves blank lines blank", () => {
+    expect(transposeChordsText("C\n\nG", 1)).toBe("C#\n\nG#");
+  });
+
+  it("is the exact inverse of the opposite step count, round-tripping back to the original", () => {
+    const original = "C G\nAm F#m7b5";
+    expect(transposeChordsText(transposeChordsText(original, 5), -5)).toBe(original);
   });
 });
