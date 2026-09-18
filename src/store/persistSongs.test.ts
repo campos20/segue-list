@@ -115,9 +115,7 @@ describe("createSongInSetlist", () => {
     const store = createAppStore();
     store.dispatch(createSetlist());
 
-    const result = store.dispatch(
-      createSongInSetlist(setlist.id, "Test song"),
-    );
+    const result = store.dispatch(createSongInSetlist(setlist.id, "Test song"));
 
     expect(result).toEqual(song);
     expect(songsSelectors.selectById(store.getState().songs, song.id)).toEqual(

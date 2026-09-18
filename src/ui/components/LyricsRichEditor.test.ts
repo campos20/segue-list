@@ -20,7 +20,9 @@ function loadEditor() {
       // - the script no-ops post() without it (see buildEditorHtml). Mocking
       // it here is how the file's own doc comment says this HTML is meant
       // to be tested outside a device.
-      (window as unknown as { ReactNativeWebView: unknown }).ReactNativeWebView = {
+      (
+        window as unknown as { ReactNativeWebView: unknown }
+      ).ReactNativeWebView = {
         postMessage(data: string) {
           messages.push(JSON.parse(data));
         },
@@ -60,24 +62,18 @@ describe("LyricsRichEditor's serialize()", () => {
 
   it("renders a leading <div><br></div> as exactly one leading blank line", () => {
     const { serialize } = loadEditor();
-    expect(serialize("<div><br></div><div>Line two</div>")).toBe(
-      "\nLine two",
-    );
+    expect(serialize("<div><br></div><div>Line two</div>")).toBe("\nLine two");
   });
 
   it("renders a trailing <div><br></div> as exactly one trailing blank line", () => {
     const { serialize } = loadEditor();
-    expect(serialize("<div>Line one</div><div><br></div>")).toBe(
-      "Line one\n",
-    );
+    expect(serialize("<div>Line one</div><div><br></div>")).toBe("Line one\n");
   });
 
   it("handles several consecutive blank lines without inflating them", () => {
     const { serialize } = loadEditor();
     expect(
-      serialize(
-        "<div>A</div><div><br></div><div><br></div><div>B</div>",
-      ),
+      serialize("<div>A</div><div><br></div><div><br></div><div>B</div>"),
     ).toBe("A\n\n\nB");
   });
 
@@ -101,9 +97,7 @@ describe("LyricsRichEditor's serialize()", () => {
       serialize(
         '<div><span style="color: rgb(255, 0, 0);">Red</span></div><div><br></div><div>Next</div>',
       ),
-    ).toBe(
-      '<span style="color:#FF0000;">Red</span>\n\nNext',
-    );
+    ).toBe('<span style="color:#FF0000;">Red</span>\n\nNext');
   });
 
   // A real document can mix flat (un-wrapped) top-level content with

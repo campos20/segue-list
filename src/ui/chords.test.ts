@@ -48,7 +48,7 @@ describe("isValidChordToken", () => {
     expect(isValidChordToken("")).toBe(false);
   });
 
-  it("accepts Brazilian \"cifra\" shorthand: º/° for diminished, + for augmented", () => {
+  it('accepts Brazilian "cifra" shorthand: º/° for diminished, + for augmented', () => {
     for (const token of ["Cº", "C°", "C+", "E5+"]) {
       expect(isValidChordToken(token)).toBe(true);
     }
@@ -182,7 +182,9 @@ describe("transposeChordsText", () => {
 
   it("is the exact inverse of the opposite step count, round-tripping back to the original", () => {
     const original = "C G\nAm F#m7b5";
-    expect(transposeChordsText(transposeChordsText(original, 5), -5)).toBe(original);
+    expect(transposeChordsText(transposeChordsText(original, 5), -5)).toBe(
+      original,
+    );
   });
 });
 

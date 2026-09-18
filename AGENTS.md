@@ -124,24 +124,25 @@ extra line, and saving fixed it. Root cause: `LyricsRichEditor.tsx`'s
 `serialize()` walks the `contenteditable` DOM and turns every `<div>`
 boundary into `"\n"` (Enter is deliberately left to the browser's own
 default handling - see the comment above `editor.addEventListener("input", ...)`
+
 - which wraps each line in its own `<div>`). Chrome/WebKit represent a truly
-*empty* line as `<div><br></div>` - a lone `<br>` inserted only so the
-otherwise-content-less `<div>` doesn't collapse to zero height. The old
-`serialize()` counted that the same as any other `<br>`, so an empty line
-produced **two** `"\n"` (one for the div boundary, one for the inner `<br>`)
-instead of one - every blank line the user pressed Enter-Enter for silently
-became two blank lines in what got saved, invisible in the editor itself
-(which just shows one blank line's worth of height either way) but visible
-once Presentation mode rendered the stored text as literal line breaks.
-First fix: skip a `<br>` that is its parent `<div>`'s *only* child (a real
-Shift+Enter soft break sitting alongside other text in the same `<div>`
-still counts normally), tracked with a `blockCount` instead of checking
-`out.length > 0` for a `<div>`'s own leading separator - a blank first
-`<div>` contributes nothing to `out`, so `out.length` alone can't tell "no
-line yet" from "one blank line so far".
+  _empty_ line as `<div><br></div>` - a lone `<br>` inserted only so the
+  otherwise-content-less `<div>` doesn't collapse to zero height. The old
+  `serialize()` counted that the same as any other `<br>`, so an empty line
+  produced **two** `"\n"` (one for the div boundary, one for the inner `<br>`)
+  instead of one - every blank line the user pressed Enter-Enter for silently
+  became two blank lines in what got saved, invisible in the editor itself
+  (which just shows one blank line's worth of height either way) but visible
+  once Presentation mode rendered the stored text as literal line breaks.
+  First fix: skip a `<br>` that is its parent `<div>`'s _only_ child (a real
+  Shift+Enter soft break sitting alongside other text in the same `<div>`
+  still counts normally), tracked with a `blockCount` instead of checking
+  `out.length > 0` for a `<div>`'s own leading separator - a blank first
+  `<div>` contributes nothing to `out`, so `out.length` alone can't tell "no
+  line yet" from "one blank line so far".
 
 That fix shipped a regression, caught by a second bug report on the very
-same feature: editing existing (already-loaded) lyrics started *merging*
+same feature: editing existing (already-loaded) lyrics started _merging_
 two lines together instead of separating them - e.g. inserting one new line
 between two existing ones made it stick to whichever line followed it.
 Root cause: content loaded via `__setContent` is flat (`__setContent`
@@ -156,12 +157,12 @@ counted previous `<div>`s, so the first `<div>` immediately following flat
 content had no idea a line already preceded it and dropped its leading
 separator, gluing that div's content onto the end of the preceding flat
 text. Fixed by replacing `blockCount` with a boolean,
-`hasEmittedTopLevelLine`, set after processing *any* top-level child (flat
+`hasEmittedTopLevelLine`, set after processing _any_ top-level child (flat
 text/`<br>`, not just a `<div>`) - only a `<div>`/`<p>` boundary reads it, to
 decide whether it needs a leading `"\n"`.
 
 The lesson from getting this wrong once already: don't hand-guess DOM
-shapes for this function - drive the *real* embedded HTML/JS with actual
+shapes for this function - drive the _real_ embedded HTML/JS with actual
 keyboard input in a real Chromium engine (`buildEditorHtml` renders as a
 loadable static HTML file; open it with Playwright, mock
 `window.ReactNativeWebView.postMessage` to capture `serialize()`'s output,

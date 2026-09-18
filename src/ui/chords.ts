@@ -43,7 +43,9 @@ export interface InvalidChordToken {
  * whitespace are never invalid - only a non-empty token that doesn't match
  * chord grammar is reported.
  */
-export function findInvalidChordTokens(chordsText: string): InvalidChordToken[] {
+export function findInvalidChordTokens(
+  chordsText: string,
+): InvalidChordToken[] {
   const invalid: InvalidChordToken[] = [];
   chordsText.split("\n").forEach((line, index) => {
     for (const token of line.trim().split(/\s+/).filter(Boolean)) {
@@ -103,13 +105,21 @@ const NATURAL_SEMITONE: Record<string, number> = {
 };
 
 /** A note's position (0-11) on the chromatic scale, wrapped into range. */
-function noteToSemitone(letter: string, accidental: string | undefined): number {
+function noteToSemitone(
+  letter: string,
+  accidental: string | undefined,
+): number {
   const semitone =
-    NATURAL_SEMITONE[letter] + (accidental === "#" ? 1 : accidental === "b" ? -1 : 0);
+    NATURAL_SEMITONE[letter] +
+    (accidental === "#" ? 1 : accidental === "b" ? -1 : 0);
   return ((semitone % 12) + 12) % 12;
 }
 
-function transposeNote(letter: string, accidental: string | undefined, steps: number): string {
+function transposeNote(
+  letter: string,
+  accidental: string | undefined,
+  steps: number,
+): string {
   const semitone = noteToSemitone(letter, accidental) + steps;
   return SHARP_SCALE[((semitone % 12) + 12) % 12];
 }
@@ -126,9 +136,12 @@ export function transposeChordToken(token: string, steps: number): string {
   if (steps === 0) return token;
   const match = token.match(CHORD_TOKEN_CAPTURE_RE);
   if (!match) return token;
-  const [, rootLetter, rootAccidental, quality, bassLetter, bassAccidental] = match;
+  const [, rootLetter, rootAccidental, quality, bassLetter, bassAccidental] =
+    match;
   const newRoot = transposeNote(rootLetter, rootAccidental, steps);
-  const newBass = bassLetter ? transposeNote(bassLetter, bassAccidental, steps) : undefined;
+  const newBass = bassLetter
+    ? transposeNote(bassLetter, bassAccidental, steps)
+    : undefined;
   return `${newRoot}${quality}${newBass ? `/${newBass}` : ""}`;
 }
 
@@ -147,7 +160,9 @@ export function transposeChordsText(chordsText: string, steps: number): string {
     .map((line) =>
       line
         .split(/(\s+)/)
-        .map((part) => (part.trim().length > 0 ? transposeChordToken(part, steps) : part))
+        .map((part) =>
+          part.trim().length > 0 ? transposeChordToken(part, steps) : part,
+        )
         .join(""),
     )
     .join("\n");

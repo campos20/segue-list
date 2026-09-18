@@ -191,8 +191,7 @@ describe("mergePlainLyricsEdit", () => {
   });
 
   it("keeps color on untouched lines but drops it on an edited line", () => {
-    const original =
-      '<span style="color:#FF0000;">Line one</span>\nLine two';
+    const original = '<span style="color:#FF0000;">Line one</span>\nLine two';
     const edited = "Line one\nLine two, changed";
     expect(mergePlainLyricsEdit(original, edited)).toBe(
       '<span style="color:#FF0000;">Line one</span>\nLine two, changed',
@@ -208,8 +207,7 @@ describe("mergePlainLyricsEdit", () => {
   });
 
   it("drops a removed line entirely", () => {
-    const original =
-      '<span style="color:#FF0000;">Line one</span>\nLine two';
+    const original = '<span style="color:#FF0000;">Line one</span>\nLine two';
     const edited = "Line one";
     expect(mergePlainLyricsEdit(original, edited)).toBe(
       '<span style="color:#FF0000;">Line one</span>',
