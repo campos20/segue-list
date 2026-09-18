@@ -43,6 +43,19 @@ Concretely:
   the UI believe it. The manifest on disk is the record; the Redux store is
   a cache of it, never the other way around. A song someone edited mid-set
   must not appear saved in the UI if the write actually failed.
+- **Presentation mode has no switcher of its own for rich-text vs.
+  lyrics+chords - it always displays whatever `settings.lyricsViewMode` is
+  currently set to.** That single global setting (`store/settingsSlice.ts`)
+  is shared with `SongDetailScreen`'s "Rich text"/"Chords" editing tabs,
+  which are what actually change it (`persistLyricsViewMode`); Presentation
+  only reads it. This was tried the other way once - a separate Lyrics/Chords
+  toggle inside Presentation mode's own header/panel - and reverted: on
+  stage, screen space belongs to the lyrics and chords themselves, not to a
+  second copy of a mode switcher, and showing whatever you were last editing
+  is exactly what you want to present anyway. Don't reintroduce a
+  Presentation-only view-mode control; if the display is showing the wrong
+  thing, the fix is in how `lyricsViewMode` is set from the editor, not a new
+  toggle in `PresentationScreen.tsx`.
 
 ## Known platform limits (web)
 
