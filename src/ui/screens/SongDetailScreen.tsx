@@ -405,6 +405,7 @@ export function SongDetailScreen() {
               label={t.song.nameLabel}
               value={name}
               onChangeText={setName}
+              autoFocus
             />
           </View>
 

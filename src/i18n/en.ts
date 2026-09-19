@@ -55,6 +55,7 @@ export const en = {
     present: "Present",
     export: "Export",
     exportDocx: "Export as .docx",
+    shareText: "Share song list",
     duplicate: "Duplicate",
     duplicateName: (name: string) => `${name} copy`,
     sort: "Sort",
