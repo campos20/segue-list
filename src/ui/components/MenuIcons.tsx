@@ -131,6 +131,18 @@ export function AddToSetlistIcon() {
   );
 }
 
+/** Same plus glyph as AddToSetlistIcon - a separate export so a menu's "New song" entry doesn't read as add-to-setlist in code. */
+export function NewSongIcon() {
+  const colors = useThemeColors();
+  const color = colors.textSecondary;
+  return (
+    <View style={styles.box}>
+      <View style={[styles.plusHorizontal, { backgroundColor: color }]} />
+      <View style={[styles.plusVertical, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
 export function RemoveFromSetlistIcon() {
   const colors = useThemeColors();
   return (

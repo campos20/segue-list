@@ -85,6 +85,8 @@ export const ptBR: TranslationDictionary = {
     durationPlaceholder: "300",
     durationDefaultHint:
       "Somente números, ex.: 300 vira 3:00. Deixe em branco para usar 3:00 como padrão.",
+    durationHintToggleLabel: (visible: boolean) =>
+      visible ? "Ocultar dica de duração" : "Mostrar dica de duração",
     lyricsLabel: "Letra",
     lyricsPlaceholder: "Digite ou cole a letra...",
     tagsLabel: "Tags",
@@ -102,6 +104,43 @@ export const ptBR: TranslationDictionary = {
     textColorLabel: "Cor da fonte",
     backgroundColorLabel: "Cor de fundo",
     colorNone: "Nenhuma",
+    richTextTab: "Texto",
+    chordsTab: "Acordes",
+    chordsLabel: "Acordes",
+    chordsModeHint:
+      "Acordes e letra se alinham por linha - a linha 1 dos acordes corresponde à linha 1 da letra, e assim por diante. Cores não são editáveis aqui; use Texto rico para isso.",
+    addLine: "+ Adicionar linha",
+    removeLineLabel: (line: number) => `Remover linha ${line}`,
+    transposeOriginal: "Tom original",
+    transposeLabel: (steps: number) => {
+      const sign = steps > 0 ? "+" : "";
+      const unit = Math.abs(steps) === 1 ? "semitom" : "semitons";
+      return `${sign}${steps} ${unit}`;
+    },
+    transposeDownLabel: "Transpor meio tom abaixo",
+    transposeUpLabel: "Transpor meio tom acima",
+    transposeReset: "Redefinir",
+    transposeEditHint:
+      "Os acordes são exibidos transpostos - redefina para o tom original para editá-los diretamente.",
+    pasteChordsButton: "Colar cifra",
+    pasteChordsTitle: "Colar cifra + letra",
+    pasteChordsHint:
+      "Cole uma cifra com uma linha de acordes acima de cada linha da letra - acordes e letra serão separados automaticamente.",
+    pasteChordsPlaceholder: "Cole aqui...",
+    pasteChordsImport: "Importar",
+    pasteChordsOverwriteTitle: "Substituir os acordes e a letra atuais?",
+    pasteChordsOverwriteBody:
+      "Esta música já tem acordes ou letra preenchidos aqui. Colar vai substituí-los.",
+    pasteChordsOverwriteConfirm: "Substituir",
+    invalidChordsTitle: "Acordes inválidos",
+    invalidChordsBody: (invalid: { line: number; token: string }[]) => {
+      const shown = invalid
+        .slice(0, 5)
+        .map((entry) => `"${entry.token}" (linha ${entry.line})`)
+        .join(", ");
+      const remaining = invalid.length - 5;
+      return `Corrija antes de salvar: ${shown}${remaining > 0 ? `, e mais ${remaining}` : ""}.`;
+    },
     saved: "Salvo.",
     discardTitle: "Descartar alterações?",
     discardBody: "Você tem alterações não salvas nesta música.",

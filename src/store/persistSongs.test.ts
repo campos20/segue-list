@@ -1,9 +1,18 @@
+import type { SetlistManifest } from "@/types/setlist";
 import type { SongManifest } from "@/types/song";
 import { createAppStore } from "./index";
-import { createSong, deleteSong, updateSong } from "./persistSongs";
+import { createSetlist } from "./persistSetlists";
+import {
+  createSong,
+  createSongInSetlist,
+  deleteSong,
+  updateSong,
+} from "./persistSongs";
+import { setlistsSelectors } from "./setlistsSlice";
 import { songsSelectors } from "./songsSlice";
 
 jest.mock("@/storage/songLibrary");
+jest.mock("@/storage/setlistLibrary");
 // settingsSlice reads persisted settings at module load time (see its
 // comment) - readAppSettings must return an object, not the automock
 // default of undefined, or destructuring it crashes before any test runs.
@@ -17,6 +26,25 @@ const songLibrary = jest.requireMock("@/storage/songLibrary") as {
   writeSong: jest.Mock;
   deleteSong: jest.Mock;
 };
+
+const setlistLibrary = jest.requireMock("@/storage/setlistLibrary") as {
+  createSetlist: jest.Mock;
+  writeSetlist: jest.Mock;
+  deleteSetlist: jest.Mock;
+};
+
+function makeSetlist(
+  overrides: Partial<SetlistManifest> = {},
+): SetlistManifest {
+  return {
+    id: "list-1",
+    name: "Test setlist",
+    songs: [],
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
 
 function makeSong(overrides: Partial<SongManifest> = {}): SongManifest {
   return {
@@ -75,6 +103,99 @@ describe("createSong", () => {
 
     expect(result).toBeNull();
     expect(songsSelectors.selectAll(store.getState().songs)).toEqual([]);
+  });
+});
+
+describe("createSongInSetlist", () => {
+  it("adds the song to the store and to the setlist's songs, when both writes succeed", () => {
+    const setlist = makeSetlist();
+    setlistLibrary.createSetlist.mockReturnValue(setlist);
+    const song = makeSong();
+    songLibrary.createSong.mockReturnValue(song);
+    const store = createAppStore();
+    store.dispatch(createSetlist());
+
+    const result = store.dispatch(createSongInSetlist(setlist.id, "Test song"));
+
+    expect(result).toEqual(song);
+    expect(songsSelectors.selectById(store.getState().songs, song.id)).toEqual(
+      song,
+    );
+    expect(
+      setlistsSelectors.selectById(store.getState().setlists, setlist.id)
+        ?.songs,
+    ).toEqual([song.id]);
+  });
+
+  it("does not put the new song at the top of the library order - it should only appear nested under the setlist", () => {
+    const setlist = makeSetlist();
+    setlistLibrary.createSetlist.mockReturnValue(setlist);
+    const song = makeSong();
+    songLibrary.createSong.mockReturnValue(song);
+    const store = createAppStore();
+    store.dispatch(createSetlist());
+
+    store.dispatch(createSongInSetlist(setlist.id));
+
+    expect(store.getState().settings.libraryOrder).not.toContain(
+      `song:${song.id}`,
+    );
+  });
+
+  it("leaves the store untouched and returns null when the song file write throws", () => {
+    const setlist = makeSetlist();
+    setlistLibrary.createSetlist.mockReturnValue(setlist);
+    songLibrary.createSong.mockImplementation(() => {
+      throw new Error("disk full");
+    });
+    const store = createAppStore();
+    store.dispatch(createSetlist());
+
+    const result = store.dispatch(createSongInSetlist(setlist.id));
+
+    expect(result).toBeNull();
+    expect(songsSelectors.selectAll(store.getState().songs)).toEqual([]);
+    expect(
+      setlistsSelectors.selectById(store.getState().setlists, setlist.id)
+        ?.songs,
+    ).toEqual([]);
+  });
+
+  it("creates nothing and returns null when the setlist no longer exists", () => {
+    songLibrary.createSong.mockReturnValue(makeSong());
+    const store = createAppStore();
+
+    const result = store.dispatch(createSongInSetlist("missing"));
+
+    expect(result).toBeNull();
+    expect(songLibrary.createSong).not.toHaveBeenCalled();
+    expect(songsSelectors.selectAll(store.getState().songs)).toEqual([]);
+  });
+
+  it("falls back to the top of the library order when the setlist write fails, so the song isn't left loose at the bottom", () => {
+    const setlist = makeSetlist();
+    setlistLibrary.createSetlist.mockReturnValue(setlist);
+    const song = makeSong();
+    songLibrary.createSong.mockReturnValue(song);
+    const store = createAppStore();
+    store.dispatch(createSetlist());
+    // addSongToSetlist logs a failed write rather than throwing, so the
+    // only way to notice is that the song never reached the setlist.
+    setlistLibrary.writeSetlist.mockImplementation(() => {
+      throw new Error("disk full");
+    });
+
+    const result = store.dispatch(createSongInSetlist(setlist.id));
+
+    expect(result).toEqual(song);
+    expect(songsSelectors.selectById(store.getState().songs, song.id)).toEqual(
+      song,
+    );
+    expect(
+      setlistsSelectors.selectById(store.getState().setlists, setlist.id)
+        ?.songs,
+    ).toEqual([]);
+    expect(store.getState().settings.libraryOrder[0]).toBe(`song:${song.id}`);
   });
 });
 

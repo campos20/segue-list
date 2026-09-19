@@ -7,6 +7,24 @@ export interface SongManifest {
   id: string;
   name: string;
   lyrics: string | null;
+  /**
+   * Chord line text, paired 1:1 by line index with `lyrics` - line i's
+   * chords sit above lyrics line i, a blank line meaning "no chords for
+   * that line" (see ui/chords.ts). Always plain text, never the
+   * `<span style="...">` color markup `lyrics` can contain - chords mode
+   * has no rich text. Optional/null so a manifest written before chords
+   * existed still parses, and so a song with no chords entered stays null
+   * rather than an all-blank-lines string.
+   */
+  chords?: string | null;
+  /**
+   * Semitones ("half steps") to transpose `chords` by for display - never
+   * bakes into `chords` itself, so the original pitch `chords` was written
+   * in is always one tap ("Reset") away. Positive is up, negative is down.
+   * Missing means 0 (no transposition). See ui/chords.ts's
+   * transposeChordsText.
+   */
+  transposeSteps?: number;
   /** Optional so a manifest written before tags existed still parses; treat a missing value as `[]`. */
   tags?: string[];
   /**

@@ -82,6 +82,8 @@ export const en = {
     durationPlaceholder: "300",
     durationDefaultHint:
       "Digits only, e.g. 300 becomes 3:00. Leave blank to default to 3:00.",
+    durationHintToggleLabel: (visible: boolean): string =>
+      visible ? "Hide duration hint" : "Show duration hint",
     lyricsLabel: "Lyrics",
     tagsLabel: "Tags",
     noTags: "No tags yet",
@@ -99,6 +101,43 @@ export const en = {
     textColorLabel: "Font color",
     backgroundColorLabel: "Background color",
     colorNone: "None",
+    richTextTab: "Text",
+    chordsTab: "Chords",
+    chordsLabel: "Chords",
+    chordsModeHint:
+      "Chords and lyrics line up by line number - chord line 1 pairs with lyrics line 1, and so on. Colors aren't editable here; switch to Rich text for that.",
+    addLine: "+ Add line",
+    removeLineLabel: (line: number) => `Remove line ${line}`,
+    transposeOriginal: "Original pitch",
+    transposeLabel: (steps: number) => {
+      const sign = steps > 0 ? "+" : "";
+      const unit = Math.abs(steps) === 1 ? "semitone" : "semitones";
+      return `${sign}${steps} ${unit}`;
+    },
+    transposeDownLabel: "Transpose down a half step",
+    transposeUpLabel: "Transpose up a half step",
+    transposeReset: "Reset",
+    transposeEditHint:
+      "Chords are shown transposed - reset to the original pitch to edit them directly.",
+    pasteChordsButton: "Paste chords",
+    pasteChordsTitle: "Paste chords + lyrics",
+    pasteChordsHint:
+      "Paste a chord chart with a chord line above each lyric line - chords and lyrics will be split apart automatically.",
+    pasteChordsPlaceholder: "Paste here...",
+    pasteChordsImport: "Import",
+    pasteChordsOverwriteTitle: "Replace current chords and lyrics?",
+    pasteChordsOverwriteBody:
+      "This song already has chords or lyrics entered here. Pasting will replace them.",
+    pasteChordsOverwriteConfirm: "Replace",
+    invalidChordsTitle: "Invalid chords",
+    invalidChordsBody: (invalid: { line: number; token: string }[]) => {
+      const shown = invalid
+        .slice(0, 5)
+        .map((entry) => `"${entry.token}" (line ${entry.line})`)
+        .join(", ");
+      const remaining = invalid.length - 5;
+      return `Fix these before saving: ${shown}${remaining > 0 ? `, and ${remaining} more` : ""}.`;
+    },
     saved: "Saved.",
     discardTitle: "Discard changes?",
     discardBody: "You have unsaved changes to this song.",

@@ -1,9 +1,10 @@
 import type { Locale } from "@/i18n";
-import { writeAppSettings } from "@/storage/appSettings";
+import { writeAppSettings, type LyricsViewMode } from "@/storage/appSettings";
 import type { ThemeOverride } from "@/types/theme";
 import type { AppDispatch } from "./index";
 import {
   languageOverrideSet,
+  lyricsViewModeSet,
   presentationAllCapsSet,
   presentationFontSizeSet,
   themeOverrideSet,
@@ -38,5 +39,17 @@ export function persistPresentationFontSize(value: number) {
   return (dispatch: AppDispatch) => {
     dispatch(presentationFontSizeSet(value));
     writeAppSettings({ presentationFontSize: value });
+  };
+}
+
+/**
+ * Sets whether lyrics are shown/edited as rich text or as plain text paired
+ * with chords, and persists it. Shared by SongDetailScreen's editing tabs
+ * and Presentation mode's display - see LyricsViewMode.
+ */
+export function persistLyricsViewMode(mode: LyricsViewMode) {
+  return (dispatch: AppDispatch) => {
+    dispatch(lyricsViewModeSet(mode));
+    writeAppSettings({ lyricsViewMode: mode });
   };
 }

@@ -7,8 +7,9 @@ import {
 import { setlistsSelectors } from "@/store/setlistsSlice";
 import { songsSelectors } from "@/store/songsSlice";
 import type { SongManifest } from "@/types/song";
+import { pairChordsWithLyrics, transposeChordsText } from "@/ui/chords";
 import { DEFAULT_DURATION_SECONDS } from "@/ui/duration";
-import { parseLyricsColors } from "@/ui/lyricsColor";
+import { parseLyricsColors, plainTextFromLyrics } from "@/ui/lyricsColor";
 import {
   glow,
   radii,
@@ -144,6 +145,14 @@ function PresentationView({
   const allCaps = useAppSelector((state) => state.settings.presentationAllCaps);
   const fontSize = useAppSelector(
     (state) => state.settings.presentationFontSize,
+  );
+  // Shared with SongDetailScreen's editing tabs, not a Presentation-only
+  // setting - see settingsSlice.ts's LyricsViewMode and AGENTS.md. There is
+  // deliberately no switcher for this in Presentation mode itself: stage
+  // screen space goes to the lyrics/chords content, and showing whatever
+  // you were last editing is exactly what you want to present.
+  const showChords = useAppSelector(
+    (state) => state.settings.lyricsViewMode === "chords",
   );
   const lyricsScrollRef = useRef<ScrollView>(null);
   const lyricsOffsetRef = useRef(0);
@@ -317,7 +326,45 @@ function PresentationView({
           style={styles.lyricsScroll}
           contentContainerStyle={styles.lyricsContent}
         >
-          {current.lyrics ? (
+          {showChords && current.chords ? (
+            // Chords mode never shows or edits color (see chords.ts /
+            // SongDetailScreen) - lyrics here are always the plain-text
+            // extraction, same as what Chords mode's editor works with.
+            // Chords are transposed for display only - the stored chords
+            // stay at their original pitch (see transposeSteps).
+            pairChordsWithLyrics(
+              transposeChordsText(current.chords, current.transposeSteps ?? 0),
+              plainTextFromLyrics(current.lyrics ?? ""),
+            ).map((line, index) => (
+              <View key={index} style={styles.chordsLyricsLine}>
+                {/* Never uppercased, even with allCaps on: chord case is
+                    meaningful (e.g. "m" for minor vs "M"/"maj"), not a
+                    stylistic choice the way lyrics capitalization is. */}
+                <Text
+                  style={[
+                    styles.chordLine,
+                    { fontSize: Math.round(fontSize * 0.85) },
+                  ]}
+                >
+                  {line.chords.length > 0 ? line.chords : " "}
+                </Text>
+                <Text
+                  style={[
+                    styles.lyrics,
+                    allCaps && styles.lyricsUppercase,
+                    {
+                      fontSize,
+                      lineHeight: Math.round(
+                        fontSize * LYRICS_LINE_HEIGHT_RATIO,
+                      ),
+                    },
+                  ]}
+                >
+                  {line.lyrics.length > 0 ? line.lyrics : " "}
+                </Text>
+              </View>
+            ))
+          ) : current.lyrics ? (
             <Text
               style={[
                 styles.lyrics,
@@ -328,25 +375,31 @@ function PresentationView({
                 },
               ]}
             >
-              {parseLyricsColors(current.lyrics).map((segment, index) =>
-                segment.span ? (
-                  <Text
-                    key={index}
-                    style={{
-                      ...(segment.span.background && {
-                        backgroundColor: `#${segment.span.background}`,
-                      }),
-                      ...(segment.span.color && {
-                        color: `#${segment.span.color}`,
-                      }),
-                    }}
-                  >
-                    {segment.text}
-                  </Text>
-                ) : (
-                  segment.text
-                ),
-              )}
+              {showChords
+                ? // Chords mode is global (see showChords), so a song with no
+                  // chords still gets its plain-text lyrics here rather than
+                  // silently switching back to the colored rich view - color
+                  // is never shown in chords mode, on any song.
+                  plainTextFromLyrics(current.lyrics)
+                : parseLyricsColors(current.lyrics).map((segment, index) =>
+                    segment.span ? (
+                      <Text
+                        key={index}
+                        style={{
+                          ...(segment.span.background && {
+                            backgroundColor: `#${segment.span.background}`,
+                          }),
+                          ...(segment.span.color && {
+                            color: `#${segment.span.color}`,
+                          }),
+                        }}
+                      >
+                        {segment.text}
+                      </Text>
+                    ) : (
+                      segment.text
+                    ),
+                  )}
             </Text>
           ) : (
             <Text style={styles.lyricsEmpty}>{t.presentation.noLyrics}</Text>
@@ -508,7 +561,10 @@ function PresentationView({
                 A−
               </Text>
             </Pressable>
-            <Pressable onPress={() => router.back()} style={styles.railButton}>
+            <Pressable
+              onPress={() => router.navigate("/")}
+              style={styles.railButton}
+            >
               <Text style={styles.railGlyph}>✕</Text>
             </Pressable>
           </View>
@@ -767,6 +823,14 @@ function createStyles(colors: ThemeColors) {
     lyricsEmpty: {
       color: colors.textTertiary,
       fontSize: 14,
+    },
+    chordsLyricsLine: {
+      marginBottom: 2,
+    },
+    chordLine: {
+      color: colors.accent,
+      fontWeight: "700",
+      fontFamily: "monospace",
     },
     footer: {
       borderTopWidth: StyleSheet.hairlineWidth,

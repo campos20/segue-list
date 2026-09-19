@@ -1,6 +1,8 @@
 import {
   buildLyricsHtml,
+  mergePlainLyricsEdit,
   parseLyricsColors,
+  plainTextFromLyrics,
   plainTextToLyricsHtml,
   sanitizeLyricsHtml,
   splitIntoLines,
@@ -162,5 +164,53 @@ describe("plainTextToLyricsHtml", () => {
     const stored = plainTextToLyricsHtml(original);
     const segments = parseLyricsColors(stored);
     expect(segments.map((s) => s.text).join("")).toBe(original);
+  });
+});
+
+describe("plainTextFromLyrics", () => {
+  it("returns plain text unchanged", () => {
+    expect(plainTextFromLyrics("Verse one\nVerse two")).toBe(
+      "Verse one\nVerse two",
+    );
+  });
+
+  it("strips color markup down to its text", () => {
+    const source =
+      'Lead <span style="color:#1C1400;background-color:#FBBF24;">Ooh ooh</span> lead';
+    expect(plainTextFromLyrics(source)).toBe("Lead Ooh ooh lead");
+  });
+});
+
+describe("mergePlainLyricsEdit", () => {
+  it("returns the original markup unchanged when the plain text wasn't edited", () => {
+    const original =
+      'Lead <span style="color:#FF0000;">Ooh</span> lead\nVerse two';
+    expect(mergePlainLyricsEdit(original, plainTextFromLyrics(original))).toBe(
+      original,
+    );
+  });
+
+  it("keeps color on untouched lines but drops it on an edited line", () => {
+    const original = '<span style="color:#FF0000;">Line one</span>\nLine two';
+    const edited = "Line one\nLine two, changed";
+    expect(mergePlainLyricsEdit(original, edited)).toBe(
+      '<span style="color:#FF0000;">Line one</span>\nLine two, changed',
+    );
+  });
+
+  it("adds a new plain line with no color when a line is appended", () => {
+    const original = '<span style="color:#FF0000;">Line one</span>';
+    const edited = "Line one\nLine two";
+    expect(mergePlainLyricsEdit(original, edited)).toBe(
+      '<span style="color:#FF0000;">Line one</span>\nLine two',
+    );
+  });
+
+  it("drops a removed line entirely", () => {
+    const original = '<span style="color:#FF0000;">Line one</span>\nLine two';
+    const edited = "Line one";
+    expect(mergePlainLyricsEdit(original, edited)).toBe(
+      '<span style="color:#FF0000;">Line one</span>',
+    );
   });
 });

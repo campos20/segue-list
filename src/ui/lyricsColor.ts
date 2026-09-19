@@ -158,3 +158,45 @@ export function sanitizeLyricsHtml(source: string): string {
 export function plainTextToLyricsHtml(text: string): string {
   return escapeText(text);
 }
+
+/** Strips color markup down to the lyrics' plain text - what Chords mode shows and edits, since it never displays or applies color (see chords.ts). */
+export function plainTextFromLyrics(source: string): string {
+  return parseLyricsColors(source)
+    .map((segment) => segment.text)
+    .join("");
+}
+
+/**
+ * Folds a plain-text lyrics edit (made in Chords mode, where color can't be
+ * touched) back into the canonical color-marked-up lyrics. Compares line by
+ * line: an unchanged line keeps its original spans; a changed or newly
+ * added line becomes plain text, since there's no color information to
+ * attach to text that didn't exist before. A line removed entirely is
+ * simply dropped. This is how editing lyrics in Chords mode only loses
+ * color highlighting on the lines actually touched, not the whole song.
+ */
+export function mergePlainLyricsEdit(
+  original: string,
+  editedPlainText: string,
+): string {
+  const originalLines = splitIntoLines(parseLyricsColors(original));
+  const originalPlainLines = originalLines.map((segments) =>
+    segments.map((segment) => segment.text).join(""),
+  );
+  const editedLines = editedPlainText.split("\n");
+
+  const mergedLines: LyricsColorSegment[][] = editedLines.map((line, index) =>
+    index < originalPlainLines.length && originalPlainLines[index] === line
+      ? originalLines[index]
+      : line.length > 0
+        ? [{ text: line }]
+        : [],
+  );
+
+  const merged: LyricsColorSegment[] = [];
+  mergedLines.forEach((segments, index) => {
+    if (index > 0) merged.push({ text: "\n" });
+    merged.push(...segments);
+  });
+  return buildLyricsHtml(merged);
+}

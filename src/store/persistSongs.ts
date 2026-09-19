@@ -10,7 +10,8 @@ import { songKey } from "@/ui/libraryTree";
 import { plainTextToLyricsHtml } from "@/ui/lyricsColor";
 import type { AppDispatch, RootState } from "./index";
 import { persistLibraryOrder } from "./persistLibrary";
-import { removeSongFromAllSetlists } from "./persistSetlists";
+import { addSongToSetlist, removeSongFromAllSetlists } from "./persistSetlists";
+import { setlistsSelectors } from "./setlistsSlice";
 import {
   songAdded,
   songRemoved,
@@ -43,6 +44,56 @@ export function createSong(name?: string) {
         ...getState().settings.libraryOrder,
       ]),
     );
+    return song;
+  };
+}
+
+/**
+ * Creates a song already inside `setlistId`, instead of loose at the top of
+ * the Library the way plain createSong does - the point is to skip the
+ * separate "create, then Add to <setlist>" round trip. Deliberately does
+ * NOT touch libraryOrder when it lands in the setlist: buildLibraryTree
+ * (ui/libraryTree.ts) already excludes any song a setlist references from
+ * the top-level loose list, so a libraryOrder entry there would just be
+ * dead, never-rendered state.
+ *
+ * Returns null without creating anything if the setlist no longer exists.
+ * And since addSongToSetlist logs a failed setlist write rather than
+ * throwing, this checks the song actually made it into the setlist - if it
+ * didn't, the song is placed at the top of the Library exactly as
+ * createSong would, rather than left loose at the very bottom where an
+ * unordered item ends up.
+ */
+export function createSongInSetlist(setlistId: string, name?: string) {
+  return (
+    dispatch: AppDispatch,
+    getState: () => RootState,
+  ): SongManifest | null => {
+    if (!setlistsSelectors.selectById(getState().setlists, setlistId)) {
+      return null;
+    }
+
+    let song: SongManifest;
+    try {
+      song = createSongFile(name);
+    } catch (error) {
+      console.warn("Failed to create a song", error);
+      return null;
+    }
+    dispatch(songAdded(song));
+    dispatch(addSongToSetlist(setlistId, song.id));
+
+    const filed = setlistsSelectors
+      .selectById(getState().setlists, setlistId)
+      ?.songs.includes(song.id);
+    if (!filed) {
+      dispatch(
+        persistLibraryOrder([
+          songKey(song.id),
+          ...getState().settings.libraryOrder,
+        ]),
+      );
+    }
     return song;
   };
 }

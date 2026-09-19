@@ -20,6 +20,7 @@ import {
 } from "@/store/persistSetlists";
 import {
   createSong,
+  createSongInSetlist,
   deleteSong,
   importSongsFromLyricsFiles,
 } from "@/store/persistSongs";
@@ -35,6 +36,7 @@ import {
   ExportIcon,
   ImportIcon,
   ImportLyricsIcon,
+  NewSongIcon,
   PresentIcon,
   RemoveFromSetlistIcon,
   RenameIcon,
@@ -187,6 +189,16 @@ export function LibraryScreen() {
 
   function handleNewSong() {
     const song = dispatch(createSong());
+    if (!song) {
+      setError(t.library.couldNotCreateSong);
+      return;
+    }
+    router.push({ pathname: "/song/[songId]", params: { songId: song.id } });
+  }
+
+  /** Same as handleNewSong, but the song is created already inside a setlist rather than loose at the top - skips the separate "create, then Add to <setlist>" step. */
+  function handleNewSongInSetlist(setlistId: string) {
+    const song = dispatch(createSongInSetlist(setlistId));
     if (!song) {
       setError(t.library.couldNotCreateSong);
       return;
@@ -522,6 +534,12 @@ export function LibraryScreen() {
                         label: t.setlist.rename,
                         icon: <RenameIcon />,
                         onPress: () => setRenamingSetlistId(setlist.id),
+                      },
+                      {
+                        key: "new-song",
+                        label: t.library.newSong,
+                        icon: <NewSongIcon />,
+                        onPress: () => handleNewSongInSetlist(setlist.id),
                       },
                       {
                         key: "present",
