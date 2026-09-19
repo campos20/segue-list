@@ -375,25 +375,31 @@ function PresentationView({
                 },
               ]}
             >
-              {parseLyricsColors(current.lyrics).map((segment, index) =>
-                segment.span ? (
-                  <Text
-                    key={index}
-                    style={{
-                      ...(segment.span.background && {
-                        backgroundColor: `#${segment.span.background}`,
-                      }),
-                      ...(segment.span.color && {
-                        color: `#${segment.span.color}`,
-                      }),
-                    }}
-                  >
-                    {segment.text}
-                  </Text>
-                ) : (
-                  segment.text
-                ),
-              )}
+              {showChords
+                ? // Chords mode is global (see showChords), so a song with no
+                  // chords still gets its plain-text lyrics here rather than
+                  // silently switching back to the colored rich view - color
+                  // is never shown in chords mode, on any song.
+                  plainTextFromLyrics(current.lyrics)
+                : parseLyricsColors(current.lyrics).map((segment, index) =>
+                    segment.span ? (
+                      <Text
+                        key={index}
+                        style={{
+                          ...(segment.span.background && {
+                            backgroundColor: `#${segment.span.background}`,
+                          }),
+                          ...(segment.span.color && {
+                            color: `#${segment.span.color}`,
+                          }),
+                        }}
+                      >
+                        {segment.text}
+                      </Text>
+                    ) : (
+                      segment.text
+                    ),
+                  )}
             </Text>
           ) : (
             <Text style={styles.lyricsEmpty}>{t.presentation.noLyrics}</Text>

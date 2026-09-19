@@ -184,10 +184,12 @@ Chords mode's lyrics field is a plain `TextInput` with no DOM to
 misrepresent line breaks in - but a line count that quietly drifts either
 way still matters there: chords are paired with lyrics strictly by line
 index (`ui/chords.ts`'s
-`pairChordsWithLyrics`/`alignChordsToLyricsLineCount`), so a phantom blank
+`pairChordsWithLyrics`/`alignChordsAndLyricsRows`), so a phantom blank
 line inflating (or a manual fix deflating) the lyrics line count shifts
 which chord line pairs with which lyric line for any song that already has
 chords saved. There's no general fix for that beyond fixing the root cause
-here - `alignChordsToLyricsLineCount` already re-pads/trims to whatever the
-current line count is at save time, it just can't know which specific line
+here - at save time `alignChordsAndLyricsRows` pads the two fields to the
+same row count and drops only rows that are blank on _both_ sides (never a
+chord-only row, and never by trimming the lyrics alone, which would shift
+every lyric against its chords), it just can't know which specific line
 moved.

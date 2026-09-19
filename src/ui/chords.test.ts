@@ -1,5 +1,5 @@
 import {
-  alignChordsToLyricsLineCount,
+  alignChordsAndLyricsRows,
   findInvalidChordTokens,
   isValidChordToken,
   pairChordsWithLyrics,
@@ -78,25 +78,68 @@ describe("findInvalidChordTokens", () => {
   });
 });
 
-describe("alignChordsToLyricsLineCount", () => {
-  it("pads with blank lines when chords has fewer lines than lyrics", () => {
-    expect(alignChordsToLyricsLineCount("C", 3)).toBe("C\n\n");
+describe("alignChordsAndLyricsRows", () => {
+  it("pads the shorter side with blank lines so both have the same row count", () => {
+    expect(alignChordsAndLyricsRows("C", "one\ntwo\nthree")).toEqual({
+      chords: "C\n\n",
+      lyrics: "one\ntwo\nthree",
+    });
   });
 
-  it("trims trailing lines when chords has more lines than lyrics", () => {
-    expect(alignChordsToLyricsLineCount("C\nG\nAm\nF", 2)).toBe("C\nG");
+  it("keeps chord rows that sit past the last lyric line, padding the lyrics instead", () => {
+    expect(alignChordsAndLyricsRows("C\nG\nAm\nF", "one\ntwo")).toEqual({
+      chords: "C\nG\nAm\nF",
+      lyrics: "one\ntwo\n\n",
+    });
   });
 
-  it("returns an all-blank string of the right line count for empty chords", () => {
-    expect(alignChordsToLyricsLineCount("", 2)).toBe("\n");
+  it("keeps the chords when the lyrics are entirely empty", () => {
+    expect(alignChordsAndLyricsRows("C\nG", "")).toEqual({
+      chords: "C\nG",
+      lyrics: "\n",
+    });
   });
 
-  it("returns an empty string for zero lyrics lines", () => {
-    expect(alignChordsToLyricsLineCount("C\nG", 0)).toBe("");
+  it("keeps a chord-only intro row instead of shifting the lyrics up against the wrong chords", () => {
+    // Row 1 is chords over a blank lyric line; row 2 is "G" over "hello".
+    // A plain lyrics.trim() would turn the lyrics into just "hello" and
+    // pair it with "C".
+    expect(alignChordsAndLyricsRows("C\nG", "\nhello")).toEqual({
+      chords: "C\nG",
+      lyrics: "\nhello",
+    });
   });
 
-  it("leaves already-aligned chords unchanged", () => {
-    expect(alignChordsToLyricsLineCount("C\nG", 2)).toBe("C\nG");
+  it("drops leading and trailing rows that are blank on both sides", () => {
+    expect(alignChordsAndLyricsRows("\n\nC\n\n", "\n\nhello\n\n")).toEqual({
+      chords: "C",
+      lyrics: "hello",
+    });
+  });
+
+  it("keeps a blank row in the middle", () => {
+    expect(alignChordsAndLyricsRows("C\n\nG", "one\n\ntwo")).toEqual({
+      chords: "C\n\nG",
+      lyrics: "one\n\ntwo",
+    });
+  });
+
+  it("returns empty strings when there's nothing but blank rows", () => {
+    expect(alignChordsAndLyricsRows("\n  \n", "\n\n")).toEqual({
+      chords: "",
+      lyrics: "",
+    });
+    expect(alignChordsAndLyricsRows("", "")).toEqual({
+      chords: "",
+      lyrics: "",
+    });
+  });
+
+  it("leaves already-aligned content unchanged", () => {
+    expect(alignChordsAndLyricsRows("C\nG", "one\ntwo")).toEqual({
+      chords: "C\nG",
+      lyrics: "one\ntwo",
+    });
   });
 });
 

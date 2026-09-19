@@ -4,7 +4,7 @@ import { persistLyricsViewMode } from "@/store/persistSettings";
 import { updateSong } from "@/store/persistSongs";
 import { songsSelectors } from "@/store/songsSlice";
 import {
-  alignChordsToLyricsLineCount,
+  alignChordsAndLyricsRows,
   findInvalidChordTokens,
   pairChordsWithLyrics,
   parseChordsAndLyrics,
@@ -295,16 +295,25 @@ export function SongDetailScreen() {
     // Chords mode's plain-text lyrics edit only lives in chordsLyricsDraft
     // until now - fold it back into the canonical lyrics first, exactly
     // like leaving the mode normally would (switchToRichMode).
-    const finalLyrics = (
+    const mergedLyrics =
       mode === "chords"
         ? mergePlainLyricsEdit(lyrics, chordsLyricsDraft)
-        : lyrics
-    ).trim();
-    const lyricsLineCount =
-      finalLyrics.length > 0 ? finalLyrics.split("\n").length : 0;
-    const alignedChords = alignChordsToLyricsLineCount(chords, lyricsLineCount);
+        : lyrics;
 
-    const invalidTokens = findInvalidChordTokens(alignedChords);
+    // With chords, trim by row (dropping only rows blank on both sides) so
+    // chord-only rows survive and no lyric slides up against the wrong
+    // chords - a plain lyrics.trim() would strip a leading blank lyric row
+    // and, worse, leave every chord after it paired with the wrong line, or
+    // drop all the chords outright when the lyrics are empty. Without any
+    // chords there's nothing to keep aligned, so it's the plain trim.
+    const hasAnyChord = chords
+      .split("\n")
+      .some((line) => line.trim().length > 0);
+    const aligned = hasAnyChord
+      ? alignChordsAndLyricsRows(chords, mergedLyrics)
+      : { chords: "", lyrics: mergedLyrics.trim() };
+
+    const invalidTokens = findInvalidChordTokens(aligned.chords);
     if (invalidTokens.length > 0) {
       Alert.alert(
         t.song.invalidChordsTitle,
@@ -313,31 +322,35 @@ export function SongDetailScreen() {
       return;
     }
 
-    const hasChordContent = alignedChords
-      .split("\n")
-      .some((line) => line.trim().length > 0);
+    // A chord-only song can have lyrics that are nothing but blank rows;
+    // that's saved as no lyrics rather than a string of newlines. The chords
+    // still carry the row count on their own (pairChordsWithLyrics pads).
+    const savedLyrics =
+      plainTextFromLyrics(aligned.lyrics).trim().length > 0
+        ? aligned.lyrics
+        : "";
+    const savedChords = aligned.chords;
 
     // Mirror exactly what gets dispatched below, or isDirty (which compares
     // this local draft state against the saved song) can end up stuck
-    // true forever: an all-blank alignedChords still saves as chords:null,
-    // and .trim() above can shorten finalLyrics by a leading/trailing blank
-    // line that chordsLyricsDraft doesn't know about yet - either one left
-    // unreconciled means every future isDirty check reads true, which is
-    // silent on web (Alert.alert is a no-op there - see AGENTS.md) but on
+    // true forever - the trim above can shorten the lyrics by rows that
+    // chordsLyricsDraft doesn't know about yet, and blank chords save as
+    // null. Left unreconciled, every future isDirty check reads true, which
+    // is silent on web (Alert.alert is a no-op there - see AGENTS.md) but on
     // native means Present/Back show a "Discard changes?" prompt that never
     // stops appearing, even right after a successful save.
-    setLyrics(finalLyrics);
-    setChords(hasChordContent ? alignedChords : "");
+    setLyrics(savedLyrics);
+    setChords(savedChords);
     if (mode === "chords") {
-      setChordsLyricsDraft(plainTextFromLyrics(finalLyrics));
+      setChordsLyricsDraft(plainTextFromLyrics(savedLyrics));
     }
 
     dispatch(
       updateSong(song.id, {
         name: name.trim(),
         durationSeconds: parsedDuration,
-        lyrics: finalLyrics || null,
-        chords: hasChordContent ? alignedChords : null,
+        lyrics: savedLyrics || null,
+        chords: savedChords || null,
         transposeSteps,
         tags,
       }),

@@ -160,6 +160,43 @@ describe("createSongInSetlist", () => {
         ?.songs,
     ).toEqual([]);
   });
+
+  it("creates nothing and returns null when the setlist no longer exists", () => {
+    songLibrary.createSong.mockReturnValue(makeSong());
+    const store = createAppStore();
+
+    const result = store.dispatch(createSongInSetlist("missing"));
+
+    expect(result).toBeNull();
+    expect(songLibrary.createSong).not.toHaveBeenCalled();
+    expect(songsSelectors.selectAll(store.getState().songs)).toEqual([]);
+  });
+
+  it("falls back to the top of the library order when the setlist write fails, so the song isn't left loose at the bottom", () => {
+    const setlist = makeSetlist();
+    setlistLibrary.createSetlist.mockReturnValue(setlist);
+    const song = makeSong();
+    songLibrary.createSong.mockReturnValue(song);
+    const store = createAppStore();
+    store.dispatch(createSetlist());
+    // addSongToSetlist logs a failed write rather than throwing, so the
+    // only way to notice is that the song never reached the setlist.
+    setlistLibrary.writeSetlist.mockImplementation(() => {
+      throw new Error("disk full");
+    });
+
+    const result = store.dispatch(createSongInSetlist(setlist.id));
+
+    expect(result).toEqual(song);
+    expect(songsSelectors.selectById(store.getState().songs, song.id)).toEqual(
+      song,
+    );
+    expect(
+      setlistsSelectors.selectById(store.getState().setlists, setlist.id)
+        ?.songs,
+    ).toEqual([]);
+    expect(store.getState().settings.libraryOrder[0]).toBe(`song:${song.id}`);
+  });
 });
 
 describe("updateSong", () => {

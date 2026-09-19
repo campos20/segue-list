@@ -56,21 +56,42 @@ export function findInvalidChordTokens(
 }
 
 /**
- * Pads or trims `chordsText` to exactly `lyricsLineCount` lines, keeping the
- * 1:1 pairing invariant with lyrics. Called at save time, not on every
- * keystroke, since chords and lyrics are edited in two independent text
- * boxes in Chords mode. A missing chord line is left blank, never invented;
- * an extra one (lyrics lines were removed) is dropped, since it would no
- * longer have a paired lyric line to sit above.
+ * Pads chords and lyrics to the same number of rows and drops leading and
+ * trailing rows that are blank on BOTH sides, keeping the two aligned row
+ * for row. Called at save time, not on every keystroke.
+ *
+ * A row is only ever dropped when it has neither chords nor lyrics, so a
+ * chord-only row (an instrumental intro or outro) is kept - the previous
+ * approach, trimming the chords down to the lyrics' line count after
+ * trimming the lyrics themselves, silently discarded those chords, and a
+ * leading blank lyric row was stripped from the lyrics alone, sliding every
+ * later lyric up one row against its chords. Lyrics with fewer rows than
+ * chords are padded with blank lines rather than the chords being cut.
+ *
+ * Leading spaces on the first lyric line and trailing ones on the last are
+ * left alone here; callers with no chords at all just trim the lyrics.
  */
-export function alignChordsToLyricsLineCount(
+export function alignChordsAndLyricsRows(
   chordsText: string,
-  lyricsLineCount: number,
-): string {
-  const lines = chordsText.length > 0 ? chordsText.split("\n") : [];
-  const aligned = lines.slice(0, lyricsLineCount);
-  while (aligned.length < lyricsLineCount) aligned.push("");
-  return aligned.join("\n");
+  lyricsText: string,
+): { chords: string; lyrics: string } {
+  const chordLines = chordsText.length > 0 ? chordsText.split("\n") : [];
+  const lyricLines = lyricsText.length > 0 ? lyricsText.split("\n") : [];
+  const count = Math.max(chordLines.length, lyricLines.length);
+  const hasContent = (index: number) =>
+    (chordLines[index] ?? "").trim().length > 0 ||
+    (lyricLines[index] ?? "").trim().length > 0;
+
+  let first = 0;
+  while (first < count && !hasContent(first)) first++;
+  if (first === count) return { chords: "", lyrics: "" };
+  let last = count - 1;
+  while (!hasContent(last)) last--;
+
+  const rows = last - first + 1;
+  const take = (lines: string[]) =>
+    Array.from({ length: rows }, (_, i) => lines[first + i] ?? "").join("\n");
+  return { chords: take(chordLines), lyrics: take(lyricLines) };
 }
 
 // Same shape as CHORD_TOKEN_RE, but with the root, quality, and bass note
@@ -177,7 +198,7 @@ function isChordOnlyLine(line: string): boolean {
  * Parses a pasted chord chart - a chord line, then the lyric line it goes
  * with, repeating, as commonly copied from lyric/chord sites - into
  * chords/lyrics text ready to drop straight into Chords mode's two fields
- * (already paired 1:1 by line, same as alignChordsToLyricsLineCount's
+ * (already paired 1:1 by line, same as alignChordsAndLyricsRows's
  * invariant). A line counts as a chord line only if EVERY space-separated
  * token on it is a recognized chord (isValidChordToken) - column spacing
  * within a chord line is preserved verbatim, since both the chords and
@@ -224,7 +245,7 @@ export interface ChordLyricsLine {
  * Zips chords and lyrics line-by-line for the "1 chord line, 1 lyrics line"
  * display - see PresentationScreen's chords view and SongDetailScreen's
  * Chords mode. Tolerant of the two not being the same length (an unsaved
- * edit in progress) rather than assuming alignChordsToLyricsLineCount has
+ * edit in progress) rather than assuming alignChordsAndLyricsRows has
  * already run.
  */
 export function pairChordsWithLyrics(
