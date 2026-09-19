@@ -58,6 +58,7 @@ import {
   type LibraryItem,
 } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
+import { setlistToText } from "@/ui/setlistText";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import Constants from "expo-constants";
 import { getDocumentAsync } from "expo-document-picker";
@@ -69,6 +70,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -231,6 +233,24 @@ export function LibraryScreen() {
         Constants.expoConfig?.version,
       );
       await shareBundle(bundle, t.library.exportSetlist);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Shares just the running order as text (no lyrics) - the OS share sheet lets it go to WhatsApp, SMS, etc. */
+  async function handleShareSetlistText(
+    name: string,
+    setlistSongs: SongManifest[],
+  ) {
+    setError(null);
+    try {
+      await Share.share({
+        message: setlistToText(
+          name,
+          setlistSongs.map((song) => song.name),
+        ),
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -573,6 +593,13 @@ export function LibraryScreen() {
                             setlist.name,
                             setlistSongs,
                           ),
+                      },
+                      {
+                        key: "share-text",
+                        label: t.setlist.shareText,
+                        icon: <ExportIcon />,
+                        onPress: () =>
+                          handleShareSetlistText(setlist.name, setlistSongs),
                       },
                       {
                         key: "export-docx",

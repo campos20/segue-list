@@ -58,6 +58,7 @@ export const ptBR: TranslationDictionary = {
     present: "Apresentar",
     export: "Exportar",
     exportDocx: "Exportar como .docx",
+    shareText: "Compartilhar lista de músicas",
     duplicate: "Duplicar",
     duplicateName: (name: string) => `${name} cópia`,
     sort: "Ordenar",
