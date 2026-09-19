@@ -398,11 +398,20 @@ export function LibraryScreen() {
         key: "present",
         label: t.setlist.present,
         icon: <PresentIcon />,
+        // Inside a setlist, present through the setlist (starting on this
+        // song) so next/previous work - same as tapping the row itself.
         onPress: () =>
-          router.push({
-            pathname: "/song/[songId]/present",
-            params: { songId: song.id },
-          }),
+          router.push(
+            containingSetlistId
+              ? {
+                  pathname: "/setlist/[setlistId]/present",
+                  params: { setlistId: containingSetlistId, songId: song.id },
+                }
+              : {
+                  pathname: "/song/[songId]/present",
+                  params: { songId: song.id },
+                },
+          ),
       },
       ...additions,
       ...removal,
