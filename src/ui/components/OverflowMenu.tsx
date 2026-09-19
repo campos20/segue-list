@@ -1,3 +1,4 @@
+import { placeMenu } from "@/ui/menuPlacement";
 import {
   elevation,
   radii,
@@ -10,10 +11,12 @@ import {
   Dimensions,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface OverflowMenuItem {
   key: string;
@@ -24,10 +27,12 @@ export interface OverflowMenuItem {
   icon?: ReactNode; // Optional icon to display alongside the label
 }
 
-interface Anchor {
-  top: number;
-  left?: number;
-  right?: number;
+/** The trigger's position in window coordinates, from View.measureInWindow. */
+interface TriggerRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface OverflowMenuProps {
@@ -43,6 +48,12 @@ interface OverflowMenuProps {
  * a Modal so it paints above every other screen element on both platforms
  * without manual zIndex tuning. Position comes from `View.measureInWindow()`
  * - a long-standing core RN API, not a third-party popover library.
+ *
+ * Vertical placement is decided by placeMenu (ui/menuPlacement.ts) once the
+ * menu has been laid out and its natural height is known: below the trigger
+ * if it fits, else above, else on the roomier side with a capped height and
+ * a scrollable list. It stays invisible until both that height and the
+ * trigger's position are known, so it never flashes in the wrong place.
  */
 export function OverflowMenu({
   items,
@@ -55,26 +66,19 @@ export function OverflowMenu({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const triggerRef = useRef<View>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [anchor, setAnchor] = useState<Anchor>(() =>
-    align === "end"
-      ? { top: 80, right: spacing.lg }
-      : { top: 80, left: spacing.lg },
-  );
+  const insets = useSafeAreaInsets();
+  const [trigger, setTrigger] = useState<TriggerRect | null>(null);
+  // The menu's natural height, taken from its first layout after opening -
+  // not updated afterwards, so a height cap applied to a tall menu can't
+  // feed back into the placement decision.
+  const [menuHeight, setMenuHeight] = useState<number | null>(null);
 
   function open() {
+    setTrigger(null);
+    setMenuHeight(null);
     setIsOpen(true);
     triggerRef.current?.measureInWindow((x, y, width, height) => {
-      setAnchor(
-        align === "end"
-          ? {
-              top: y + height + 6,
-              right: Math.max(
-                spacing.sm,
-                Dimensions.get("window").width - (x + width),
-              ),
-            }
-          : { top: y + height + 6, left: x },
-      );
+      setTrigger({ x, y, width, height });
     });
   }
 
@@ -113,36 +117,76 @@ export function OverflowMenu({
           accessibilityLabel={accessibilityLabel}
           testID={testID ? `${testID}-backdrop` : undefined}
         />
-        <View style={[styles.menu, anchor]}>
-          {items.map((item, index) => (
-            <Pressable
-              key={item.key}
-              onPress={() => handleSelect(item)}
-              testID={item.testID}
-
-              style={({ pressed }) => [
-                styles.item,
-                index < items.length - 1 && styles.itemDivider,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={styles.itemContent}>
-                {item.icon}
-                <Text
-                  style={[
-                    styles.itemText,
-                    item.destructive && styles.itemTextDestructive,
+        {trigger && (
+          <View
+            onLayout={(event) =>
+              setMenuHeight(
+                (current) => current ?? event.nativeEvent.layout.height,
+              )
+            }
+            style={[
+              styles.menu,
+              menuPosition(trigger, menuHeight, align, insets),
+              menuHeight === null && styles.menuMeasuring,
+            ]}
+          >
+            <ScrollView bounces={false}>
+              {items.map((item, index) => (
+                <Pressable
+                  key={item.key}
+                  onPress={() => handleSelect(item)}
+                  testID={item.testID}
+                  style={({ pressed }) => [
+                    styles.item,
+                    index < items.length - 1 && styles.itemDivider,
+                    pressed && styles.pressed,
                   ]}
                 >
-                  {item.label}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+                  <View style={styles.itemContent}>
+                    {item.icon}
+                    <Text
+                      style={[
+                        styles.itemText,
+                        item.destructive && styles.itemTextDestructive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </Modal>
     </>
   );
+}
+
+function menuPosition(
+  trigger: TriggerRect,
+  menuHeight: number | null,
+  align: "start" | "end",
+  insets: { top: number; bottom: number },
+) {
+  const { top, maxHeight } = placeMenu({
+    triggerTop: trigger.y,
+    triggerHeight: trigger.height,
+    menuHeight,
+    windowHeight: Dimensions.get("window").height,
+    insetTop: insets.top,
+    insetBottom: insets.bottom,
+  });
+  const horizontal =
+    align === "end"
+      ? {
+          right: Math.max(
+            spacing.sm,
+            Dimensions.get("window").width - (trigger.x + trigger.width),
+          ),
+        }
+      : { left: trigger.x };
+  return { top, maxHeight, ...horizontal };
 }
 
 /** The "..." trigger icon - three dots, drawn with Views rather than a glyph/icon font. */
@@ -192,6 +236,10 @@ function createStyles(colors: ThemeColors) {
       borderColor: colors.border,
       overflow: "hidden",
       ...elevation,
+    },
+    // Laid out at its natural size but not yet shown - see OverflowMenu's doc.
+    menuMeasuring: {
+      opacity: 0,
     },
     item: {
       paddingVertical: 14,
