@@ -96,6 +96,23 @@ Scan the QR code with Expo Go (Android) or the Camera app (iOS), or press
 tap **New song** to write your first lyrics, or **New setlist** to start
 grouping songs for a show.
 
+## Web preview
+
+Every push to `main` also publishes a web build to GitHub Pages
+(<https://campos20.github.io/segue-list/>), next to the
+[privacy policy](https://campos20.github.io/segue-list/privacy-policy-en.html)
+([português](https://campos20.github.io/segue-list/privacy-policy.html)). It's
+a way to look around the UI without installing anything: the app stores songs
+as files on the device, which a browser doesn't have, so on the web the
+library starts empty and is not saved - reloading the page clears it. The
+Android app is the one to use on stage.
+
+To try it locally: `npm run web`. To reproduce the Pages build:
+
+```bash
+EXPO_BASE_URL=/segue-list npx expo export --platform web
+```
+
 ## Testing
 
 ```bash

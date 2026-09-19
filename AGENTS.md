@@ -64,11 +64,20 @@ constructing one on web throws. Every storage function checks
 `storage/paths.ts`'s `isFileSystemAvailable` first and no-ops (returning
 empty results rather than throwing) when it's false, so running on web
 degrades to an empty, non-persistent library instead of crashing at boot.
-Web is not a target this app is built for - it exists for quick browser-based
-testing during development, not for actual use. Don't assume a fix verified
-only on web is verified at all; confirm on iOS/Android (or at minimum a real
+Web is not a target this app is built for. It is exported and published to
+GitHub Pages (`.github/workflows/pages.yaml`) alongside the privacy policy
+pages in `docs/`, but as a preview of the UI with an empty, non-persistent
+library, not something to run a show from. Don't assume a fix verified only
+on web is verified at all; confirm on iOS/Android (or at minimum a real
 `expo export`/`expo prebuild` for that platform) before calling something
 done.
+
+Two things keep that deploy from breaking the docs: the workflow copies
+`docs/` into the export at the site root and fails the deploy if a file name
+collides (so `/privacy-policy.html` and `/privacy-policy-en.html` - linked
+from the Play Store listing - never move or get replaced), and the Pages
+subpath (`experiments.baseUrl`) is set only for that build via
+`EXPO_BASE_URL` in `app.config.js`, not in `app.json`.
 
 Relatedly, `Alert.alert` is a documented no-op in `react-native-web` (see its
 source: `static alert() {}`). Every confirmation dialog in this app -

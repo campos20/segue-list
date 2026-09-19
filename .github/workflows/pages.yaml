@@ -1,13 +1,16 @@
 name: Deploy Pages
 
-# Only the docs/ folder (the privacy policy pages) is served via GitHub
-# Pages, so this only needs to run when that folder actually changes.
+# GitHub Pages serves two things from the same site:
+#   - the web build of the app, at the root
+#   - the docs/ folder (the privacy policy pages), also at the root, so
+#     /privacy-policy.html and /privacy-policy-en.html keep the exact URLs
+#     they have always had (the Play Store listing links to them)
+# Both are rebuilt on every push to main, since the app half changes with
+# almost any commit and a stale web build is worse than a redundant one.
 on:
   push:
     branches:
       - main
-    paths:
-      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -31,11 +34,50 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The site lives under /segue-list/ (a project page, not a user page),
+      # so every bundled resource needs that prefix - see app.config.js.
+      - name: Export web build
+        run: npx expo export --platform web --output-dir site
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+
+      # Copy docs/ in without overwriting anything: if the app export ever
+      # produces a file with the same name as a doc (say a route called
+      # privacy-policy), fail the deploy instead of silently replacing either
+      # the app page or the privacy policy.
+      - name: Add docs to the site
+        run: |
+          for file in docs/*; do
+            name="$(basename "$file")"
+            if [ -e "site/$name" ]; then
+              echo "::error::docs/$name collides with a file in the web export"
+              exit 1
+            fi
+            cp -R "$file" "site/$name"
+          done
+
+      # Pages can't rewrite /song/<id> to the app, so a hard refresh or
+      # shared deep link on a route the export has no file for would hit
+      # GitHub's own 404. Serving the app shell there instead lets the
+      # client-side router take over.
+      - name: Add SPA fallback and disable Jekyll
+        run: |
+          cp site/index.html site/404.html
+          touch site/.nojekyll
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: site
 
       - uses: actions/deploy-pages@v4
         id: deployment
