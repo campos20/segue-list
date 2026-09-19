@@ -741,7 +741,6 @@ export function SongDetailScreen() {
         )}
 
         <View style={styles.footer}>
-          {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
           <View style={styles.actionsRow}>
             <Button onPress={handleSave} disabled={!name.trim()}>
               {t.common.save}
@@ -759,6 +758,7 @@ export function SongDetailScreen() {
             >
               {t.setlist.present}
             </Button>
+            {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -877,8 +877,8 @@ function createStyles(colors: ThemeColors) {
     // Never scrolls either - Save/Present are always reachable.
     footer: {
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.sm,
-      paddingBottom: spacing.md,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.xs,
       gap: spacing.sm,
     },
     notFound: {
@@ -1016,6 +1016,7 @@ function createStyles(colors: ThemeColors) {
     },
     actionsRow: {
       flexDirection: "row",
+      alignItems: "center",
       gap: spacing.sm,
     },
     tagRow: {
