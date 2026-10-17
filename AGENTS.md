@@ -106,17 +106,9 @@ changes?" silently did nothing on web.
 
 The rich-text editor on web hosts the exact same `buildEditorHtml` document
 in an `<iframe srcdoc sandbox="allow-scripts">` (opaque origin - it can't
-reach the page or its localStorage). Two timing bugs were found driving it
-with real fast keyboard input in Chromium, both fixed with layout effects in
-`LyricsRichEditor.web.tsx`: the iframe's "ready" could arrive before a plain
-`useEffect` listener was attached (empty editor after reloading a song's
-page), and a plain `useEffect` comparing `value` against the editor's last
-message could run for an older render and re-inject stale text mid-typing
-(scrambled lines, caret thrown to the start). The native
-`LyricsRichEditor.tsx` uses the same plain-`useEffect` comparison and was
-deliberately left alone - it hasn't been reproduced on a device - but if
-anyone reports lost keystrokes or a jumping caret in Rich text mode on a
-phone, that race is the first suspect.
+reach the page or its localStorage). The iframe's "ready" can arrive before
+a plain `useEffect` listener is attached (an empty editor after reloading a
+song's page), so `LyricsRichEditor.web.tsx` listens from a layout effect.
 
 Deploys (`.github/workflows/pages.yaml`) always build the app from the
 **latest release tag**, never from main - a web build ahead of the released
@@ -127,6 +119,34 @@ single-page app (`web.output: "single"`) with `404.html` as a copy of the
 shell, because Pages can't route `/song/<id>` itself; the `/segue-list`
 subpath comes from `EXPO_BASE_URL` via `app.config.js`, so `npm run web`
 still serves from the root.
+
+## A documented incident: the caret jumping while typing in `LyricsRichEditor`
+
+A user reported the cursor jumping while typing in Rich text mode. Both
+editors (`LyricsRichEditor.tsx` and its `.web.tsx` twin) decide whether
+`value` is an external change - switching songs, a save that trims - by
+comparing it against the last content the editor itself reported, and
+re-inject it with `__setContent` if not. That comparison ran in a plain
+`useEffect`, which React may run _after_ the editor has already posted a
+newer keystroke: the effect for render "f" ran once "fi" had arrived, saw
+"f" !== "fi", and re-injected "f" - rewriting the editor's content, losing
+the keystroke and throwing the caret to the start. On every keystroke, when
+typing quickly. It was first found on web by driving the editor with fast
+real keyboard input in Chromium, then reproduced for the phone component in
+`LyricsRichEditor.native.test.tsx` (real React scheduling, not `act()` -
+React yields to paint between a commit and its passive effects, which is
+the window the next keystroke lands in). Fix: the comparison runs in a
+`useLayoutEffect`, inside the commit itself, so it can never be left
+pending behind a newer message. Keep it a layout effect.
+
+The same test file covers a second bug found alongside it: new theme colors
+rebuild the editor's HTML, and Android's WebView reloads the page whenever
+it gets a new `source` - but the component only tracked "ready" as a boolean,
+so the reloaded (empty) page never got its content back. Reachable from the
+song screen itself (Color -> theme link -> change theme -> back), and typing
+into that blank editor would have replaced the song's lyrics with only the
+new text. Fix: count "ready" messages and forget what was loaded on each
+one, so every fresh page gets the content injected.
 
 ## Syncing a draft from a loaded entity
 

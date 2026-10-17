@@ -1,7 +1,7 @@
 import {
   forwardRef,
-  useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -57,7 +57,13 @@ export const LyricsRichEditor = forwardRef<
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const webViewRef = useRef<WebView>(null);
-  const [isReady, setIsReady] = useState(false);
+  // Bumped on every "ready", not just the first: new theme colors rebuild
+  // `html`, which reloads the WebView with an empty editor, and that fresh
+  // page needs the content injected again. A plain `isReady` boolean stayed
+  // true across the reload, so nothing re-injected - the editor came back
+  // blank, and typing into it would have replaced the song's lyrics with
+  // only the new text.
+  const [readyCount, setReadyCount] = useState(0);
   // The content the WebView currently has loaded, so an outgoing `change`
   // message doesn't get treated as an external `value` change and
   // re-injected - only a genuinely different value (switching songs) does.
@@ -68,14 +74,21 @@ export const LyricsRichEditor = forwardRef<
     [colors, placeholder],
   );
 
-  useEffect(() => {
-    if (!isReady) return;
+  // A layout effect, not a plain effect: it runs inside the commit that
+  // changed `value`, so it can never be left pending behind a newer message
+  // from the editor. As a plain effect, React could run it for keystroke "f"
+  // after the editor had already sent "fi" - "f" !== "fi" then looked like
+  // an external change, and re-injecting it rewrote the editor's content
+  // and threw the caret back to the start (reported by a user as the cursor
+  // jumping while typing; LyricsRichEditor.native.test.tsx reproduces it).
+  useLayoutEffect(() => {
+    if (readyCount === 0) return;
     if (value === loadedValueRef.current) return;
     loadedValueRef.current = value;
     webViewRef.current?.injectJavaScript(
       `window.__setContent(${JSON.stringify(sanitizeLyricsHtml(value))}); true;`,
     );
-  }, [isReady, value]);
+  }, [readyCount, value]);
 
   useImperativeHandle(ref, () => ({
     applyColor(span) {
@@ -96,7 +109,9 @@ export const LyricsRichEditor = forwardRef<
       return;
     }
     if (message.type === "ready") {
-      setIsReady(true);
+      // Whatever was loaded before belongs to the page that just got replaced.
+      loadedValueRef.current = null;
+      setReadyCount((count) => count + 1);
     } else if (
       message.type === "change" &&
       typeof message.payload === "string"
