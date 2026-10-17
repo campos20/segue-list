@@ -1,12 +1,10 @@
 import { strToU8, zipSync } from "fflate";
-import { File, Paths } from "expo-file-system";
 import type { SongManifest } from "@/types/song";
 import {
   parseLyricsColors,
   splitIntoLines,
   type ColorSpan,
 } from "@/ui/lyricsColor";
-import { isFileSystemAvailable } from "./paths";
 
 /**
  * Writes a setlist (or the whole library) out as one .docx: a title page
@@ -21,7 +19,6 @@ import { isFileSystemAvailable } from "./paths";
  * templates - the same "hand-roll the narrow XML, zip it with fflate"
  * approach as the reverse direction in lyricsImport.ts.
  */
-export class DocxExportError extends Error {}
 
 function escapeXml(text: string): string {
   return text
@@ -146,23 +143,18 @@ export function docxFileName(label: string): string {
   return `${slug}.docx`;
 }
 
-/** Writes `songs` as one .docx into the cache directory, where it can be handed to the share sheet. */
-export function writeSongsAsDocxToCache(
+/**
+ * `songs` as one .docx's bytes. Pure, like serializeBundle - getting the
+ * file to the user is share.ts's job.
+ */
+export function buildSongsDocx(
   songs: SongManifest[],
   title: string,
   noLyricsLabel: string,
-): File {
-  if (!isFileSystemAvailable) {
-    throw new DocxExportError("Exporting isn't supported in this environment.");
-  }
-  const bytes = zipSync({
+): Uint8Array {
+  return zipSync({
     "[Content_Types].xml": strToU8(CONTENT_TYPES_XML),
     "_rels/.rels": strToU8(RELS_XML),
     "word/document.xml": strToU8(buildDocumentXml(title, songs, noLyricsLabel)),
   });
-
-  const destination = new File(Paths.cache, docxFileName(title));
-  if (destination.exists) destination.delete();
-  destination.write(bytes);
-  return destination;
 }

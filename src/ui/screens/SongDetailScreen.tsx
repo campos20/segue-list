@@ -18,6 +18,7 @@ import {
 } from "@/ui/components/LyricsRichEditor";
 import { PasteChordsModal } from "@/ui/components/PasteChordsModal";
 import { TextField } from "@/ui/components/TextField";
+import { confirmDestructive, showMessage } from "@/ui/dialogs";
 import {
   digitsFromDuration,
   formatDurationDigits,
@@ -32,7 +33,6 @@ import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -102,7 +102,10 @@ export function SongDetailScreen() {
   // screen opened, for something only worth reading once. The ⓘ button
   // reveals it on demand instead.
   const [durationHintVisible, setDurationHintVisible] = useState(false);
-  const [saved, setSaved] = useState(false);
+  // Reflects the last Save's actual outcome: a failed write must never read
+  // as "Saved." (see AGENTS.md - the store, and so isDirty, only change if
+  // the write succeeded).
+  const [saveStatus, setSaveStatus] = useState<"saved" | "failed" | null>(null);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [pasteChordsOpen, setPasteChordsOpen] = useState(false);
 
@@ -166,18 +169,13 @@ export function SongDetailScreen() {
     const hasExistingContent =
       chords.trim().length > 0 || chordsLyricsDraft.trim().length > 0;
     if (hasExistingContent) {
-      Alert.alert(
-        t.song.pasteChordsOverwriteTitle,
-        t.song.pasteChordsOverwriteBody,
-        [
-          { text: t.song.keepEditing, style: "cancel" },
-          {
-            text: t.song.pasteChordsOverwriteConfirm,
-            style: "destructive",
-            onPress: apply,
-          },
-        ],
-      );
+      confirmDestructive({
+        title: t.song.pasteChordsOverwriteTitle,
+        message: t.song.pasteChordsOverwriteBody,
+        cancelLabel: t.song.keepEditing,
+        confirmLabel: t.song.pasteChordsOverwriteConfirm,
+        onConfirm: apply,
+      });
     } else {
       apply();
     }
@@ -315,7 +313,7 @@ export function SongDetailScreen() {
 
     const invalidTokens = findInvalidChordTokens(aligned.chords);
     if (invalidTokens.length > 0) {
-      Alert.alert(
+      showMessage(
         t.song.invalidChordsTitle,
         t.song.invalidChordsBody(invalidTokens),
       );
@@ -336,8 +334,7 @@ export function SongDetailScreen() {
     // true forever - the trim above can shorten the lyrics by rows that
     // chordsLyricsDraft doesn't know about yet, and blank chords save as
     // null. Left unreconciled, every future isDirty check reads true, which
-    // is silent on web (Alert.alert is a no-op there - see AGENTS.md) but on
-    // native means Present/Back show a "Discard changes?" prompt that never
+    // would mean Present/Back show a "Discard changes?" prompt that never
     // stops appearing, even right after a successful save.
     setLyrics(savedLyrics);
     setChords(savedChords);
@@ -345,7 +342,7 @@ export function SongDetailScreen() {
       setChordsLyricsDraft(plainTextFromLyrics(savedLyrics));
     }
 
-    dispatch(
+    const written = dispatch(
       updateSong(song.id, {
         name: name.trim(),
         durationSeconds: parsedDuration,
@@ -355,7 +352,7 @@ export function SongDetailScreen() {
         tags,
       }),
     );
-    setSaved(true);
+    setSaveStatus(written ? "saved" : "failed");
   }
 
   const isDirty =
@@ -373,10 +370,13 @@ export function SongDetailScreen() {
       proceed();
       return;
     }
-    Alert.alert(t.song.discardTitle, t.song.discardBody, [
-      { text: t.song.keepEditing, style: "cancel" },
-      { text: t.song.discardConfirm, style: "destructive", onPress: proceed },
-    ]);
+    confirmDestructive({
+      title: t.song.discardTitle,
+      message: t.song.discardBody,
+      cancelLabel: t.song.keepEditing,
+      confirmLabel: t.song.discardConfirm,
+      onConfirm: proceed,
+    });
   }
 
   return (
@@ -759,7 +759,12 @@ export function SongDetailScreen() {
             >
               {t.setlist.present}
             </Button>
-            {saved && <Text style={styles.savedText}>{t.song.saved}</Text>}
+            {saveStatus === "saved" && (
+              <Text style={styles.savedText}>{t.song.saved}</Text>
+            )}
+            {saveStatus === "failed" && (
+              <Text style={styles.saveFailedText}>{t.song.saveFailed}</Text>
+            )}
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -1013,6 +1018,11 @@ function createStyles(colors: ThemeColors) {
     },
     savedText: {
       color: colors.success,
+      fontSize: 13,
+    },
+    saveFailedText: {
+      flexShrink: 1,
+      color: colors.danger,
       fontSize: 13,
     },
     actionsRow: {

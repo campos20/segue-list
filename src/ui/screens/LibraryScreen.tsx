@@ -1,12 +1,16 @@
 import { useTranslation } from "@/i18n";
 import {
+  buildSongsDocx,
+  openPickedFile,
+  serializeBundle,
   shareBundle,
   shareDocx,
-  writeBundleToCache,
-  writeSongsAsDocxToCache,
 } from "@/storage";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { importBundleIntoLibrary } from "@/store/persistBundle";
+import {
+  applyNewerFromBundle,
+  importBundleIntoLibrary,
+} from "@/store/persistBundle";
 import { persistLibraryOrder } from "@/store/persistLibrary";
 import {
   addSongToSetlist,
@@ -58,16 +62,15 @@ import {
   type LibraryItem,
 } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
+import { confirmDestructive } from "@/ui/dialogs";
 import { setlistToText } from "@/ui/setlistText";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import Constants from "expo-constants";
 import { getDocumentAsync } from "expo-document-picker";
-import { File } from "expo-file-system";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   Share,
@@ -175,18 +178,13 @@ export function LibraryScreen() {
   }
 
   function handleDeleteSetlist(id: string, name: string, songCount: number) {
-    Alert.alert(
-      t.library.deleteSetlistTitle,
-      t.library.deleteSetlistBody(name, songCount),
-      [
-        { text: t.common.cancel, style: "cancel" },
-        {
-          text: t.setlist.delete,
-          style: "destructive",
-          onPress: () => dispatch(deleteSetlist(id)),
-        },
-      ],
-    );
+    confirmDestructive({
+      title: t.library.deleteSetlistTitle,
+      message: t.library.deleteSetlistBody(name, songCount),
+      cancelLabel: t.common.cancel,
+      confirmLabel: t.setlist.delete,
+      onConfirm: () => dispatch(deleteSetlist(id)),
+    });
   }
 
   function handleNewSong() {
@@ -209,14 +207,13 @@ export function LibraryScreen() {
   }
 
   function handleDeleteSong(id: string, name: string) {
-    Alert.alert(t.library.deleteSongTitle, t.library.deleteSongBody(name), [
-      { text: t.common.cancel, style: "cancel" },
-      {
-        text: t.setlist.delete,
-        style: "destructive",
-        onPress: () => dispatch(deleteSong(id)),
-      },
-    ]);
+    confirmDestructive({
+      title: t.library.deleteSongTitle,
+      message: t.library.deleteSongBody(name),
+      cancelLabel: t.common.cancel,
+      confirmLabel: t.setlist.delete,
+      onConfirm: () => dispatch(deleteSong(id)),
+    });
   }
 
   async function handleExportSetlist(
@@ -227,12 +224,11 @@ export function LibraryScreen() {
     setError(null);
     try {
       const setlist = setlists.find((candidate) => candidate.id === setlistId);
-      const bundle = writeBundleToCache(
+      const bundle = serializeBundle(
         { songs: setlistSongs, setlists: setlist ? [setlist] : [] },
-        name,
         Constants.expoConfig?.version,
       );
-      await shareBundle(bundle, t.library.exportSetlist);
+      await shareBundle(bundle, name, t.library.exportSetlist);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -259,12 +255,11 @@ export function LibraryScreen() {
   async function handleExportAll() {
     setError(null);
     try {
-      const bundle = writeBundleToCache(
+      const bundle = serializeBundle(
         { songs, setlists },
-        "segue-list-backup",
         Constants.expoConfig?.version,
       );
-      await shareBundle(bundle, t.library.exportBackup);
+      await shareBundle(bundle, "segue-list-backup", t.library.exportBackup);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -276,12 +271,8 @@ export function LibraryScreen() {
   ) {
     setError(null);
     try {
-      const doc = writeSongsAsDocxToCache(
-        setlistSongs,
-        name,
-        t.song.noLyricsYet,
-      );
-      await shareDocx(doc, t.library.exportSetlist);
+      const doc = buildSongsDocx(setlistSongs, name, t.song.noLyricsYet);
+      await shareDocx(doc, name, t.library.exportSetlist);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -290,12 +281,8 @@ export function LibraryScreen() {
   async function handleExportAllDocx() {
     setError(null);
     try {
-      const doc = writeSongsAsDocxToCache(
-        songs,
-        t.library.title,
-        t.song.noLyricsYet,
-      );
-      await shareDocx(doc, t.library.exportFullLibraryDocx);
+      const doc = buildSongsDocx(songs, t.library.title, t.song.noLyricsYet);
+      await shareDocx(doc, t.library.title, t.library.exportFullLibraryDocx);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -311,10 +298,36 @@ export function LibraryScreen() {
       if (picked.canceled || !picked.assets[0]) return;
 
       setStatus(t.library.importing);
-      const result = await dispatch(
-        importBundleIntoLibrary(new File(picked.assets[0].uri)),
-      );
+      const bundleText = await openPickedFile(picked.assets[0]).text();
+      const result = dispatch(importBundleIntoLibrary(bundleText));
       setStatus(null);
+
+      const { newerSongs, newerSetlists } = result;
+      if (newerSongs.length + newerSetlists.length > 0) {
+        // Anything new is already in; replacing an existing copy is the
+        // destructive part, so that waits for an explicit yes.
+        confirmDestructive({
+          title: t.library.importNewerTitle,
+          message: t.library.importNewerBody(
+            newerSongs.length,
+            newerSetlists.length,
+          ),
+          cancelLabel: t.library.importKeepMine,
+          confirmLabel: t.library.importReplace,
+          onConfirm: () => {
+            const applied = dispatch(
+              applyNewerFromBundle({
+                songs: newerSongs,
+                setlists: newerSetlists,
+              }),
+            );
+            if (applied.failedCount > 0) {
+              setError(t.library.importNewerFailed(applied.failedCount));
+            }
+          },
+        });
+        return;
+      }
 
       const imported = result.songs.length + result.setlists.length;
       const skipped =
@@ -347,7 +360,7 @@ export function LibraryScreen() {
       const result = await dispatch(
         importSongsFromLyricsFiles(
           picked.assets.map((asset) => ({
-            uri: asset.uri,
+            file: openPickedFile(asset),
             fileName: asset.name,
           })),
         ),

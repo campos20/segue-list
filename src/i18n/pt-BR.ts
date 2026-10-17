@@ -30,6 +30,22 @@ export const ptBR: TranslationDictionary = {
     importing: "Importando...",
     importingLyricsFiles: "Importando arquivos de letra...",
     importAlreadyHere: "Tudo nesse backup já está na sua biblioteca.",
+    importNewerTitle: "Substituir por versões mais recentes?",
+    importNewerBody: (songCount: number, setlistCount: number) => {
+      const parts = [
+        songCount > 0
+          ? `${songCount} ${songCount === 1 ? "música" : "músicas"}`
+          : "",
+        setlistCount > 0
+          ? `${setlistCount} ${setlistCount === 1 ? "repertório" : "repertórios"}`
+          : "",
+      ].filter(Boolean);
+      return `Este backup tem versões mais recentes de ${parts.join(" e ")} que já estão na sua biblioteca. Suas versões atuais serão substituídas.`;
+    },
+    importKeepMine: "Manter as minhas",
+    importReplace: "Substituir",
+    importNewerFailed: (count: number) =>
+      `Não foi possível atualizar ${count} ${count === 1 ? "item" : "itens"} do backup.`,
     importLyricsFilesFailed: (fileNames: string[]) => {
       const shown = fileNames.slice(0, 3).join(", ");
       const remaining = fileNames.length - 3;
@@ -143,6 +159,8 @@ export const ptBR: TranslationDictionary = {
       return `Corrija antes de salvar: ${shown}${remaining > 0 ? `, e mais ${remaining}` : ""}.`;
     },
     saved: "Salvo.",
+    saveFailed:
+      "Não foi possível salvar - suas edições continuam aqui. Tente novamente.",
     discardTitle: "Descartar alterações?",
     discardBody: "Você tem alterações não salvas nesta música.",
     discardConfirm: "Descartar",
@@ -185,5 +203,13 @@ export const ptBR: TranslationDictionary = {
     themeSystem: "Sistema",
     themeLight: "Claro",
     themeDark: "Escuro",
+  },
+  web: {
+    storageNotice:
+      "Sua biblioteca está salva apenas neste navegador. Use “Exportar biblioteca completa” para guardar uma cópia ou levá-la para o celular.",
+    dismiss: "Fechar",
+    changedElsewhere:
+      "Esta biblioteca foi alterada em outra aba. Recarregue para continuar editando - nada mais será salvo aqui até lá.",
+    reload: "Recarregar",
   },
 };

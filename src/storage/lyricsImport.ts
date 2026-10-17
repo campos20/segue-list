@@ -1,5 +1,4 @@
 import { strFromU8, unzipSync } from "fflate";
-import type { File } from "expo-file-system";
 import { LyricsImportError } from "./lyricsImportError";
 import { extractPdfText } from "./pdfTextExtract";
 
@@ -124,9 +123,19 @@ export interface ImportedLyricsFile {
   lyrics: string;
 }
 
+/**
+ * The two reads extractLyricsFromFile needs. expo-file-system's `File`
+ * already has exactly this shape, so on a phone the picked file is passed
+ * straight through; storage/pickedFile.web.ts adapts a browser `File` to it.
+ */
+export interface ReadableFile {
+  text(): Promise<string>;
+  bytes(): Promise<Uint8Array>;
+}
+
 /** Reads a picked .txt/.docx/.odt/.pdf file into a song name (from the filename) and its lyrics text. */
 export async function extractLyricsFromFile(
-  file: File,
+  file: ReadableFile,
   fileName: string,
 ): Promise<ImportedLyricsFile> {
   const extension = extensionOf(fileName);

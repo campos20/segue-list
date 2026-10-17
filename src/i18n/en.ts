@@ -28,6 +28,20 @@ export const en = {
     importing: "Importing...",
     importingLyricsFiles: "Importing lyrics files...",
     importAlreadyHere: "Everything in that backup is already in your library.",
+    importNewerTitle: "Replace with newer versions?",
+    importNewerBody: (songCount: number, setlistCount: number) => {
+      const parts = [
+        songCount > 0 ? `${songCount} song${songCount === 1 ? "" : "s"}` : "",
+        setlistCount > 0
+          ? `${setlistCount} setlist${setlistCount === 1 ? "" : "s"}`
+          : "",
+      ].filter(Boolean);
+      return `This backup has newer versions of ${parts.join(" and ")} already in your library. Your current versions will be replaced.`;
+    },
+    importKeepMine: "Keep mine",
+    importReplace: "Replace",
+    importNewerFailed: (count: number) =>
+      `Couldn't update ${count} item${count === 1 ? "" : "s"} from the backup.`,
     importLyricsFilesFailed: (fileNames: string[]) => {
       const shown = fileNames.slice(0, 3).join(", ");
       const remaining = fileNames.length - 3;
@@ -140,6 +154,7 @@ export const en = {
       return `Fix these before saving: ${shown}${remaining > 0 ? `, and ${remaining} more` : ""}.`;
     },
     saved: "Saved.",
+    saveFailed: "Couldn't save - your edits are still here. Try again.",
     discardTitle: "Discard changes?",
     discardBody: "You have unsaved changes to this song.",
     discardConfirm: "Discard",
@@ -181,6 +196,14 @@ export const en = {
     themeSystem: "System",
     themeLight: "Light",
     themeDark: "Dark",
+  },
+  web: {
+    storageNotice:
+      "Your library is saved only in this browser. Use “Export full library” to keep a copy or move it to your phone.",
+    dismiss: "Dismiss",
+    changedElsewhere:
+      "This library was changed in another tab. Reload to keep editing - nothing more will be saved here until you do.",
+    reload: "Reload",
   },
 };
 

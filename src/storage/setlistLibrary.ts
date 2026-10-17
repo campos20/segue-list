@@ -1,22 +1,13 @@
 import { File } from "expo-file-system";
 import type { SetlistManifest } from "@/types/setlist";
-import { generateId } from "./ids";
+import { isUsableSetlist, newSetlistManifest } from "./manifests";
 import {
   ensureSetlistsDirectoryExists,
   isFileSystemAvailable,
   setlistFile,
 } from "./paths";
 
-export const DRAFT_SETLIST_NAME = "New setlist";
-
-function isUsable(manifest: unknown): manifest is SetlistManifest {
-  const candidate = manifest as SetlistManifest | null;
-  return (
-    Boolean(candidate?.id) &&
-    typeof candidate?.name === "string" &&
-    Array.isArray(candidate?.songs)
-  );
-}
+export { DRAFT_SETLIST_NAME } from "./manifests";
 
 /** Reads every setlist off disk. One unreadable file is skipped rather than failing the whole scan. */
 export async function listSetlists(): Promise<SetlistManifest[]> {
@@ -33,7 +24,7 @@ export async function listSetlists(): Promise<SetlistManifest[]> {
     files.map(async (file): Promise<SetlistManifest | null> => {
       try {
         const manifest = await file.json();
-        return isUsable(manifest) ? manifest : null;
+        return isUsableSetlist(manifest) ? manifest : null;
       } catch {
         return null;
       }
@@ -51,15 +42,8 @@ export function writeSetlist(manifest: SetlistManifest): void {
   setlistFile(manifest.id).write(JSON.stringify(manifest, null, 2));
 }
 
-export function createSetlist(name = DRAFT_SETLIST_NAME): SetlistManifest {
-  const now = new Date().toISOString();
-  const manifest: SetlistManifest = {
-    id: generateId(name),
-    name,
-    songs: [],
-    createdAt: now,
-    updatedAt: now,
-  };
+export function createSetlist(name?: string): SetlistManifest {
+  const manifest = newSetlistManifest(name);
   writeSetlist(manifest);
   return manifest;
 }

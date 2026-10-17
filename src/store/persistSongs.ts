@@ -1,5 +1,7 @@
-import { File } from "expo-file-system";
-import { extractLyricsFromFile } from "@/storage/lyricsImport";
+import {
+  extractLyricsFromFile,
+  type ReadableFile,
+} from "@/storage/lyricsImport";
 import {
   createSong as createSongFile,
   deleteSong as deleteSongFile,
@@ -98,13 +100,14 @@ export function createSongInSetlist(setlistId: string, name?: string) {
   };
 }
 
+/** Returns whether the change was written - the editor only says "Saved." when it was. */
 export function updateSong(
   id: string,
   changes: Partial<Omit<SongManifest, "id" | "createdAt">>,
 ) {
-  return (dispatch: AppDispatch, getState: () => RootState) => {
+  return (dispatch: AppDispatch, getState: () => RootState): boolean => {
     const song = songsSelectors.selectById(getState().songs, id);
-    if (!song) return;
+    if (!song) return false;
 
     const updated: SongManifest = {
       ...song,
@@ -116,7 +119,7 @@ export function updateSong(
       writeSong(updated);
     } catch (error) {
       console.warn(`Failed to write song "${id}"`, error);
-      return;
+      return false;
     }
     dispatch(
       songUpdated({
@@ -124,6 +127,7 @@ export function updateSong(
         changes: { ...changes, updatedAt: updated.updatedAt },
       }),
     );
+    return true;
   };
 }
 
@@ -145,7 +149,7 @@ export interface LyricsFileImportResult {
  * file shouldn't cost you the other eleven.
  */
 export function importSongsFromLyricsFiles(
-  files: { uri: string; fileName: string }[],
+  files: { file: ReadableFile; fileName: string }[],
 ) {
   return async (
     dispatch: AppDispatch,
@@ -154,12 +158,9 @@ export function importSongsFromLyricsFiles(
     const imported: SongManifest[] = [];
     const failed: LyricsFileImportFailure[] = [];
 
-    for (const { uri, fileName } of files) {
+    for (const { file, fileName } of files) {
       try {
-        const { name, lyrics } = await extractLyricsFromFile(
-          new File(uri),
-          fileName,
-        );
+        const { name, lyrics } = await extractLyricsFromFile(file, fileName);
         const song = createSongFile(
           name,
           lyrics ? plainTextToLyricsHtml(lyrics) : null,

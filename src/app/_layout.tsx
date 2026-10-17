@@ -4,6 +4,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { store } from "@/store";
 import { LibraryGate } from "@/ui/LibraryGate";
+import { WebLibraryBanner } from "@/ui/components/WebLibraryBanner";
 import { useThemeColors, useThemeMode } from "@/ui/theme";
 
 export default function RootLayout() {
@@ -28,6 +29,8 @@ function ThemedApp() {
   return (
     <>
       <StatusBar style={mode} />
+      {/* Renders nothing on iOS/Android - see WebLibraryBanner.tsx. */}
+      <WebLibraryBanner />
       {/* No transition animation: removes the window where two screens'
           native view trees are both present during an animated
           transition, and keeps navigation fully predictable. */}

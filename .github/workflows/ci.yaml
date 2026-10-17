@@ -44,6 +44,41 @@ jobs:
       - name: Test
         run: npx jest --coverage --ci
 
+      # The web version (deployed to Pages by pages.yaml) has to keep
+      # building, with the same Pages subpath the deploy uses.
+      - name: Export web
+        run: npx expo export --platform web --output-dir "$RUNNER_TEMP/web"
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+
+      # Everything web-only lives in *.web.ts(x) files that Metro leaves out
+      # of the iOS/Android bundles. This proves it: each marker below is a
+      # string that exists only in one of those files (browserStorage.ts's
+      # key prefix and error message, the web editor's iframe sandbox), so
+      # finding one in the Android bundle means web code is shipping to
+      # phones. Hermes bytecode keeps string literals as plain bytes, so
+      # `grep -a` finds them.
+      - name: Check web-only code stays out of the Android bundle
+        run: |
+          npx expo export --platform android --output-dir "$RUNNER_TEMP/android"
+          BUNDLE="$(find "$RUNNER_TEMP/android/_expo/static/js/android" -name '*.hbc' | head -n 1)"
+          if [ -z "$BUNDLE" ]; then
+            echo "::error::No Android bundle found in the export."
+            exit 1
+          fi
+          # Positive control: a string every build has, so a change in how
+          # the bundle stores strings fails loudly instead of passing.
+          if ! grep -a -q "segue-list-bundle" "$BUNDLE"; then
+            echo "::error::Sanity check failed: couldn't find a known string in the Android bundle."
+            exit 1
+          fi
+          for marker in "segue-list:v1:" "Reload the page before making more changes" "allow-scripts"; do
+            if grep -a -q -- "$marker" "$BUNDLE"; then
+              echo "::error::Web-only code (\"$marker\") found in the Android bundle."
+              exit 1
+            fi
+          done
+
       # Just a quick indicator on the PR itself - reads the json-summary
       # report jest already produces, no README to keep in sync.
       - name: Comment coverage on PR

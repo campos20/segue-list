@@ -206,8 +206,9 @@ describe("updateSong", () => {
     const store = createAppStore();
     store.dispatch(createSong());
 
-    store.dispatch(updateSong(song.id, { name: "New name" }));
+    const written = store.dispatch(updateSong(song.id, { name: "New name" }));
 
+    expect(written).toBe(true);
     expect(
       songsSelectors.selectById(store.getState().songs, song.id)?.name,
     ).toBe("New name");
@@ -222,8 +223,10 @@ describe("updateSong", () => {
       throw new Error("disk full");
     });
 
-    store.dispatch(updateSong(song.id, { name: "New name" }));
+    const written = store.dispatch(updateSong(song.id, { name: "New name" }));
 
+    // false is what keeps the editor from showing "Saved." for this.
+    expect(written).toBe(false);
     expect(
       songsSelectors.selectById(store.getState().songs, song.id)?.name,
     ).toBe(song.name);
@@ -232,8 +235,9 @@ describe("updateSong", () => {
   it("does nothing for a song id that isn't in the store", () => {
     const store = createAppStore();
 
-    store.dispatch(updateSong("missing", { name: "New name" }));
+    const written = store.dispatch(updateSong("missing", { name: "New name" }));
 
+    expect(written).toBe(false);
     expect(songLibrary.writeSong).not.toHaveBeenCalled();
   });
 });

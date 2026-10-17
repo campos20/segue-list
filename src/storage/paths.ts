@@ -2,11 +2,11 @@ import { Directory, File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 
 /**
- * expo-file-system has no web implementation - this app is built for
- * iOS/Android, where a setlist lives on stage in your pocket, not in a
- * browser tab. Every storage function checks this before touching the
- * filesystem, so running on web degrades to an empty, non-persistent
- * library instead of crashing at boot.
+ * expo-file-system has no web implementation. The web build doesn't reach
+ * this file at all - each storage module has a `.web.ts` counterpart backed
+ * by localStorage (see browserStorage.ts) - so this guard is a last line of
+ * defense: if a native storage module were ever bundled for web by mistake,
+ * it would no-op instead of crashing at boot.
  */
 export const isFileSystemAvailable = Platform.OS !== "web";
 

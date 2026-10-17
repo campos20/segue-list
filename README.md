@@ -62,7 +62,10 @@ setlist mid-set with the next song's lyrics one tap away.
   `<id>.json` file under the app's document directory - a setlist's file
   holds song _ids_, not the songs themselves, which is what lets one song
   belong to several setlists without duplication. There is no database and
-  no sync; the filesystem is the source of truth, read once at launch.
+  no sync; the filesystem is the source of truth, read once at launch. The
+  web version keeps the same records in the browser's `localStorage`
+  instead (`*.web.ts` files next to each storage module - see
+  [Web version](#web-version)).
 - **i18n**: `src/i18n/` - a plain object dictionary per locale, checked
   against a shared TypeScript type so a missing translation is a compile
   error. See [`AGENTS.md`](AGENTS.md) for why this project has no backend and
@@ -75,10 +78,38 @@ Exporting (from the Library's overflow menu, or a single setlist's) writes a
 readable even by hand. It contains the songs and setlists you exported, and
 nothing else - no account data, because there isn't any.
 
-Importing reads that file back in. A song or setlist whose id already exists
-locally is left untouched, so re-importing your own backup is a no-op instead
-of silently overwriting something you've since edited, and a file from
-another musician can never clobber one of yours that happens to share an id.
+Importing reads that file back in. Anything new is added. A song or setlist
+whose id already exists locally is left untouched when your copy is the same
+age or newer, so re-importing your own backup is a no-op instead of silently
+overwriting something you've since edited. When the file's copy was saved
+more recently - you edited the song on the web version, say - the app asks
+before replacing yours, and nothing is replaced unless you confirm.
+
+## Web version
+
+The app also runs in a browser at <https://campos20.github.io/segue-list/>,
+meant for comfortable editing at a keyboard: write or fix lyrics there,
+then **Export full library** and **Import backup** on the phone to bring the
+changes over (newer copies replace older ones after you confirm). It also
+works on its own, saving everything in that browser.
+
+- **Where your data lives**: only in that browser's local storage - no
+  account, no server. Clearing the site's data deletes it, and Safari
+  removes it after about a week without a visit, so keep a backup export.
+- **Use the phone on stage.** The web version is for editing; the phone
+  app is what's built for a live show.
+- **One tab at a time.** If the library changes in another tab, the page
+  stops saving and asks you to reload, rather than overwriting the other
+  tab's newer edits with an older copy.
+
+It's published to GitHub Pages by `.github/workflows/pages.yaml`, always
+from the latest release tag (so it never gets ahead of the phone app), next
+to the [privacy policy](https://campos20.github.io/segue-list/privacy-policy-en.html).
+To try it locally: `npm run web`. To reproduce the Pages build:
+
+```bash
+EXPO_BASE_URL=/segue-list npx expo export --platform web
+```
 
 ## Running the app
 

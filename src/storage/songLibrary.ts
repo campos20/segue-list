@@ -1,18 +1,13 @@
 import { File } from "expo-file-system";
 import type { SongManifest } from "@/types/song";
-import { generateId } from "./ids";
+import { isUsableSong, newSongManifest } from "./manifests";
 import {
   ensureSongsDirectoryExists,
   isFileSystemAvailable,
   songFile,
 } from "./paths";
 
-export const DRAFT_SONG_NAME = "New song";
-
-function isUsable(manifest: unknown): manifest is SongManifest {
-  const candidate = manifest as SongManifest | null;
-  return Boolean(candidate?.id) && typeof candidate?.name === "string";
-}
+export { DRAFT_SONG_NAME } from "./manifests";
 
 /** Reads every song off disk. One unreadable file is skipped rather than failing the whole scan. */
 export async function listSongs(): Promise<SongManifest[]> {
@@ -29,7 +24,7 @@ export async function listSongs(): Promise<SongManifest[]> {
     files.map(async (file): Promise<SongManifest | null> => {
       try {
         const manifest = await file.json();
-        return isUsable(manifest) ? manifest : null;
+        return isUsableSong(manifest) ? manifest : null;
       } catch {
         return null;
       }
@@ -48,20 +43,10 @@ export function writeSong(manifest: SongManifest): void {
 }
 
 export function createSong(
-  name = DRAFT_SONG_NAME,
+  name?: string,
   lyrics: string | null = null,
 ): SongManifest {
-  const now = new Date().toISOString();
-  const manifest: SongManifest = {
-    id: generateId(name),
-    name,
-    lyrics,
-    chords: null,
-    transposeSteps: 0,
-    tags: [],
-    createdAt: now,
-    updatedAt: now,
-  };
+  const manifest = newSongManifest(name, lyrics);
   writeSong(manifest);
   return manifest;
 }

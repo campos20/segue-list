@@ -17,6 +17,8 @@ const songsSlice = createSlice({
       state.hydrated = true;
     },
     songAdded: songsAdapter.addOne,
+    /** Swaps in a whole manifest (an import's newer copy) - unlike songUpdated, fields it lacks are dropped, not kept. */
+    songReplaced: songsAdapter.setOne,
     songRemoved: songsAdapter.removeOne,
     songUpdated(
       state,
@@ -30,7 +32,12 @@ const songsSlice = createSlice({
   },
 });
 
-export const { songsHydrated, songAdded, songRemoved, songUpdated } =
-  songsSlice.actions;
+export const {
+  songsHydrated,
+  songAdded,
+  songReplaced,
+  songRemoved,
+  songUpdated,
+} = songsSlice.actions;
 export const songsSelectors = songsAdapter.getSelectors();
 export default songsSlice.reducer;

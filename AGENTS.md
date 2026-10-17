@@ -57,26 +57,76 @@ Concretely:
   thing, the fix is in how `lyricsViewMode` is set from the editor, not a new
   toggle in `PresentationScreen.tsx`.
 
-## Known platform limits (web)
+## The web version
 
-`expo-file-system`'s `File`/`Directory` classes have no web implementation -
-constructing one on web throws. Every storage function checks
-`storage/paths.ts`'s `isFileSystemAvailable` first and no-ops (returning
-empty results rather than throwing) when it's false, so running on web
-degrades to an empty, non-persistent library instead of crashing at boot.
-Web is not a target this app is built for - it exists for quick browser-based
-testing during development, not for actual use. Don't assume a fix verified
-only on web is verified at all; confirm on iOS/Android (or at minimum a real
-`expo export`/`expo prebuild` for that platform) before calling something
-done.
+The app also ships as a web build on GitHub Pages - for editing lyrics at a
+keyboard and moving them to the phone through a backup file, or for using on
+its own. The phone is still what the app is _for_: the web version must never
+make the iOS/Android app any less stable. That's enforced structurally, not by
+being careful:
 
-Relatedly, `Alert.alert` is a documented no-op in `react-native-web` (see its
-source: `static alert() {}`). Every confirmation dialog in this app -
-deleting a song or setlist, discarding an unsaved lyrics edit - silently does
-nothing on web: the callback never fires, so the safe default is that nothing
-happens rather than the destructive action running unconfirmed. This is a
-web-only gap, not a bug to chase; the same code shows a real native dialog on
-iOS/Android, the platforms this app is actually for.
+- **Everything web-only lives in a `*.web.ts`/`*.web.tsx` file** next to the
+  native module it replaces, with the same exports: `storage/songLibrary`,
+  `setlistLibrary`, `appSettings`, `share`, `pickedFile`, `ui/dialogs`,
+  `ui/components/LyricsRichEditor`, `ui/components/WebLibraryBanner`. Metro
+  picks one file per platform, so web code is never in a phone bundle. Never
+  add a `Platform.OS === "web"` branch to a shared file instead - that ships
+  the web path to phones. `storage/browserStorage.ts` has no `.web` suffix
+  but is only ever imported from `.web` files; keep it that way.
+- **CI proves it**: `ci.yaml` exports the Android bundle and fails if it
+  contains strings that exist only in web files (`segue-list:v1:`,
+  browserStorage's error text, the editor's `allow-scripts`). If you rename
+  one of those, update the marker list.
+- **Shared code stays platform-neutral**: `bundle.ts` and `docxExport.ts`
+  build text/bytes; only `share.ts` / `share.web.ts` deliver them.
+  `lyricsImport.ts` reads through the small `ReadableFile` interface, which
+  expo-file-system's `File` already satisfies - the phone passes the same
+  object it always did.
+- **A shared-code change still needs a phone check.** Don't assume a fix
+  verified only on web is verified at all; confirm on iOS/Android (or at
+  minimum a real `expo export`/`expo prebuild` for that platform) before
+  calling something done.
+
+Web storage is `localStorage` (`storage/browserStorage.ts`), not IndexedDB,
+on purpose: it's synchronous like the rest of the storage API, so the "write
+lands before the store hears about it" contract holds unchanged - a full
+browser storage throws, and the persist thunks never dispatch. Keys are
+prefixed `segue-list:v1:` because every project page on `campos20.github.io`
+shares one origin. When another tab writes to the library, this tab's store
+may be stale, so browserStorage refuses every further write (and
+WebLibraryBanner asks for a reload) rather than letting an old copy
+overwrite a newer edit - a refused write is just another failed write to the
+code above it.
+
+`Alert.alert` is a documented no-op in `react-native-web` (`static alert()
+{}`), so never call it directly: use `ui/dialogs.ts`'s `confirmDestructive` /
+`showMessage`, which are `Alert.alert` on phones and `window.confirm` /
+`window.alert` on web. Before this existed, every delete and "Discard
+changes?" silently did nothing on web.
+
+The rich-text editor on web hosts the exact same `buildEditorHtml` document
+in an `<iframe srcdoc sandbox="allow-scripts">` (opaque origin - it can't
+reach the page or its localStorage). Two timing bugs were found driving it
+with real fast keyboard input in Chromium, both fixed with layout effects in
+`LyricsRichEditor.web.tsx`: the iframe's "ready" could arrive before a plain
+`useEffect` listener was attached (empty editor after reloading a song's
+page), and a plain `useEffect` comparing `value` against the editor's last
+message could run for an older render and re-inject stale text mid-typing
+(scrambled lines, caret thrown to the start). The native
+`LyricsRichEditor.tsx` uses the same plain-`useEffect` comparison and was
+deliberately left alone - it hasn't been reproduced on a device - but if
+anyone reports lost keystrokes or a jumping caret in Rich text mode on a
+phone, that race is the first suspect.
+
+Deploys (`.github/workflows/pages.yaml`) always build the app from the
+**latest release tag**, never from main - a web build ahead of the released
+phone app could write a backup format the phone can't read yet. `docs/` (the
+privacy policy, linked from the Play Store) is taken from main and copied in
+with a collision check, so those URLs never move. The export is a
+single-page app (`web.output: "single"`) with `404.html` as a copy of the
+shell, because Pages can't route `/song/<id>` itself; the `/segue-list`
+subpath comes from `EXPO_BASE_URL` via `app.config.js`, so `npm run web`
+still serves from the root.
 
 ## Syncing a draft from a loaded entity
 
