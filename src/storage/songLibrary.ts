@@ -1,6 +1,6 @@
 import { File } from "expo-file-system";
 import type { SongManifest } from "@/types/song";
-import { isUsableSong, newSongManifest } from "./manifests";
+import { isUsableSong, newSongManifest, type NewSongFields } from "./manifests";
 import {
   ensureSongsDirectoryExists,
   isFileSystemAvailable,
@@ -45,8 +45,9 @@ export function writeSong(manifest: SongManifest): void {
 export function createSong(
   name?: string,
   lyrics: string | null = null,
+  fields: NewSongFields = {},
 ): SongManifest {
-  const manifest = newSongManifest(name, lyrics);
+  const manifest = newSongManifest(name, lyrics, fields);
   writeSong(manifest);
   return manifest;
 }

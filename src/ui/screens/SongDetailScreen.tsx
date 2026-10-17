@@ -7,9 +7,9 @@ import {
   alignChordsAndLyricsRows,
   findInvalidChordTokens,
   pairChordsWithLyrics,
-  parseChordsAndLyrics,
   transposeChordsText,
 } from "@/ui/chords";
+import { parsePastedChordChart } from "@/ui/chordPro";
 import { Button } from "@/ui/components/Button";
 import { ColorPickerModal } from "@/ui/components/ColorPickerModal";
 import {
@@ -157,13 +157,13 @@ export function SongDetailScreen() {
     dispatch(persistLyricsViewMode("rich"));
   }
 
-  /** Splits a pasted chord chart into the two draft fields via parseChordsAndLyrics, replacing whatever Chords mode currently has - confirmed first if that would discard existing content. Also resets transposeSteps to 0: the pasted chart is the new "original" pitch, not a transposition of whatever was there before. */
+  /** Splits a pasted chord chart - chords-above-lyrics or ChordPro, detected automatically (parsePastedChordChart) - into the two draft fields, replacing whatever Chords mode currently has - confirmed first if that would discard existing content. Also resets transposeSteps: the pasted chart is the new "original" pitch, not a transposition of whatever was there before (unless it's ChordPro carrying its own `{transpose}`). */
   function handlePasteChordsImport(pastedText: string) {
-    const parsed = parseChordsAndLyrics(pastedText);
+    const parsed = parsePastedChordChart(pastedText);
     function apply() {
       setChords(parsed.chords);
       setChordsLyricsDraft(parsed.lyrics);
-      setTransposeSteps(0);
+      setTransposeSteps(parsed.transposeSteps);
       setPasteChordsOpen(false);
     }
     const hasExistingContent =

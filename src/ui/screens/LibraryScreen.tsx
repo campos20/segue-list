@@ -4,6 +4,7 @@ import {
   openPickedFile,
   serializeBundle,
   shareBundle,
+  shareChordPro,
   shareDocx,
 } from "@/storage";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -62,6 +63,7 @@ import {
   type LibraryItem,
 } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
+import { songsToChordPro } from "@/ui/chordPro";
 import { confirmDestructive } from "@/ui/dialogs";
 import { setlistToText } from "@/ui/setlistText";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
@@ -288,6 +290,20 @@ export function LibraryScreen() {
     }
   }
 
+  /** Exports `songsToExport` as one ChordPro file - several songs are separated by `{new_song}`. */
+  async function handleExportChordPro(
+    songsToExport: SongManifest[],
+    label: string,
+    dialogTitle: string,
+  ) {
+    setError(null);
+    try {
+      await shareChordPro(songsToChordPro(songsToExport), label, dialogTitle);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   async function handleImport() {
     setError(null);
     try {
@@ -345,12 +361,11 @@ export function LibraryScreen() {
     setError(null);
     try {
       const picked = await getDocumentAsync({
-        type: [
-          "text/plain",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "application/vnd.oasis.opendocument.text",
-          "application/pdf",
-        ],
+        // Any file, not a MIME list: ChordPro files (.cho, .chordpro, .crd,
+        // .pro...) have no registered MIME type, so a filtered picker shows
+        // them greyed out. extractSongsFromFile checks the extension and
+        // reports an unsupported file by name instead.
+        type: "*/*",
         multiple: true,
         copyToCacheDirectory: true,
       });
@@ -429,6 +444,13 @@ export function LibraryScreen() {
       ...additions,
       ...removal,
       {
+        key: "export-chordpro",
+        label: t.setlist.exportChordPro,
+        icon: <ExportDocxIcon />,
+        onPress: () =>
+          handleExportChordPro([song], song.name, t.setlist.exportChordPro),
+      },
+      {
         key: "delete",
         label: t.setlist.deleteSong,
         destructive: true,
@@ -462,6 +484,17 @@ export function LibraryScreen() {
       label: t.library.exportFullLibraryDocx,
       icon: <ExportDocxIcon />,
       onPress: handleExportAllDocx,
+    },
+    {
+      key: "export-chordpro",
+      label: t.library.exportFullLibraryChordPro,
+      icon: <ExportDocxIcon />,
+      onPress: () =>
+        handleExportChordPro(
+          songs,
+          t.library.title,
+          t.library.exportFullLibraryChordPro,
+        ),
     },
     {
       key: "settings",
@@ -629,6 +662,17 @@ export function LibraryScreen() {
                         icon: <ExportDocxIcon />,
                         onPress: () =>
                           handleExportSetlistDocx(setlist.name, setlistSongs),
+                      },
+                      {
+                        key: "export-chordpro",
+                        label: t.setlist.exportChordPro,
+                        icon: <ExportDocxIcon />,
+                        onPress: () =>
+                          handleExportChordPro(
+                            setlistSongs,
+                            setlist.name,
+                            t.setlist.exportChordPro,
+                          ),
                       },
                       {
                         key: "delete",

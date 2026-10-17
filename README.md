@@ -44,6 +44,18 @@ setlist mid-set with the next song's lyrics one tap away.
   a single file and hand it off through the OS share sheet - Drive, AirDrop,
   email, whatever. Importing merges it into your library without touching
   anything you already have.
+- **ChordPro, both ways.** [ChordPro](https://www.chordpro.org/) is the
+  format most chord apps (OnSong, SongbookPro, Planning Center, OpenLP...)
+  read and write: chords inline in the lyric, `A[G]mazing [G7]grace`.
+  Import is automatic - **Import lyrics files** takes `.cho`/`.chordpro`/
+  `.crd`/`.pro` files, recognizes ChordPro inside a `.txt`, `.docx` or
+  `.pdf` too, and **Paste chords** recognizes a pasted ChordPro chart;
+  songs come in with their chords, title, duration and transposition, and
+  a file with several songs (`{new_song}`) becomes several songs. Export a
+  song, a setlist or the whole library with **Export as ChordPro** (chords
+  written at the pitch you play them). The app has no song sections, key or
+  lyric colors in ChordPro terms, so those don't carry over (see
+  `src/ui/chordPro.ts`).
 - **English and Portuguese**, following the device's language by default,
   overridable in Settings.
 - **Light and dark themes**, following the device's setting by default (or

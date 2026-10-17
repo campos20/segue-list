@@ -12,18 +12,29 @@ import { generateId } from "./ids";
 export const DRAFT_SONG_NAME = "New song";
 export const DRAFT_SETLIST_NAME = "New setlist";
 
+/** What an import (a ChordPro file, say) can set on a song at creation, beyond its name and lyrics. */
+export interface NewSongFields {
+  chords?: string | null;
+  durationSeconds?: number | null;
+  transposeSteps?: number;
+}
+
 export function newSongManifest(
   name = DRAFT_SONG_NAME,
   lyrics: string | null = null,
+  fields: NewSongFields = {},
 ): SongManifest {
   const now = new Date().toISOString();
   return {
     id: generateId(name),
     name,
     lyrics,
-    chords: null,
-    transposeSteps: 0,
+    chords: fields.chords || null,
+    transposeSteps: fields.transposeSteps ?? 0,
     tags: [],
+    ...(fields.durationSeconds
+      ? { durationSeconds: fields.durationSeconds }
+      : {}),
     createdAt: now,
     updatedAt: now,
   };

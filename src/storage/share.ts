@@ -1,5 +1,6 @@
 import { File, Paths } from "expo-file-system";
 import { isAvailableAsync, shareAsync } from "expo-sharing";
+import { chordProFileName } from "@/ui/chordPro";
 import { bundleFileName } from "./bundle";
 import { docxFileName } from "./docxExport";
 import { isFileSystemAvailable } from "./paths";
@@ -64,5 +65,24 @@ export async function shareDocx(
     dialogTitle,
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "org.openxmlformats.wordprocessingml.document",
+  );
+}
+
+/**
+ * Shares ChordPro text (see ui/chordPro.ts's songsToChordPro) named after
+ * `label`. Sent as plain text: ChordPro has no registered MIME type, and
+ * text/plain is what lets chord apps and plain editors alike offer to open it.
+ */
+export async function shareChordPro(
+  chordProText: string,
+  label: string,
+  dialogTitle: string,
+): Promise<void> {
+  await writeToCacheAndShare(
+    chordProFileName(label),
+    chordProText,
+    dialogTitle,
+    "text/plain",
+    "public.plain-text",
   );
 }

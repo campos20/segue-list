@@ -1,5 +1,5 @@
 import {
-  extractLyricsFromFile,
+  extractSongsFromFile,
   type ReadableFile,
 } from "@/storage/lyricsImport";
 import {
@@ -142,8 +142,10 @@ export interface LyricsFileImportResult {
 }
 
 /**
- * Creates one song per picked .txt/.docx/.odt/.pdf file, named from the filename
- * with lyrics read out of it. Each file is isolated - one that fails to
+ * Creates a song per picked .txt/.docx/.odt/.pdf/ChordPro file, named from
+ * the filename with lyrics read out of it - or, for ChordPro, from each
+ * song's `{title}`, with its chords too (see extractSongsFromFile; a
+ * ChordPro file can hold several songs). Each file is isolated - one that fails to
  * parse is reported and skipped rather than aborting the batch, since a
  * bulk import of a folder of lyric sheets is exactly the case where one bad
  * file shouldn't cost you the other eleven.
@@ -160,13 +162,19 @@ export function importSongsFromLyricsFiles(
 
     for (const { file, fileName } of files) {
       try {
-        const { name, lyrics } = await extractLyricsFromFile(file, fileName);
-        const song = createSongFile(
-          name,
-          lyrics ? plainTextToLyricsHtml(lyrics) : null,
-        );
-        dispatch(songAdded(song));
-        imported.push(song);
+        for (const draft of await extractSongsFromFile(file, fileName)) {
+          const song = createSongFile(
+            draft.name,
+            draft.lyrics ? plainTextToLyricsHtml(draft.lyrics) : null,
+            {
+              chords: draft.chords,
+              durationSeconds: draft.durationSeconds,
+              transposeSteps: draft.transposeSteps,
+            },
+          );
+          dispatch(songAdded(song));
+          imported.push(song);
+        }
       } catch (error) {
         failed.push({
           fileName,

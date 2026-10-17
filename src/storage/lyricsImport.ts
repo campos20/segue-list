@@ -1,4 +1,5 @@
 import { strFromU8, unzipSync } from "fflate";
+import { looksLikeChordPro, parseChordPro } from "@/ui/chordPro";
 import { LyricsImportError } from "./lyricsImportError";
 import { extractPdfText } from "./pdfTextExtract";
 
@@ -10,10 +11,23 @@ import { extractPdfText } from "./pdfTextExtract";
  * go through the same "strip the markup, keep paragraph/line breaks"
  * extraction, just pointed at different tag names. .pdf has no such
  * shortcut - see pdfTextExtract.ts for why and how.
+ *
+ * ChordPro (see ui/chordPro.ts) needs no choice from the user either way:
+ * its own file extensions are read as text, and the text pulled out of ANY
+ * supported file is checked for ChordPro syntax - a .txt, .docx or .pdf
+ * chord sheet written in ChordPro imports with its chords too.
  */
 export { LyricsImportError };
 
-const SUPPORTED_EXTENSIONS = ["txt", "docx", "odt", "pdf"] as const;
+/** ChordPro's file extensions - all plain text. */
+const CHORDPRO_EXTENSIONS = ["cho", "chordpro", "chopro", "crd", "pro"];
+const SUPPORTED_EXTENSIONS = [
+  "txt",
+  "docx",
+  "odt",
+  "pdf",
+  ...CHORDPRO_EXTENSIONS,
+] as const;
 type SupportedExtension = (typeof SUPPORTED_EXTENSIONS)[number];
 
 function extensionOf(fileName: string): string {
@@ -118,13 +132,18 @@ function cleanLyrics(raw: string): string {
     .trim();
 }
 
-export interface ImportedLyricsFile {
+/** One song read out of an imported file - plain-text lyrics, not yet in the rich-text storage format. */
+export interface ImportedSong {
   name: string;
   lyrics: string;
+  /** Paired 1:1 by line with `lyrics` (see ui/chords.ts); null when the file had none. */
+  chords: string | null;
+  durationSeconds: number | null;
+  transposeSteps: number;
 }
 
 /**
- * The two reads extractLyricsFromFile needs. expo-file-system's `File`
+ * The two reads extractSongsFromFile needs. expo-file-system's `File`
  * already has exactly this shape, so on a phone the picked file is passed
  * straight through; storage/pickedFile.web.ts adapts a browser `File` to it.
  */
@@ -133,30 +152,16 @@ export interface ReadableFile {
   bytes(): Promise<Uint8Array>;
 }
 
-/** Reads a picked .txt/.docx/.odt/.pdf file into a song name (from the filename) and its lyrics text. */
-export async function extractLyricsFromFile(
+async function extractText(
   file: ReadableFile,
   fileName: string,
-): Promise<ImportedLyricsFile> {
-  const extension = extensionOf(fileName);
-  if (!isSupportedExtension(extension)) {
-    throw new LyricsImportError(
-      `"${fileName}" isn't a .txt, .docx, .odt, or .pdf file.`,
-    );
-  }
-  const name =
-    fileName.slice(0, fileName.length - extension.length - 1).trim() ||
-    fileName;
-
-  if (extension === "txt") {
-    return { name, lyrics: cleanLyrics(await file.text()) };
-  }
-
+  extension: SupportedExtension,
+): Promise<string> {
   if (extension === "pdf") {
-    return {
-      name,
-      lyrics: cleanLyrics(extractPdfText(await file.bytes(), fileName)),
-    };
+    return extractPdfText(await file.bytes(), fileName);
+  }
+  if (extension !== "docx" && extension !== "odt") {
+    return file.text();
   }
 
   let zip: Record<string, Uint8Array>;
@@ -167,10 +172,53 @@ export async function extractLyricsFromFile(
       `"${fileName}" couldn't be read as a .${extension} file.`,
     );
   }
+  return extension === "docx"
+    ? extractDocxText(zip, fileName)
+    : extractOdtText(zip, fileName);
+}
 
-  const raw =
-    extension === "docx"
-      ? extractDocxText(zip, fileName)
-      : extractOdtText(zip, fileName);
-  return { name, lyrics: cleanLyrics(raw) };
+/**
+ * Reads a picked file into songs: usually one, named after the file, with
+ * its text as lyrics. A ChordPro file (by extension or by content) brings
+ * its chords, duration and transposition along, takes its name from
+ * `{title}` when it has one, and can hold several songs (`{new_song}`).
+ */
+export async function extractSongsFromFile(
+  file: ReadableFile,
+  fileName: string,
+): Promise<ImportedSong[]> {
+  const extension = extensionOf(fileName);
+  if (!isSupportedExtension(extension)) {
+    throw new LyricsImportError(
+      `"${fileName}" isn't a .txt, .docx, .odt, .pdf or ChordPro file.`,
+    );
+  }
+  const name =
+    fileName.slice(0, fileName.length - extension.length - 1).trim() ||
+    fileName;
+  const text = cleanLyrics(await extractText(file, fileName, extension));
+
+  if (CHORDPRO_EXTENSIONS.includes(extension) || looksLikeChordPro(text)) {
+    const songs = parseChordPro(text);
+    if (songs.length > 0) {
+      return songs.map((song, index) => ({
+        name:
+          song.title ?? (songs.length > 1 ? `${name} (${index + 1})` : name),
+        lyrics: song.lyrics,
+        chords: song.chords || null,
+        durationSeconds: song.durationSeconds,
+        transposeSteps: song.transposeSteps,
+      }));
+    }
+  }
+
+  return [
+    {
+      name,
+      lyrics: text,
+      chords: null,
+      durationSeconds: null,
+      transposeSteps: 0,
+    },
+  ];
 }

@@ -5,7 +5,7 @@ import {
   SONG_KEY_PREFIX,
   writeJson,
 } from "./browserStorage";
-import { isUsableSong, newSongManifest } from "./manifests";
+import { isUsableSong, newSongManifest, type NewSongFields } from "./manifests";
 
 /**
  * The browser's song library - same exports as songLibrary.ts, backed by
@@ -27,8 +27,9 @@ export function writeSong(manifest: SongManifest): void {
 export function createSong(
   name?: string,
   lyrics: string | null = null,
+  fields: NewSongFields = {},
 ): SongManifest {
-  const manifest = newSongManifest(name, lyrics);
+  const manifest = newSongManifest(name, lyrics, fields);
   writeSong(manifest);
   return manifest;
 }

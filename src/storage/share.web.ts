@@ -1,3 +1,4 @@
+import { chordProFileName } from "@/ui/chordPro";
 import { bundleFileName } from "./bundle";
 import { docxFileName } from "./docxExport";
 
@@ -50,4 +51,13 @@ export async function shareDocx(
     new Uint8Array(docxBytes),
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   );
+}
+
+/** Downloads ChordPro text (see ui/chordPro.ts's songsToChordPro) named after `label`. */
+export async function shareChordPro(
+  chordProText: string,
+  label: string,
+  _dialogTitle: string,
+): Promise<void> {
+  download(chordProFileName(label), chordProText, "text/plain");
 }
