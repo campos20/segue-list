@@ -19,9 +19,9 @@ interface PasteChordsModalProps {
 }
 
 /**
- * Collects a pasted chord chart (chord line, lyric line, repeating - see
- * ui/chords.ts's parseChordsAndLyrics, which does the actual splitting) and
- * hands the raw text back via onImport. Deliberately just a big plain
+ * Collects a pasted chord chart (chord line, lyric line, repeating - or
+ * ChordPro; ui/chordPro.ts's parsePastedChordChart tells them apart and
+ * does the actual splitting) and hands the raw text back via onImport. Deliberately just a big plain
  * TextInput, not a dedicated paste button/clipboard API: the OS's own
  * paste gesture (long-press, Cmd+V) already works on any TextInput, so no
  * new dependency (e.g. expo-clipboard) is needed for something this simple

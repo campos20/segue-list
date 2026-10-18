@@ -1,8 +1,27 @@
 name: Deploy Pages
 
-# Only the docs/ folder (the privacy policy pages) is served via GitHub
-# Pages, so this only needs to run when that folder actually changes.
+# GitHub Pages serves two things from the same site:
+#   - the web version of the app, at the root
+#   - the docs/ folder (the privacy policy pages), also at the root, so
+#     /privacy-policy.html and /privacy-policy-en.html keep the exact URLs
+#     they have always had (the Play Store listing links to them)
+#
+# The web app is always built from the latest release tag, never from
+# whatever main happens to be: a web build ahead of the released phone app
+# could write a backup format the phone can't read yet. docs/ is always
+# taken from main, so a privacy policy fix doesn't have to wait for a
+# release.
+#
+# Triggers:
+#   - a successful "Release Android APK" run. Its own tag push uses
+#     GITHUB_TOKEN, which can't trigger other workflows' `push` triggers,
+#     so this listens for the run finishing instead.
+#   - a docs/ change on main.
+#   - manual dispatch.
 on:
+  workflow_run:
+    workflows: ["Release Android APK"]
+    types: [completed]
   push:
     branches:
       - main
@@ -23,6 +42,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -30,12 +50,96 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0 # tags, to find the latest release
+
+      - name: Find the latest release
+        run: |
+          TAG="$(git describe --tags --abbrev=0 --match 'v*' HEAD)"
+          echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "Publishing the web app from ${TAG}"
+
+      - name: Check out the release
+        run: git worktree add "$RUNNER_TEMP/app" "$RELEASE_TAG"
+
+      # Releases from before the web version have no browser storage and no
+      # Pages subpath support (app.config.js) - exporting one would publish
+      # a broken page. Until the first release that has both, the site is
+      # just docs/, exactly as it was before.
+      - name: Check the release has a web version
+        run: |
+          if [ -f "$RUNNER_TEMP/app/src/storage/browserStorage.ts" ] && [ -f "$RUNNER_TEMP/app/app.config.js" ]; then
+            echo "HAS_WEB=true" >> "$GITHUB_ENV"
+          else
+            echo "::notice::${RELEASE_TAG} predates the web version - publishing docs/ only."
+            echo "HAS_WEB=false" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-node@v7
+        if: env.HAS_WEB == 'true'
+        with:
+          node-version-file: ${{ runner.temp }}/app/.nvmrc
+          cache: npm
+          cache-dependency-path: ${{ runner.temp }}/app/package-lock.json
+
+      - name: Install dependencies
+        if: env.HAS_WEB == 'true'
+        working-directory: ${{ runner.temp }}/app
+        run: npm ci
+
+      # Same as the release build: package.json is the version's single
+      # source of truth, and it's what ends up in every exported backup's
+      # `app` field.
+      - name: Set the app version
+        if: env.HAS_WEB == 'true'
+        working-directory: ${{ runner.temp }}/app
+        run: node scripts/sync-app-version.mjs "$(node -p "require('./package.json').version")"
+
+      # The site lives under /segue-list/ (a project page, not a user page),
+      # so every bundled resource needs that prefix - see app.config.js.
+      - name: Export the web app
+        if: env.HAS_WEB == 'true'
+        working-directory: ${{ runner.temp }}/app
+        run: npx expo export --platform web --output-dir "$GITHUB_WORKSPACE/site"
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+
+      - name: Start from docs only
+        if: env.HAS_WEB != 'true'
+        run: mkdir site
+
+      # Copy docs/ in without overwriting anything: if the app export ever
+      # produces a file with the same name as a doc (say a route called
+      # privacy-policy), fail the deploy instead of silently replacing either
+      # the app page or the privacy policy.
+      - name: Add docs to the site
+        run: |
+          for file in docs/*; do
+            name="$(basename "$file")"
+            if [ -e "site/$name" ]; then
+              echo "::error::docs/$name collides with a file in the web export"
+              exit 1
+            fi
+            cp -R "$file" "site/$name"
+          done
+
+      # The app's routes (/song/<id>, /settings, ...) exist only in the
+      # client-side router - the export is a single-page app (`web.output:
+      # "single"` in app.json), so there's no file for Pages to serve at
+      # those paths. Pages serves 404.html for any missing path, so making
+      # that the app shell lets a refresh or a bookmarked song open the app,
+      # which then routes itself.
+      - name: Add the SPA fallback and disable Jekyll
+        run: |
+          if [ "$HAS_WEB" = "true" ]; then cp site/index.html site/404.html; fi
+          touch site/.nojekyll
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: site
 
       - uses: actions/deploy-pages@v4
         id: deployment

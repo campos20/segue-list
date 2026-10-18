@@ -1,7 +1,5 @@
-import { File, Paths } from "expo-file-system";
 import type { SetlistManifest } from "@/types/setlist";
 import type { SongManifest } from "@/types/song";
-import { isFileSystemAvailable } from "./paths";
 import { writeSetlist } from "./setlistLibrary";
 import { writeSong } from "./songLibrary";
 
@@ -34,10 +32,30 @@ export interface BundleContents {
 }
 
 export interface ImportedBundle {
+  /** New to this library - already written by importBundle. */
   songs: SongManifest[];
   setlists: SetlistManifest[];
+  /** Already here, and the local copy is at least as recent - left alone. */
   skippedSongIds: string[];
   skippedSetlistIds: string[];
+  /**
+   * Already here, but the bundle's copy was saved more recently - NOT
+   * written by importBundle. Replacing a local copy is destructive, so the
+   * caller asks first and only then hands these to
+   * store/persistBundle.ts's applyNewerFromBundle.
+   */
+  newerSongs: SongManifest[];
+  newerSetlists: SetlistManifest[];
+  /**
+   * New to this library, but their write failed (browser storage full, a
+   * disk error) - not saved, and not in `songs`/`setlists`. Each item is
+   * written on its own, so one failure never costs the items before or
+   * after it, and every item that did save is still returned for the store.
+   * A setlist whose song failed just shows without that song (see
+   * ui/libraryTree.ts).
+   */
+  failedSongIds: string[];
+  failedSetlistIds: string[];
 }
 
 export class BundleFormatError extends Error {}
@@ -67,22 +85,17 @@ export function buildBundle(
   };
 }
 
-/** Writes a bundle into the cache directory, where it can be handed to the share sheet. */
-export function writeBundleToCache(
+/**
+ * The bundle as the text that goes into a `.seguelist` file. Pure on
+ * purpose - writing it somewhere and handing it to the user is
+ * platform-specific (share sheet on a phone, download in a browser) and
+ * lives in share.ts, so this stays the same on every platform.
+ */
+export function serializeBundle(
   contents: BundleContents,
-  label: string,
   appVersion?: string,
-): File {
-  if (!isFileSystemAvailable) {
-    throw new BundleFormatError(
-      "Backups aren't supported in this environment.",
-    );
-  }
-  const bundle = buildBundle(contents, appVersion);
-  const destination = new File(Paths.cache, bundleFileName(label));
-  if (destination.exists) destination.delete();
-  destination.write(JSON.stringify(bundle, null, 2));
-  return destination;
+): string {
+  return JSON.stringify(buildBundle(contents, appVersion), null, 2);
 }
 
 function isUsableBundle(value: unknown): value is LibraryBundle {
@@ -94,11 +107,11 @@ function isUsableBundle(value: unknown): value is LibraryBundle {
   );
 }
 
-/** Reads a `.seguelist` file back into its parts, without writing anything. */
-export function readBundle(file: File): LibraryBundle {
+/** Parses a `.seguelist` file's text back into its parts, without writing anything. */
+export function parseBundle(text: string): LibraryBundle {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(file.textSync());
+    parsed = JSON.parse(text);
   } catch {
     throw new BundleFormatError("This file isn't a valid segue-list backup.");
   }
@@ -114,42 +127,79 @@ export function readBundle(file: File): LibraryBundle {
 }
 
 /**
+ * True only when `incoming` was saved strictly after `local`. An unparseable
+ * timestamp on either side is never "newer" - when in doubt, the local copy
+ * wins.
+ */
+export function isNewerThan(
+  incoming: { updatedAt: string },
+  local: { updatedAt: string },
+): boolean {
+  const incomingTime = Date.parse(incoming.updatedAt);
+  const localTime = Date.parse(local.updatedAt);
+  if (Number.isNaN(incomingTime) || Number.isNaN(localTime)) return false;
+  return incomingTime > localTime;
+}
+
+/**
  * Merges a bundle into the local library.
  *
- * A song or setlist whose id already exists locally is left untouched
- * rather than overwritten: re-importing your own backup is a no-op instead
- * of silently replacing something you've since changed, and a bundle from
- * someone else can never clobber one of yours that happens to share an id.
+ * Anything whose id isn't here yet is written straight away. A song or
+ * setlist whose id already exists locally is never overwritten here:
+ * re-importing your own backup is a no-op instead of silently replacing
+ * something you've since changed. When the bundle's copy is newer (edited
+ * on the web version, say, then moved to the phone), it comes back in
+ * `newerSongs`/`newerSetlists` for the caller to confirm before applying.
  */
 export function importBundle(
-  file: File,
+  text: string,
   existing: BundleContents,
 ): ImportedBundle {
-  const bundle = readBundle(file);
+  const bundle = parseBundle(text);
 
-  const existingSongIds = new Set(existing.songs.map((song) => song.id));
+  const existingSongs = new Map(existing.songs.map((song) => [song.id, song]));
   const newSongs: SongManifest[] = [];
   const skippedSongIds: string[] = [];
+  const newerSongs: SongManifest[] = [];
+  const failedSongIds: string[] = [];
   for (const song of bundle.songs) {
-    if (existingSongIds.has(song.id)) {
-      skippedSongIds.push(song.id);
+    const local = existingSongs.get(song.id);
+    if (local) {
+      if (isNewerThan(song, local)) newerSongs.push(song);
+      else skippedSongIds.push(song.id);
       continue;
     }
-    writeSong(song);
+    try {
+      writeSong(song);
+    } catch (error) {
+      console.warn(`Failed to import song "${song.id}"`, error);
+      failedSongIds.push(song.id);
+      continue;
+    }
     newSongs.push(song);
   }
 
-  const existingSetlistIds = new Set(
-    existing.setlists.map((setlist) => setlist.id),
+  const existingSetlists = new Map(
+    existing.setlists.map((setlist) => [setlist.id, setlist]),
   );
   const newSetlists: SetlistManifest[] = [];
   const skippedSetlistIds: string[] = [];
+  const newerSetlists: SetlistManifest[] = [];
+  const failedSetlistIds: string[] = [];
   for (const setlist of bundle.setlists) {
-    if (existingSetlistIds.has(setlist.id)) {
-      skippedSetlistIds.push(setlist.id);
+    const local = existingSetlists.get(setlist.id);
+    if (local) {
+      if (isNewerThan(setlist, local)) newerSetlists.push(setlist);
+      else skippedSetlistIds.push(setlist.id);
       continue;
     }
-    writeSetlist(setlist);
+    try {
+      writeSetlist(setlist);
+    } catch (error) {
+      console.warn(`Failed to import setlist "${setlist.id}"`, error);
+      failedSetlistIds.push(setlist.id);
+      continue;
+    }
     newSetlists.push(setlist);
   }
 
@@ -158,5 +208,9 @@ export function importBundle(
     setlists: newSetlists,
     skippedSongIds,
     skippedSetlistIds,
+    newerSongs,
+    newerSetlists,
+    failedSongIds,
+    failedSetlistIds,
   };
 }

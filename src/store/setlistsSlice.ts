@@ -16,6 +16,8 @@ const setlistsSlice = createSlice({
       state.hydrated = true;
     },
     setlistAdded: setlistsAdapter.addOne,
+    /** Swaps in a whole manifest (an import's newer copy) - see songReplaced. */
+    setlistReplaced: setlistsAdapter.setOne,
     setlistRemoved: setlistsAdapter.removeOne,
     setlistUpdated(
       state,
@@ -32,6 +34,7 @@ const setlistsSlice = createSlice({
 export const {
   setlistsHydrated,
   setlistAdded,
+  setlistReplaced,
   setlistRemoved,
   setlistUpdated,
 } = setlistsSlice.actions;

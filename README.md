@@ -5,15 +5,18 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/campos20/segue-list/ci.yaml?branch=main&label=CI)](https://github.com/campos20/segue-list/actions/workflows/ci.yaml)
 [![Release](https://img.shields.io/github/v/release/campos20/segue-list?include_prereleases&sort=semver&label=release)](https://github.com/campos20/segue-list/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Android-lightgrey)](#running-the-app)
+[![Platform](https://img.shields.io/badge/platform-Android-lightgrey)](https://play.google.com/store/apps/details?id=com.github.campos20.seguelist)
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2057-000020?logo=expo&logoColor=white)](https://docs.expo.dev/versions/v57.0.0/)
 
 <!-- The CI and release badges read live GitHub state, so until the first
      workflow run and the first tagged release they read "no status" and "no
      releases found". Both fill themselves in - nothing to change here. -->
 
-> This app is currently in closed testing on Google Play. If you'd like to
-> use it, reach out and I'll send you instructions to join.
+<a href="https://play.google.com/store/apps/details?id=com.github.campos20.seguelist"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="80"></a>
+
+**Or try it in your browser: <https://campos20.github.io/segue-list/>** - no
+install needed. See [Web version](#web-version) for how it differs from the
+phone app.
 
 A setlist app for musicians: write your songs' lyrics once, group them into
 setlists, and read them on a phone or tablet during a show. No account, no
@@ -44,6 +47,18 @@ setlist mid-set with the next song's lyrics one tap away.
   a single file and hand it off through the OS share sheet - Drive, AirDrop,
   email, whatever. Importing merges it into your library without touching
   anything you already have.
+- **ChordPro, both ways.** [ChordPro](https://www.chordpro.org/) is the
+  format most chord apps (OnSong, SongbookPro, Planning Center, OpenLP...)
+  read and write: chords inline in the lyric, `A[G]mazing [G7]grace`.
+  Import is automatic - **Import lyrics files** takes `.cho`/`.chordpro`/
+  `.crd`/`.pro` files, recognizes ChordPro inside a `.txt`, `.docx` or
+  `.pdf` too, and **Paste chords** recognizes a pasted ChordPro chart;
+  songs come in with their chords, title, duration and transposition, and
+  a file with several songs (`{new_song}`) becomes several songs. Export a
+  song, a setlist or the whole library with **Export as ChordPro** (chords
+  written at the pitch you play them). The app has no song sections, key or
+  lyric colors in ChordPro terms, so those don't carry over (see
+  `src/ui/chordPro.ts`).
 - **English and Portuguese**, following the device's language by default,
   overridable in Settings.
 - **Light and dark themes**, following the device's setting by default (or
@@ -62,7 +77,10 @@ setlist mid-set with the next song's lyrics one tap away.
   `<id>.json` file under the app's document directory - a setlist's file
   holds song _ids_, not the songs themselves, which is what lets one song
   belong to several setlists without duplication. There is no database and
-  no sync; the filesystem is the source of truth, read once at launch.
+  no sync; the filesystem is the source of truth, read once at launch. The
+  web version keeps the same records in the browser's `localStorage`
+  instead (`*.web.ts` files next to each storage module - see
+  [Web version](#web-version)).
 - **i18n**: `src/i18n/` - a plain object dictionary per locale, checked
   against a shared TypeScript type so a missing translation is a compile
   error. See [`AGENTS.md`](AGENTS.md) for why this project has no backend and
@@ -75,10 +93,38 @@ Exporting (from the Library's overflow menu, or a single setlist's) writes a
 readable even by hand. It contains the songs and setlists you exported, and
 nothing else - no account data, because there isn't any.
 
-Importing reads that file back in. A song or setlist whose id already exists
-locally is left untouched, so re-importing your own backup is a no-op instead
-of silently overwriting something you've since edited, and a file from
-another musician can never clobber one of yours that happens to share an id.
+Importing reads that file back in. Anything new is added. A song or setlist
+whose id already exists locally is left untouched when your copy is the same
+age or newer, so re-importing your own backup is a no-op instead of silently
+overwriting something you've since edited. When the file's copy was saved
+more recently - you edited the song on the web version, say - the app asks
+before replacing yours, and nothing is replaced unless you confirm.
+
+## Web version
+
+The app also runs in a browser at <https://campos20.github.io/segue-list/>,
+meant for comfortable editing at a keyboard: write or fix lyrics there,
+then **Export full library** and **Import backup** on the phone to bring the
+changes over (newer copies replace older ones after you confirm). It also
+works on its own, saving everything in that browser.
+
+- **Where your data lives**: only in that browser's local storage - no
+  account, no server. Clearing the site's data deletes it, and Safari
+  removes it after about a week without a visit, so keep a backup export.
+- **Use the phone on stage.** The web version is for editing; the phone
+  app is what's built for a live show.
+- **One tab at a time.** If the library changes in another tab, the page
+  stops saving and asks you to reload, rather than overwriting the other
+  tab's newer edits with an older copy.
+
+It's published to GitHub Pages by `.github/workflows/pages.yaml`, always
+from the latest release tag (so it never gets ahead of the phone app), next
+to the [privacy policy](https://campos20.github.io/segue-list/privacy-policy-en.html).
+To try it locally: `npm run web`. To reproduce the Pages build:
+
+```bash
+EXPO_BASE_URL=/segue-list npx expo export --platform web
+```
 
 ## Running the app
 
@@ -112,9 +158,20 @@ request into `main`, so there's nothing here to regenerate or keep in sync.
 
 ## Downloading a release
 
-Tagged releases publish a signed APK to the
-[Releases page](https://github.com/campos20/segue-list/releases). Download
-the `.apk` and open it on your Android device.
+The easiest way to install is
+[Google Play](https://play.google.com/store/apps/details?id=com.github.campos20.seguelist),
+which also keeps the app updated.
+
+Every tagged release also publishes a signed APK to the
+[Releases page](https://github.com/campos20/segue-list/releases), for
+installing without the Play Store or for verifying a build yourself (below).
+Download the `.apk` and open it on your Android device.
+
+> **Switching between the APK and Google Play?** The two can be signed
+> differently, and Android won't install one over the other - you'd have to
+> uninstall first, and uninstalling deletes your songs and setlists. Before
+> switching, use **Export full library** to save a backup, then **Import
+> backup** in the newly installed app.
 
 ### Verifying a download
 

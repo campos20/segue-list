@@ -1,5 +1,7 @@
-import { File } from "expo-file-system";
-import { extractLyricsFromFile } from "@/storage/lyricsImport";
+import {
+  extractSongsFromFile,
+  type ReadableFile,
+} from "@/storage/lyricsImport";
 import {
   createSong as createSongFile,
   deleteSong as deleteSongFile,
@@ -98,13 +100,14 @@ export function createSongInSetlist(setlistId: string, name?: string) {
   };
 }
 
+/** Returns whether the change was written - the editor only says "Saved." when it was. */
 export function updateSong(
   id: string,
   changes: Partial<Omit<SongManifest, "id" | "createdAt">>,
 ) {
-  return (dispatch: AppDispatch, getState: () => RootState) => {
+  return (dispatch: AppDispatch, getState: () => RootState): boolean => {
     const song = songsSelectors.selectById(getState().songs, id);
-    if (!song) return;
+    if (!song) return false;
 
     const updated: SongManifest = {
       ...song,
@@ -116,7 +119,7 @@ export function updateSong(
       writeSong(updated);
     } catch (error) {
       console.warn(`Failed to write song "${id}"`, error);
-      return;
+      return false;
     }
     dispatch(
       songUpdated({
@@ -124,6 +127,7 @@ export function updateSong(
         changes: { ...changes, updatedAt: updated.updatedAt },
       }),
     );
+    return true;
   };
 }
 
@@ -138,14 +142,16 @@ export interface LyricsFileImportResult {
 }
 
 /**
- * Creates one song per picked .txt/.docx/.odt/.pdf file, named from the filename
- * with lyrics read out of it. Each file is isolated - one that fails to
+ * Creates a song per picked .txt/.docx/.odt/.pdf/ChordPro file, named from
+ * the filename with lyrics read out of it - or, for ChordPro, from each
+ * song's `{title}`, with its chords too (see extractSongsFromFile; a
+ * ChordPro file can hold several songs). Each file is isolated - one that fails to
  * parse is reported and skipped rather than aborting the batch, since a
  * bulk import of a folder of lyric sheets is exactly the case where one bad
  * file shouldn't cost you the other eleven.
  */
 export function importSongsFromLyricsFiles(
-  files: { uri: string; fileName: string }[],
+  files: { file: ReadableFile; fileName: string }[],
 ) {
   return async (
     dispatch: AppDispatch,
@@ -154,18 +160,21 @@ export function importSongsFromLyricsFiles(
     const imported: SongManifest[] = [];
     const failed: LyricsFileImportFailure[] = [];
 
-    for (const { uri, fileName } of files) {
+    for (const { file, fileName } of files) {
       try {
-        const { name, lyrics } = await extractLyricsFromFile(
-          new File(uri),
-          fileName,
-        );
-        const song = createSongFile(
-          name,
-          lyrics ? plainTextToLyricsHtml(lyrics) : null,
-        );
-        dispatch(songAdded(song));
-        imported.push(song);
+        for (const draft of await extractSongsFromFile(file, fileName)) {
+          const song = createSongFile(
+            draft.name,
+            draft.lyrics ? plainTextToLyricsHtml(draft.lyrics) : null,
+            {
+              chords: draft.chords,
+              durationSeconds: draft.durationSeconds,
+              transposeSteps: draft.transposeSteps,
+            },
+          );
+          dispatch(songAdded(song));
+          imported.push(song);
+        }
       } catch (error) {
         failed.push({
           fileName,

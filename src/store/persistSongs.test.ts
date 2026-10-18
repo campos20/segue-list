@@ -6,6 +6,7 @@ import {
   createSong,
   createSongInSetlist,
   deleteSong,
+  importSongsFromLyricsFiles,
   updateSong,
 } from "./persistSongs";
 import { setlistsSelectors } from "./setlistsSlice";
@@ -206,8 +207,9 @@ describe("updateSong", () => {
     const store = createAppStore();
     store.dispatch(createSong());
 
-    store.dispatch(updateSong(song.id, { name: "New name" }));
+    const written = store.dispatch(updateSong(song.id, { name: "New name" }));
 
+    expect(written).toBe(true);
     expect(
       songsSelectors.selectById(store.getState().songs, song.id)?.name,
     ).toBe("New name");
@@ -222,8 +224,10 @@ describe("updateSong", () => {
       throw new Error("disk full");
     });
 
-    store.dispatch(updateSong(song.id, { name: "New name" }));
+    const written = store.dispatch(updateSong(song.id, { name: "New name" }));
 
+    // false is what keeps the editor from showing "Saved." for this.
+    expect(written).toBe(false);
     expect(
       songsSelectors.selectById(store.getState().songs, song.id)?.name,
     ).toBe(song.name);
@@ -232,8 +236,9 @@ describe("updateSong", () => {
   it("does nothing for a song id that isn't in the store", () => {
     const store = createAppStore();
 
-    store.dispatch(updateSong("missing", { name: "New name" }));
+    const written = store.dispatch(updateSong("missing", { name: "New name" }));
 
+    expect(written).toBe(false);
     expect(songLibrary.writeSong).not.toHaveBeenCalled();
   });
 });
@@ -269,5 +274,44 @@ describe("deleteSong", () => {
     expect(songsSelectors.selectById(store.getState().songs, song.id)).toEqual(
       song,
     );
+  });
+});
+
+describe("importSongsFromLyricsFiles", () => {
+  it("creates a ChordPro file's songs with their chords, duration and transposition", async () => {
+    songLibrary.createSong.mockImplementation(
+      (name: string, lyrics: string | null, fields: Partial<SongManifest>) =>
+        makeSong({ id: `id-${name}`, name, lyrics, ...fields }),
+    );
+    const store = createAppStore();
+    const text =
+      "{title: One}\n{transpose: 2}\n[G]la & [C]da\n{new_song}\n{title: Two}\n{duration: 2:00}\nno chords";
+
+    const result = await store.dispatch(
+      importSongsFromLyricsFiles([
+        {
+          file: { text: async () => text, bytes: async () => new Uint8Array() },
+          fileName: "set.cho",
+        },
+      ]),
+    );
+
+    expect(result.failed).toEqual([]);
+    expect(songLibrary.createSong).toHaveBeenNthCalledWith(
+      1,
+      "One",
+      // Lyrics go into the rich-text storage format (escaped), chords stay plain.
+      "la &amp; da",
+      { chords: "G    C", durationSeconds: null, transposeSteps: 2 },
+    );
+    expect(songLibrary.createSong).toHaveBeenNthCalledWith(
+      2,
+      "Two",
+      "no chords",
+      { chords: null, durationSeconds: 120, transposeSteps: 0 },
+    );
+    expect(
+      songsSelectors.selectAll(store.getState().songs).map((song) => song.name),
+    ).toEqual(["One", "Two"]);
   });
 });
