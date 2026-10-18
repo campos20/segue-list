@@ -76,12 +76,14 @@ jobs:
             echo "HAS_WEB=false" >> "$GITHUB_ENV"
           fi
 
+      # No `cache: npm` here: setup-node only resolves cache paths inside the
+      # workspace, and the release is checked out under $RUNNER_TEMP - with
+      # the cache on, this step fails ("Some specified paths were not
+      # resolved"). This runs once per release, so the cache saved little.
       - uses: actions/setup-node@v7
         if: env.HAS_WEB == 'true'
         with:
           node-version-file: ${{ runner.temp }}/app/.nvmrc
-          cache: npm
-          cache-dependency-path: ${{ runner.temp }}/app/package-lock.json
 
       - name: Install dependencies
         if: env.HAS_WEB == 'true'
