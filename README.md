@@ -5,18 +5,18 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/campos20/segue-list/ci.yaml?branch=main&label=CI)](https://github.com/campos20/segue-list/actions/workflows/ci.yaml)
 [![Release](https://img.shields.io/github/v/release/campos20/segue-list?include_prereleases&sort=semver&label=release)](https://github.com/campos20/segue-list/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Android-lightgrey)](#running-the-app)
+[![Platform](https://img.shields.io/badge/platform-Android-lightgrey)](https://play.google.com/store/apps/details?id=com.github.campos20.seguelist)
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2057-000020?logo=expo&logoColor=white)](https://docs.expo.dev/versions/v57.0.0/)
 
 <!-- The CI and release badges read live GitHub state, so until the first
      workflow run and the first tagged release they read "no status" and "no
      releases found". Both fill themselves in - nothing to change here. -->
 
-**Try it in your browser: <https://campos20.github.io/segue-list/>** - no
+<a href="https://play.google.com/store/apps/details?id=com.github.campos20.seguelist"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="80"></a>
+
+**Or try it in your browser: <https://campos20.github.io/segue-list/>** - no
 install needed. See [Web version](#web-version) for how it differs from the
 phone app.
-
-> Download this app from Google Play: <https://play.google.com/store/apps/details?id=com.github.campos20.seguelist>.
 
 A setlist app for musicians: write your songs' lyrics once, group them into
 setlists, and read them on a phone or tablet during a show. No account, no
@@ -158,9 +158,20 @@ request into `main`, so there's nothing here to regenerate or keep in sync.
 
 ## Downloading a release
 
-Tagged releases publish a signed APK to the
-[Releases page](https://github.com/campos20/segue-list/releases). Download
-the `.apk` and open it on your Android device.
+The easiest way to install is
+[Google Play](https://play.google.com/store/apps/details?id=com.github.campos20.seguelist),
+which also keeps the app updated.
+
+Every tagged release also publishes a signed APK to the
+[Releases page](https://github.com/campos20/segue-list/releases), for
+installing without the Play Store or for verifying a build yourself (below).
+Download the `.apk` and open it on your Android device.
+
+> **Switching between the APK and Google Play?** The two can be signed
+> differently, and Android won't install one over the other - you'd have to
+> uninstall first, and uninstalling deletes your songs and setlists. Before
+> switching, use **Export full library** to save a backup, then **Import
+> backup** in the newly installed app.
 
 ### Verifying a download
 
