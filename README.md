@@ -12,8 +12,11 @@
      workflow run and the first tagged release they read "no status" and "no
      releases found". Both fill themselves in - nothing to change here. -->
 
-> This app is currently in closed testing on Google Play. If you'd like to
-> use it, reach out and I'll send you instructions to join.
+**Try it in your browser: <https://campos20.github.io/segue-list/>** - no
+install needed. See [Web version](#web-version) for how it differs from the
+phone app.
+
+> Download this app from Google Play: <https://play.google.com/store/apps/details?id=com.github.campos20.seguelist>.
 
 A setlist app for musicians: write your songs' lyrics once, group them into
 setlists, and read them on a phone or tablet during a show. No account, no
