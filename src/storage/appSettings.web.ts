@@ -20,7 +20,15 @@ export function readAppSettings(): PersistedAppSettings {
     : {};
 }
 
-/** Failing to persist must never block the UI - the change is already live in the store. */
+/**
+ * Failing to persist must never block the UI - the change is already live in the store.
+ *
+ * Re-reads the stored settings right before writing and merges only the
+ * changed fields on top, so another tab's change to a different setting is
+ * kept rather than overwritten. (That fresh read also satisfies
+ * browserStorage's "unchanged since last seen" check by design - the merge
+ * is what protects settings, not that check.)
+ */
 export function writeAppSettings(changes: Partial<PersistedAppSettings>): void {
   try {
     writeJson(SETTINGS_KEY, { ...readAppSettings(), ...changes });

@@ -75,10 +75,49 @@ function storage(): Storage | null {
   }
 }
 
+/**
+ * The raw value this tab last read or wrote at each key (null: saw it
+ * absent). The `storage` event alone can't protect a write: it reaches this
+ * tab asynchronously, so if another tab saves the same song a moment before
+ * this one does, this tab would still write its stale copy over the other
+ * tab's edit before ever hearing about it. So every write first checks
+ * that the key still holds what this tab last saw (see assertUnchanged).
+ *
+ * A key this tab never read or wrote isn't in here; it's only expected to be
+ * absent (a brand-new song or setlist id).
+ */
+const lastSeen = new Map<string, string | null>();
+
+function readRaw(store: Storage, key: string): string | null {
+  const raw = store.getItem(key);
+  lastSeen.set(key, raw);
+  return raw;
+}
+
+/**
+ * Refuses a write when another tab changed `key` since this tab last saw
+ * it - and marks the library as changed elsewhere right away, so the reload
+ * banner shows without waiting for the `storage` event.
+ *
+ * localStorage has no cross-tab transaction, so this narrows the window to
+ * the instant between this check and the write rather than closing it
+ * outright; the `storage` event still catches anything that slips through
+ * for every later write.
+ */
+function assertUnchanged(store: Storage, key: string): void {
+  if (changedElsewhere) throw new LibraryChangedElsewhereError();
+  const expected = lastSeen.has(key) ? lastSeen.get(key) : null;
+  if (store.getItem(key) !== expected) {
+    markChangedElsewhere();
+    throw new LibraryChangedElsewhereError();
+  }
+}
+
 /** Parsed JSON at `key`, or null when it's missing or unreadable. */
 export function readJson(key: string): unknown {
   try {
-    const raw = storage()?.getItem(key);
+    const store = storage();
+    const raw = store ? readRaw(store, key) : null;
     return raw == null ? null : JSON.parse(raw);
   } catch {
     return null;
@@ -104,12 +143,17 @@ export function writeJson(key: string, value: unknown): void {
   if (changedElsewhere) throw new LibraryChangedElsewhereError();
   const store = storage();
   if (!store) throw new Error("This browser isn't allowing the app to save.");
-  store.setItem(key, JSON.stringify(value));
+  assertUnchanged(store, key);
+  const raw = JSON.stringify(value);
+  store.setItem(key, raw);
+  lastSeen.set(key, raw);
 }
 
 export function removeKey(key: string): void {
   if (changedElsewhere) throw new LibraryChangedElsewhereError();
   const store = storage();
   if (!store) throw new Error("This browser isn't allowing the app to save.");
+  assertUnchanged(store, key);
   store.removeItem(key);
+  lastSeen.set(key, null);
 }

@@ -92,11 +92,15 @@ on purpose: it's synchronous like the rest of the storage API, so the "write
 lands before the store hears about it" contract holds unchanged - a full
 browser storage throws, and the persist thunks never dispatch. Keys are
 prefixed `segue-list:v1:` because every project page on `campos20.github.io`
-shares one origin. When another tab writes to the library, this tab's store
-may be stale, so browserStorage refuses every further write (and
-WebLibraryBanner asks for a reload) rather than letting an old copy
-overwrite a newer edit - a refused write is just another failed write to the
-code above it.
+shares one origin. Two guards stop a stale tab from overwriting a newer
+edit made in another tab. First, every write checks that its key still holds
+what this tab last read or wrote; if not, it's refused on the spot. The
+`storage` event alone can't do this, because it arrives asynchronously, after
+a near-simultaneous save could already have overwritten the other tab's edit.
+Second, once another tab is known to have written (by that check or by the
+`storage` event), this tab's store may be stale everywhere, so browserStorage
+refuses every further write and WebLibraryBanner asks for a reload. A refused
+write is just another failed write to the code above it.
 
 `Alert.alert` is a documented no-op in `react-native-web` (`static alert()
 {}`), so never call it directly: use `ui/dialogs.ts`'s `confirmDestructive` /
