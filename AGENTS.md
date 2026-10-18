@@ -68,15 +68,18 @@ being careful:
 - **Everything web-only lives in a `*.web.ts`/`*.web.tsx` file** next to the
   native module it replaces, with the same exports: `storage/songLibrary`,
   `setlistLibrary`, `appSettings`, `share`, `pickedFile`, `ui/dialogs`,
-  `ui/components/LyricsRichEditor`, `ui/components/WebLibraryBanner`. Metro
+  `ui/components/LyricsRichEditor`, `ui/components/WebLibraryBanner`,
+  `ui/components/SendToPhoneButton`, `ui/components/OpenInAppLink`,
+  `ui/importPayload`. Metro
   picks one file per platform, so web code is never in a phone bundle. Never
   add a `Platform.OS === "web"` branch to a shared file instead - that ships
   the web path to phones. `storage/browserStorage.ts` has no `.web` suffix
   but is only ever imported from `.web` files; keep it that way.
 - **CI proves it**: `ci.yaml` exports the Android bundle and fails if it
   contains strings that exist only in web files (`segue-list:v1:`,
-  browserStorage's error text, the editor's `allow-scripts`). If you rename
-  one of those, update the marker list.
+  browserStorage's error text, the editor's `allow-scripts`, the QR code's
+  test id and the web-only `qrcode-generator` library's own error text). If
+  you rename one of those, update the marker list.
 - **Shared code stays platform-neutral**: `bundle.ts` and `docxExport.ts`
   build text/bytes; only `share.ts` / `share.web.ts` deliver them.
   `lyricsImport.ts` reads through the small `ReadableFile` interface, which

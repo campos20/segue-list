@@ -135,6 +135,23 @@ describe("importBundle", () => {
     setlistLibrary.writeSetlist.mockReset();
   });
 
+  it("refuses ids that aren't the app's own shape - they'd become file names", () => {
+    const text = serializeBundle({
+      songs: [makeSong({ id: "../settings" }), makeSong({ id: "song-2" })],
+      setlists: [makeSetlist({ id: "../../x" })],
+    });
+
+    const result = importBundle(text, { songs: [], setlists: [] });
+
+    expect(result.failedSongIds).toEqual(["../settings"]);
+    expect(result.failedSetlistIds).toEqual(["../../x"]);
+    expect(songLibrary.writeSong).toHaveBeenCalledTimes(1);
+    expect(songLibrary.writeSong).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "song-2" }),
+    );
+    expect(setlistLibrary.writeSetlist).not.toHaveBeenCalled();
+  });
+
   it("writes nothing when the text isn't a valid bundle", () => {
     expect(() => importBundle("{}", { songs: [], setlists: [] })).toThrow(
       BundleFormatError,

@@ -1,5 +1,6 @@
 import type { SetlistManifest } from "@/types/setlist";
 import type { SongManifest } from "@/types/song";
+import { isSafeId } from "./manifests";
 import { writeSetlist } from "./setlistLibrary";
 import { writeSong } from "./songLibrary";
 
@@ -163,6 +164,12 @@ export function importBundle(
   const newerSongs: SongManifest[] = [];
   const failedSongIds: string[] = [];
   for (const song of bundle.songs) {
+    // An id becomes a file name - a backup is outside data, so one that
+    // isn't in the app's own id shape is refused, never written.
+    if (!isSafeId(song.id)) {
+      failedSongIds.push(String(song.id));
+      continue;
+    }
     const local = existingSongs.get(song.id);
     if (local) {
       if (isNewerThan(song, local)) newerSongs.push(song);
@@ -187,6 +194,10 @@ export function importBundle(
   const newerSetlists: SetlistManifest[] = [];
   const failedSetlistIds: string[] = [];
   for (const setlist of bundle.setlists) {
+    if (!isSafeId(setlist.id)) {
+      failedSetlistIds.push(String(setlist.id));
+      continue;
+    }
     const local = existingSetlists.get(setlist.id);
     if (local) {
       if (isNewerThan(setlist, local)) newerSetlists.push(setlist);

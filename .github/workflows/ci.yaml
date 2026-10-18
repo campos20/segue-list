@@ -72,7 +72,9 @@ jobs:
             echo "::error::Sanity check failed: couldn't find a known string in the Android bundle."
             exit 1
           fi
-          for marker in "segue-list:v1:" "Reload the page before making more changes" "allow-scripts"; do
+          # "code length overflow" is qrcode-generator's own error text: the QR
+          # library is a web-only dependency (SendToPhoneButton.web.tsx).
+          for marker in "segue-list:v1:" "Reload the page before making more changes" "allow-scripts" "send-to-phone-qr" "code length overflow"; do
             if grep -a -q -- "$marker" "$BUNDLE"; then
               echo "::error::Web-only code (\"$marker\") found in the Android bundle."
               exit 1

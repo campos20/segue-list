@@ -1,3 +1,4 @@
+import { isNewerThan } from "@/storage/bundle";
 import {
   extractSongsFromFile,
   type ReadableFile,
@@ -17,6 +18,7 @@ import { setlistsSelectors } from "./setlistsSlice";
 import {
   songAdded,
   songRemoved,
+  songReplaced,
   songUpdated,
   songsSelectors,
 } from "./songsSlice";
@@ -213,5 +215,51 @@ export function deleteSong(id: string) {
     const order = getState().settings.libraryOrder;
     if (order.includes(key))
       dispatch(persistLibraryOrder(order.filter((entry) => entry !== key)));
+  };
+}
+
+/**
+ * - "added": new to this library, now at the top of it.
+ * - "updated": replaced an older local copy.
+ * - "unchanged": the local copy is the same age or newer - left alone.
+ * - "failed": the write failed; nothing changed.
+ */
+export type SharedSongOutcome = "added" | "updated" | "unchanged" | "failed";
+
+/**
+ * Saves a song that arrived through a QR/app link (see ui/songLink.ts).
+ * Shares the import rule backups use (storage/bundle.ts's isNewerThan): an
+ * existing song is only ever replaced by a strictly newer copy, so scanning
+ * an old QR code can't roll back an edit made on this device since. The
+ * import screen showing the song first is the confirmation - nothing is
+ * saved until the user taps there.
+ */
+export function saveSharedSong(incoming: SongManifest) {
+  return (
+    dispatch: AppDispatch,
+    getState: () => RootState,
+  ): SharedSongOutcome => {
+    const local = songsSelectors.selectById(getState().songs, incoming.id);
+    if (local && !isNewerThan(incoming, local)) return "unchanged";
+
+    try {
+      writeSong(incoming);
+    } catch (error) {
+      console.warn(`Failed to save shared song "${incoming.id}"`, error);
+      return "failed";
+    }
+
+    if (local) {
+      dispatch(songReplaced(incoming));
+      return "updated";
+    }
+    dispatch(songAdded(incoming));
+    dispatch(
+      persistLibraryOrder([
+        songKey(incoming.id),
+        ...getState().settings.libraryOrder,
+      ]),
+    );
+    return "added";
   };
 }

@@ -17,6 +17,7 @@ import {
   type LyricsRichEditorHandle,
 } from "@/ui/components/LyricsRichEditor";
 import { PasteChordsModal } from "@/ui/components/PasteChordsModal";
+import { SendToPhoneButton } from "@/ui/components/SendToPhoneButton";
 import { TextField } from "@/ui/components/TextField";
 import { confirmDestructive, showMessage } from "@/ui/dialogs";
 import {
@@ -759,6 +760,8 @@ export function SongDetailScreen() {
             >
               {t.setlist.present}
             </Button>
+            {/* Renders nothing on iOS/Android - see SendToPhoneButton.tsx. */}
+            <SendToPhoneButton song={song} hasUnsavedChanges={isDirty} />
             {saveStatus === "saved" && (
               <Text style={styles.savedText}>{t.song.saved}</Text>
             )}

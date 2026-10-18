@@ -103,10 +103,21 @@ before replacing yours, and nothing is replaced unless you confirm.
 ## Web version
 
 The app also runs in a browser at <https://campos20.github.io/segue-list/>,
-meant for comfortable editing at a keyboard: write or fix lyrics there,
-then **Export full library** and **Import backup** on the phone to bring the
-changes over (newer copies replace older ones after you confirm). It also
-works on its own, saving everything in that browser.
+meant for comfortable editing at a keyboard. Two ways to bring a song over
+to the phone:
+
+- **One song, by QR code.** Open the song and tap **Send to phone**, then
+  point the phone's camera at the code. It opens the song in the phone's
+  browser; tap **Open in Segue List app** to save it in the app. A song
+  that's already on the phone is only updated by a newer copy, so an old
+  code can never roll back an edit. The song travels inside the link
+  itself, after the `#`, which browsers never send to the server - nothing
+  is uploaded anywhere.
+- **Everything, by backup file.** **Export full library** here, then
+  **Import backup** on the phone (newer copies replace older ones after you
+  confirm).
+
+It also works on its own, saving everything in that browser.
 
 - **Where your data lives**: only in that browser's local storage - no
   account, no server. Clearing the site's data deletes it, and Safari
