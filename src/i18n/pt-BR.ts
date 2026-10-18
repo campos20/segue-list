@@ -44,6 +44,8 @@ export const ptBR: TranslationDictionary = {
       return `Este backup tem versões mais recentes de ${parts.join(" e ")} que já estão na sua biblioteca. Suas versões atuais serão substituídas.`;
     },
     importKeepMine: "Manter as minhas",
+    importPartlyFailed: (count: number) =>
+      `Não foi possível salvar ${count} ${count === 1 ? "item" : "itens"} do backup - todo o resto foi importado.`,
     importReplace: "Substituir",
     importNewerFailed: (count: number) =>
       `Não foi possível atualizar ${count} ${count === 1 ? "item" : "itens"} do backup.`,

@@ -15,7 +15,13 @@ import {
 } from "./setlistsSlice";
 import { songAdded, songReplaced, songsSelectors } from "./songsSlice";
 
-/** Parses a `.seguelist` backup's text and merges anything new into the local library. */
+/**
+ * Parses a `.seguelist` backup's text and merges anything new into the
+ * local library. Every item that was actually written reaches the store,
+ * even when others in the same backup failed (see
+ * ImportedBundle.failedSongIds) - the store never misses something that's
+ * on disk.
+ */
 export function importBundleIntoLibrary(bundleText: string) {
   return (dispatch: AppDispatch, getState: () => RootState): ImportedBundle => {
     const state = getState();

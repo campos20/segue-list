@@ -107,6 +107,34 @@ describe("importBundle", () => {
     expect(setlistLibrary.writeSetlist).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps going when one write fails, reporting it instead of throwing", () => {
+    // PR review: storage running out mid-import must not lose track of the
+    // items already written before (or after) the failure.
+    songLibrary.writeSong.mockImplementation((song: SongManifest) => {
+      if (song.id === "song-2") throw new Error("storage full");
+    });
+    setlistLibrary.writeSetlist.mockImplementation(() => {
+      throw new Error("storage full");
+    });
+    const text = serializeBundle({
+      songs: [
+        makeSong({ id: "song-1" }),
+        makeSong({ id: "song-2" }),
+        makeSong({ id: "song-3" }),
+      ],
+      setlists: [makeSetlist()],
+    });
+
+    const result = importBundle(text, { songs: [], setlists: [] });
+
+    expect(result.songs.map((song) => song.id)).toEqual(["song-1", "song-3"]);
+    expect(result.failedSongIds).toEqual(["song-2"]);
+    expect(result.setlists).toEqual([]);
+    expect(result.failedSetlistIds).toEqual(["list-1"]);
+    songLibrary.writeSong.mockReset();
+    setlistLibrary.writeSetlist.mockReset();
+  });
+
   it("writes nothing when the text isn't a valid bundle", () => {
     expect(() => importBundle("{}", { songs: [], setlists: [] })).toThrow(
       BundleFormatError,

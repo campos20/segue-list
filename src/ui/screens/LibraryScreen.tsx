@@ -318,6 +318,10 @@ export function LibraryScreen() {
       const result = dispatch(importBundleIntoLibrary(bundleText));
       setStatus(null);
 
+      const failed =
+        result.failedSongIds.length + result.failedSetlistIds.length;
+      if (failed > 0) setError(t.library.importPartlyFailed(failed));
+
       const { newerSongs, newerSetlists } = result;
       if (newerSongs.length + newerSetlists.length > 0) {
         // Anything new is already in; replacing an existing copy is the
@@ -348,7 +352,7 @@ export function LibraryScreen() {
       const imported = result.songs.length + result.setlists.length;
       const skipped =
         result.skippedSongIds.length + result.skippedSetlistIds.length;
-      if (imported === 0 && skipped > 0) {
+      if (failed === 0 && imported === 0 && skipped > 0) {
         setError(t.library.importAlreadyHere);
       }
     } catch (e) {

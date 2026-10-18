@@ -46,6 +46,16 @@ export interface ImportedBundle {
    */
   newerSongs: SongManifest[];
   newerSetlists: SetlistManifest[];
+  /**
+   * New to this library, but their write failed (browser storage full, a
+   * disk error) - not saved, and not in `songs`/`setlists`. Each item is
+   * written on its own, so one failure never costs the items before or
+   * after it, and every item that did save is still returned for the store.
+   * A setlist whose song failed just shows without that song (see
+   * ui/libraryTree.ts).
+   */
+  failedSongIds: string[];
+  failedSetlistIds: string[];
 }
 
 export class BundleFormatError extends Error {}
@@ -151,6 +161,7 @@ export function importBundle(
   const newSongs: SongManifest[] = [];
   const skippedSongIds: string[] = [];
   const newerSongs: SongManifest[] = [];
+  const failedSongIds: string[] = [];
   for (const song of bundle.songs) {
     const local = existingSongs.get(song.id);
     if (local) {
@@ -158,7 +169,13 @@ export function importBundle(
       else skippedSongIds.push(song.id);
       continue;
     }
-    writeSong(song);
+    try {
+      writeSong(song);
+    } catch (error) {
+      console.warn(`Failed to import song "${song.id}"`, error);
+      failedSongIds.push(song.id);
+      continue;
+    }
     newSongs.push(song);
   }
 
@@ -168,6 +185,7 @@ export function importBundle(
   const newSetlists: SetlistManifest[] = [];
   const skippedSetlistIds: string[] = [];
   const newerSetlists: SetlistManifest[] = [];
+  const failedSetlistIds: string[] = [];
   for (const setlist of bundle.setlists) {
     const local = existingSetlists.get(setlist.id);
     if (local) {
@@ -175,7 +193,13 @@ export function importBundle(
       else skippedSetlistIds.push(setlist.id);
       continue;
     }
-    writeSetlist(setlist);
+    try {
+      writeSetlist(setlist);
+    } catch (error) {
+      console.warn(`Failed to import setlist "${setlist.id}"`, error);
+      failedSetlistIds.push(setlist.id);
+      continue;
+    }
     newSetlists.push(setlist);
   }
 
@@ -186,5 +210,7 @@ export function importBundle(
     skippedSetlistIds,
     newerSongs,
     newerSetlists,
+    failedSongIds,
+    failedSetlistIds,
   };
 }

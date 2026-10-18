@@ -40,6 +40,8 @@ export const en = {
       return `This backup has newer versions of ${parts.join(" and ")} already in your library. Your current versions will be replaced.`;
     },
     importKeepMine: "Keep mine",
+    importPartlyFailed: (count: number) =>
+      `Couldn't save ${count} item${count === 1 ? "" : "s"} from the backup - everything else was imported.`,
     importReplace: "Replace",
     importNewerFailed: (count: number) =>
       `Couldn't update ${count} item${count === 1 ? "" : "s"} from the backup.`,

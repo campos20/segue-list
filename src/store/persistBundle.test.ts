@@ -99,6 +99,29 @@ describe("importBundleIntoLibrary", () => {
   });
 });
 
+describe("importBundleIntoLibrary when a write fails partway", () => {
+  it("still adds every item that was saved to the store", () => {
+    songLibrary.writeSong.mockImplementation((song: SongManifest) => {
+      if (song.id === "song-2") throw new Error("storage full");
+    });
+    const store = storeWith([]);
+    const text = serializeBundle({
+      songs: [makeSong({ id: "song-1" }), makeSong({ id: "song-2" })],
+      setlists: [makeSetlist({ songs: ["song-1", "song-2"] })],
+    });
+
+    const result = store.dispatch(importBundleIntoLibrary(text));
+
+    expect(result.failedSongIds).toEqual(["song-2"]);
+    expect(
+      songsSelectors.selectAll(store.getState().songs).map((song) => song.id),
+    ).toEqual(["song-1"]);
+    expect(
+      setlistsSelectors.selectById(store.getState().setlists, "list-1"),
+    ).toBeDefined();
+  });
+});
+
 describe("applyNewerFromBundle", () => {
   it("replaces the whole local song, including fields the newer copy no longer has", () => {
     const store = storeWith([makeSong()]);
