@@ -127,6 +127,27 @@ shell, because Pages can't route `/song/<id>` itself; the `/segue-list`
 subpath comes from `EXPO_BASE_URL` via `app.config.js`, so `npm run web`
 still serves from the root.
 
+## A documented trap: npm dropping `@emnapi/*` from the lockfile
+
+Three times now (a version bump, adding `qrcode-generator`, the SDK 57 patch
+updates), running `npm install` on a Mac rewrote `package-lock.json` without
+the `node_modules/@emnapi/core` and `@emnapi/runtime` entries, and CI's
+`npm ci` then failed with "lock file's @emnapi/wasi-threads@... does not
+satisfy ..." / "Missing: @emnapi/core@1.10.0 from lock file". They're
+dependencies of `@unrs/resolver-binding-wasm32-wasi` (pulled in by ESLint's
+import resolver via `eslint-config-expo`), a build for the wasm32 platform
+only; npm leaves a platform-specific optional package's own dependencies out
+when it rewrites the lockfile on a machine where that package doesn't apply,
+even with `--package-lock-only`. Linux CI checks the whole tree and rejects
+the gap.
+
+After any change to dependencies, run `npm run check:lockfile` (it's
+`npm ci --dry-run` - it validates the lockfile exactly the way CI's `npm ci`
+does, and installs nothing). If it fails this way, restore those entries
+from `main`'s lockfile (they're only valid while the wasm32 binding's
+version - and so its pinned `@emnapi` versions - is unchanged; check that
+first) and run it again.
+
 ## A documented incident: the caret jumping while typing in `LyricsRichEditor`
 
 A user reported the cursor jumping while typing in Rich text mode. Both
