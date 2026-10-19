@@ -1,4 +1,4 @@
-import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
+import { deflateSync, Inflate, strFromU8, strToU8 } from "fflate";
 import { generateId } from "@/storage/ids";
 import { isSafeId } from "@/storage/manifests";
 import type { SongManifest } from "@/types/song";
@@ -106,6 +106,52 @@ function base64UrlToBytes(text: string): Uint8Array {
   return bytes;
 }
 
+// Compressed input is fed to the decoder this many bytes at a time. Deflate
+// expands at most ~1032:1, so one slice can yield at most ~132 KB before the
+// size check below gets to run.
+const INFLATE_INPUT_SLICE = 128;
+
+/**
+ * Inflates `data`, refusing as soon as the output passes `maxBytes` - before
+ * the rest is decompressed, not after. A link is untrusted, and deflate can
+ * turn a few KB into many MB: inflating it all first and checking the size
+ * afterwards (inflateSync) would already have made that allocation, enough
+ * to stall or crash a phone. Fed in small slices to fflate's streaming
+ * Inflate, which hands each piece of output to the callback and keeps only
+ * a 32 KB window, peak memory stays near `maxBytes` + one slice's output.
+ *
+ * Throws SongLinkError when the limit is hit; a corrupt stream throws
+ * whatever fflate throws. Exported for its tests.
+ */
+export function inflateWithLimit(
+  data: Uint8Array,
+  maxBytes: number,
+): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let finished = false;
+  const inflater = new Inflate((chunk, final) => {
+    total += chunk.length;
+    // Thrown inside the callback, so it aborts the push that produced it.
+    if (total > maxBytes) throw new SongLinkError("invalid");
+    chunks.push(chunk);
+    if (final) finished = true;
+  });
+  for (let offset = 0; offset < data.length; offset += INFLATE_INPUT_SLICE) {
+    const end = Math.min(offset + INFLATE_INPUT_SLICE, data.length);
+    inflater.push(data.subarray(offset, end), end === data.length);
+  }
+  if (!finished) throw new SongLinkError("invalid");
+
+  const out = new Uint8Array(total);
+  let position = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, position);
+    position += chunk.length;
+  }
+  return out;
+}
+
 /** `song` as a link payload. Lyrics keep their color markup - it's the app's own format at both ends. */
 export function encodeSongLink(song: SongManifest): string {
   const payload: SongLinkPayload = {
@@ -146,8 +192,10 @@ export function decodeSongLink(text: string): SongManifest {
 
   let json: unknown;
   try {
-    const inflated = inflateSync(base64UrlToBytes(trimmed));
-    if (inflated.length > MAX_INFLATED_BYTES) invalid();
+    const inflated = inflateWithLimit(
+      base64UrlToBytes(trimmed),
+      MAX_INFLATED_BYTES,
+    );
     json = JSON.parse(strFromU8(inflated));
   } catch (error) {
     if (error instanceof SongLinkError) throw error;

@@ -1,8 +1,9 @@
-import { deflateSync, strToU8 } from "fflate";
+import { deflateSync, inflateSync, strToU8 } from "fflate";
 import type { SongManifest } from "@/types/song";
 import {
   decodeSongLink,
   encodeSongLink,
+  inflateWithLimit,
   MAX_QR_PAYLOAD_LENGTH,
   SongLinkError,
   songImportAppUrl,
@@ -178,5 +179,47 @@ describe("link builders", () => {
 
   it("hands the payload to the app through its own scheme", () => {
     expect(songImportAppUrl("abc")).toBe("seguelist://import?d=abc");
+  });
+});
+
+describe("inflateWithLimit", () => {
+  it("inflates exactly what inflateSync would, within the limit", () => {
+    const original = strToU8(
+      "Amazing grace, how sweet the sound\n".repeat(200),
+    );
+    const compressed = deflateSync(original);
+    expect(inflateWithLimit(compressed, original.length)).toEqual(
+      inflateSync(compressed),
+    );
+  });
+
+  it("refuses a stream that ends before its final block", () => {
+    const compressed = deflateSync(strToU8("x".repeat(5000)));
+    expect(() =>
+      inflateWithLimit(compressed.subarray(0, compressed.length - 4), 1e6),
+    ).toThrow();
+  });
+
+  it("stops as soon as the output passes the limit, without decompressing the rest", () => {
+    // PR review: inflating everything first and checking the size after
+    // lets a small link force a huge allocation. 30 MB of zeros compress to
+    // ~30 KB; the second half of that compressed data is then corrupted.
+    const bomb = deflateSync(new Uint8Array(30_000_000), { level: 9 });
+    const corrupted = bomb.slice();
+    corrupted.fill(0xff, Math.floor(corrupted.length / 2));
+
+    // Control: decoding all the way does reach the corruption...
+    let fullError: unknown;
+    try {
+      inflateWithLimit(corrupted, Number.MAX_SAFE_INTEGER);
+    } catch (error) {
+      fullError = error;
+    }
+    expect(fullError).toBeDefined();
+    expect(fullError).not.toBeInstanceOf(SongLinkError);
+
+    // ...so failing with the limit error instead proves decoding stopped at
+    // the limit, long before the corrupted half was ever read.
+    expect(() => inflateWithLimit(corrupted, 256_000)).toThrow(SongLinkError);
   });
 });
