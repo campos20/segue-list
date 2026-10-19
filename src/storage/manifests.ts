@@ -51,6 +51,18 @@ export function newSetlistManifest(name = DRAFT_SETLIST_NAME): SetlistManifest {
   };
 }
 
+/**
+ * Whether `id` has the shape generateId produces (lowercase letters, digits
+ * and hyphens). An id becomes a file name (`songs/<id>.json`), so one that
+ * arrives from outside the app - a QR link, say - is only trusted when it
+ * matches: something like `../settings` must never reach the filesystem.
+ */
+export function isSafeId(id: unknown): id is string {
+  // 250: a file name is at most 255 bytes, and ".json" takes 5. generateId
+  // doesn't cap its slug, so a long song name gives a long (but valid) id.
+  return typeof id === "string" && /^[a-z0-9][a-z0-9-]{0,249}$/.test(id);
+}
+
 export function isUsableSong(manifest: unknown): manifest is SongManifest {
   const candidate = manifest as SongManifest | null;
   return Boolean(candidate?.id) && typeof candidate?.name === "string";

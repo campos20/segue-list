@@ -7,10 +7,11 @@ import {
   createSongInSetlist,
   deleteSong,
   importSongsFromLyricsFiles,
+  saveSharedSong,
   updateSong,
 } from "./persistSongs";
 import { setlistsSelectors } from "./setlistsSlice";
-import { songsSelectors } from "./songsSlice";
+import { songsHydrated, songsSelectors } from "./songsSlice";
 
 jest.mock("@/storage/songLibrary");
 jest.mock("@/storage/setlistLibrary");
@@ -313,5 +314,77 @@ describe("importSongsFromLyricsFiles", () => {
     expect(
       songsSelectors.selectAll(store.getState().songs).map((song) => song.name),
     ).toEqual(["One", "Two"]);
+  });
+});
+
+describe("saveSharedSong", () => {
+  const OLDER = "2026-01-01T00:00:00.000Z";
+  const NEWER = "2026-02-01T00:00:00.000Z";
+
+  it("adds a song that isn't here yet, at the top of the library", () => {
+    const store = createAppStore();
+    store.dispatch(songsHydrated([makeSong({ id: "other" })]));
+    const incoming = makeSong({ id: "shared", updatedAt: NEWER });
+
+    expect(store.dispatch(saveSharedSong(incoming))).toBe("added");
+    expect(songLibrary.writeSong).toHaveBeenCalledWith(incoming);
+    expect(songsSelectors.selectById(store.getState().songs, "shared")).toEqual(
+      incoming,
+    );
+    expect(store.getState().settings.libraryOrder[0]).toBe("song:shared");
+  });
+
+  it("replaces an older local copy", () => {
+    const store = createAppStore();
+    store.dispatch(
+      songsHydrated([
+        makeSong({ id: "shared", lyrics: "old", updatedAt: OLDER }),
+      ]),
+    );
+
+    expect(
+      store.dispatch(
+        saveSharedSong(
+          makeSong({ id: "shared", lyrics: "new", updatedAt: NEWER }),
+        ),
+      ),
+    ).toBe("updated");
+    expect(
+      songsSelectors.selectById(store.getState().songs, "shared")?.lyrics,
+    ).toBe("new");
+  });
+
+  it("never rolls back a local copy that's the same age or newer", () => {
+    const store = createAppStore();
+    store.dispatch(
+      songsHydrated([
+        makeSong({ id: "shared", lyrics: "edited here", updatedAt: NEWER }),
+      ]),
+    );
+
+    expect(
+      store.dispatch(
+        saveSharedSong(
+          makeSong({ id: "shared", lyrics: "old QR", updatedAt: OLDER }),
+        ),
+      ),
+    ).toBe("unchanged");
+    expect(songLibrary.writeSong).not.toHaveBeenCalled();
+    expect(
+      songsSelectors.selectById(store.getState().songs, "shared")?.lyrics,
+    ).toBe("edited here");
+  });
+
+  it("leaves the store untouched when the write fails", () => {
+    songLibrary.writeSong.mockImplementation(() => {
+      throw new Error("disk full");
+    });
+    const store = createAppStore();
+    store.dispatch(songsHydrated([]));
+
+    expect(store.dispatch(saveSharedSong(makeSong({ id: "shared" })))).toBe(
+      "failed",
+    );
+    expect(songsSelectors.selectAll(store.getState().songs)).toEqual([]);
   });
 });

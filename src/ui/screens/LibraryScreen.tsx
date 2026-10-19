@@ -55,6 +55,10 @@ import {
 } from "@/ui/components/OverflowMenu";
 import { SetlistRow } from "@/ui/components/SetlistRow";
 import { SongRow } from "@/ui/components/SongRow";
+import {
+  SEND_TO_PHONE_SUPPORTED,
+  SendToPhoneDialog,
+} from "@/ui/components/SendToPhoneDialog";
 import { SortSetlistModal } from "@/ui/components/SortSetlistModal";
 import { TextField } from "@/ui/components/TextField";
 import {
@@ -63,6 +67,7 @@ import {
   type LibraryItem,
 } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
+import { readableColumn } from "@/ui/layout";
 import { songsToChordPro } from "@/ui/chordPro";
 import { confirmDestructive } from "@/ui/dialogs";
 import { setlistToText } from "@/ui/setlistText";
@@ -105,6 +110,8 @@ export function LibraryScreen() {
     null,
   );
   const [sortingSetlistId, setSortingSetlistId] = useState<string | null>(null);
+  // The song whose QR code is showing (web only - see SendToPhoneDialog).
+  const [sendingSongId, setSendingSongId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -454,6 +461,17 @@ export function LibraryScreen() {
         onPress: () =>
           handleExportChordPro([song], song.name, t.setlist.exportChordPro),
       },
+      // Only in the web version: getting a song from there onto the phone.
+      ...(SEND_TO_PHONE_SUPPORTED
+        ? [
+            {
+              key: "send-to-phone",
+              label: t.sendToPhone.menuItem,
+              icon: <ExportIcon />,
+              onPress: () => setSendingSongId(song.id),
+            },
+          ]
+        : []),
       {
         key: "delete",
         label: t.setlist.deleteSong,
@@ -516,7 +534,7 @@ export function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, readableColumn]}>
         <View>
           <Text style={styles.eyebrow}>{t.library.eyebrow}</Text>
           <Text style={styles.header}>{t.library.title}</Text>
@@ -551,7 +569,7 @@ export function LibraryScreen() {
         </View>
       </View>
 
-      <View style={styles.searchRow}>
+      <View style={[styles.searchRow, readableColumn]}>
         <TextField
           value={search}
           onChangeText={setSearch}
@@ -559,10 +577,10 @@ export function LibraryScreen() {
         />
       </View>
 
-      {status && <Text style={styles.status}>{status}</Text>}
-      {error && <Text style={styles.error}>{error}</Text>}
+      {status && <Text style={[styles.status, readableColumn]}>{status}</Text>}
+      {error && <Text style={[styles.error, readableColumn]}>{error}</Text>}
 
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView contentContainerStyle={[styles.list, readableColumn]}>
         {!hydrated ? (
           <ActivityIndicator color={colors.accent} style={styles.loading} />
         ) : items.length === 0 ? (
@@ -803,6 +821,10 @@ export function LibraryScreen() {
           })
         )}
       </ScrollView>
+      <SendToPhoneDialog
+        song={songs.find((song) => song.id === sendingSongId) ?? null}
+        onClose={() => setSendingSongId(null)}
+      />
     </SafeAreaView>
   );
 }

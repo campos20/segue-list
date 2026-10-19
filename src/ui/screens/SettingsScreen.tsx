@@ -10,6 +10,7 @@ import {
 } from "@/store/persistSettings";
 import type { ThemeOverride } from "@/types/theme";
 import { OverflowMenu } from "@/ui/components/OverflowMenu";
+import { readableColumn } from "@/ui/layout";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 type LanguageKey = "system" | Locale;
@@ -76,7 +77,7 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.header}>
+      <View style={[styles.header, readableColumn]}>
         <Pressable
           onPress={() => router.back()}
           hitSlop={8}
@@ -87,7 +88,7 @@ export function SettingsScreen() {
         <Text style={styles.title}>{t.settings.title}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, readableColumn]}>
         <View style={styles.section}>
           <Text style={styles.sectionHeading}>{t.settings.language}</Text>
           <OverflowMenu

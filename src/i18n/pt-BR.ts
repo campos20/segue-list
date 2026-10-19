@@ -208,6 +208,34 @@ export const ptBR: TranslationDictionary = {
     themeLight: "Claro",
     themeDark: "Escuro",
   },
+  sendToPhone: {
+    menuItem: "Enviar para o celular (QR code)",
+    title: "Escaneie com o celular",
+    hint: "Aponte a câmera do celular para este código. Ele abre a música no navegador - toque em “Abrir no app Segue List” lá para salvá-la no app.",
+    tooLong:
+      "Esta música é longa demais para caber em um QR code. Use “Exportar como ChordPro” ou “Exportar biblioteca completa”.",
+    close: "Fechar",
+  },
+  importLink: {
+    title: "Importar música",
+    invalid: "Este não é um link de música válido do Segue List.",
+    newerVersion:
+      "Esta música foi compartilhada de uma versão mais nova do app. Atualize o app para abri-la.",
+    loading: "Carregando sua biblioteca...",
+    withChords: "Com acordes",
+    save: "Salvar na biblioteca",
+    update: "Atualizar música",
+    updateHint:
+      "Sua biblioteca tem uma versão mais antiga desta música - atualizar a substitui.",
+    upToDate: "Sua biblioteca já tem esta versão da música, ou uma mais nova.",
+    openSong: "Abrir música",
+    saveFailed: "Não foi possível salvar a música. Tente novamente.",
+    openInApp: "Abrir no app Segue List",
+    openInAppHint: "Está no celular? Abra a música no app Segue List.",
+    orSaveHere: "Ou guarde neste navegador:",
+    getApp: "Não tem o app? Baixe no Google Play",
+    goToLibrary: "Ir para a biblioteca",
+  },
   web: {
     storageNotice:
       "Sua biblioteca está salva apenas neste navegador. Use “Exportar biblioteca completa” para guardar uma cópia ou levá-la para o celular.",

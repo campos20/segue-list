@@ -201,6 +201,35 @@ export const en = {
     themeLight: "Light",
     themeDark: "Dark",
   },
+  sendToPhone: {
+    menuItem: "Send to phone (QR code)",
+    title: "Scan with your phone",
+    hint: "Point your phone's camera at this code. It opens the song in the browser - tap “Open in Segue List app” there to save it in the app.",
+    tooLong:
+      "This song is too long to fit in a QR code. Use “Export as ChordPro” or “Export full library” instead.",
+    close: "Close",
+  },
+  importLink: {
+    title: "Import song",
+    invalid: "This isn't a valid Segue List song link.",
+    newerVersion:
+      "This song was shared from a newer version of the app. Update the app to open it.",
+    loading: "Loading your library...",
+    withChords: "With chords",
+    save: "Save to library",
+    update: "Update song",
+    updateHint:
+      "Your library has an older version of this song - updating replaces it.",
+    upToDate:
+      "Your library already has this version of the song, or a newer one.",
+    openSong: "Open song",
+    saveFailed: "Couldn't save the song. Try again.",
+    openInApp: "Open in Segue List app",
+    openInAppHint: "On your phone? Open the song in the Segue List app.",
+    orSaveHere: "Or keep it in this browser:",
+    getApp: "Don't have the app? Get it on Google Play",
+    goToLibrary: "Go to library",
+  },
   web: {
     storageNotice:
       "Your library is saved only in this browser. Use “Export full library” to keep a copy or move it to your phone.",
