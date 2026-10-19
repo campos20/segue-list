@@ -9,7 +9,7 @@ import {
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import Constants from "expo-constants";
 import createQrCode from "qrcode-generator";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Image, Modal, StyleSheet, Text, View } from "react-native";
 
 /**
@@ -39,76 +39,70 @@ function qrDataUrl(text: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+export const SEND_TO_PHONE_SUPPORTED = true;
+
 /**
- * "Send to phone": shows the saved song as a QR code that any phone camera
- * can open - see ui/songLink.ts for the link and ImportSongScreen for the
- * other end. The code always carries the *saved* song (unsaved edits are
- * flagged, not included), so what arrives on the phone is exactly what's in
- * this library.
+ * "Send to phone (QR code)" from a song's menu in the Library: shows the
+ * song as a QR code that any phone camera can open - see ui/songLink.ts for
+ * the link and ImportSongScreen for the other end. Open while `song` is set.
+ * The Library only ever holds saved songs, so what arrives on the phone is
+ * exactly what's in this library.
  */
-export function SendToPhoneButton({
+export function SendToPhoneDialog({
   song,
-  hasUnsavedChanges,
+  onClose,
 }: {
-  song: SongManifest;
-  hasUnsavedChanges: boolean;
+  song: SongManifest | null;
+  onClose: () => void;
 }) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [open, setOpen] = useState(false);
 
-  // Only computed while the dialog is open, and again when the saved song
-  // changes - a QR for a long song takes a moment to build.
+  // Built only while the dialog is open (a QR for a long song takes a
+  // moment), and again if the song changes.
   const qr = useMemo(() => {
-    if (!open) return null;
+    if (!song) return null;
     const payload = encodeSongLink(song);
-    if (payload.length > MAX_QR_PAYLOAD_LENGTH)
+    if (payload.length > MAX_QR_PAYLOAD_LENGTH) {
       return { tooLong: true as const };
+    }
     const url = songImportWebUrl(siteBaseUrl(), payload);
     return { tooLong: false as const, url, image: qrDataUrl(url) };
-  }, [open, song]);
+  }, [song]);
 
   return (
-    <>
-      <Button variant="secondary" onPress={() => setOpen(true)}>
-        {t.sendToPhone.button}
-      </Button>
-      <Modal
-        visible={open}
-        transparent
-        animationType="none"
-        onRequestClose={() => setOpen(false)}
-      >
-        <View style={styles.backdrop}>
-          <View style={styles.dialog}>
-            <Text style={styles.title}>{t.sendToPhone.title}</Text>
-            <Text style={styles.songName}>{song.name}</Text>
-            {qr?.tooLong ? (
-              <Text style={styles.warning}>{t.sendToPhone.tooLong}</Text>
-            ) : qr ? (
-              <>
-                <View style={styles.codeFrame}>
-                  <Image
-                    source={{ uri: qr.image }}
-                    style={styles.code}
-                    accessibilityLabel={qr.url}
-                    testID="send-to-phone-qr"
-                  />
-                </View>
-                <Text style={styles.hint}>{t.sendToPhone.hint}</Text>
-              </>
-            ) : null}
-            {hasUnsavedChanges && (
-              <Text style={styles.warning}>{t.sendToPhone.unsavedWarning}</Text>
-            )}
-            <Button variant="secondary" onPress={() => setOpen(false)}>
-              {t.sendToPhone.close}
-            </Button>
-          </View>
+    <Modal
+      visible={song !== null}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+    >
+      <View style={styles.backdrop}>
+        <View style={styles.dialog}>
+          <Text style={styles.title}>{t.sendToPhone.title}</Text>
+          <Text style={styles.songName}>{song?.name}</Text>
+          {qr?.tooLong ? (
+            <Text style={styles.warning}>{t.sendToPhone.tooLong}</Text>
+          ) : qr ? (
+            <>
+              <View style={styles.codeFrame}>
+                <Image
+                  source={{ uri: qr.image }}
+                  style={styles.code}
+                  accessibilityLabel={qr.url}
+                  testID="send-to-phone-qr"
+                />
+              </View>
+              <Text style={styles.hint}>{t.sendToPhone.hint}</Text>
+            </>
+          ) : null}
+          <Button variant="secondary" onPress={onClose}>
+            {t.sendToPhone.close}
+          </Button>
         </View>
-      </Modal>
-    </>
+      </View>
+    </Modal>
   );
 }
 

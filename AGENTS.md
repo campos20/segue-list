@@ -69,7 +69,7 @@ being careful:
   native module it replaces, with the same exports: `storage/songLibrary`,
   `setlistLibrary`, `appSettings`, `share`, `pickedFile`, `ui/dialogs`,
   `ui/components/LyricsRichEditor`, `ui/components/WebLibraryBanner`,
-  `ui/components/SendToPhoneButton`, `ui/components/OpenInAppLink`,
+  `ui/components/SendToPhoneDialog`, `ui/components/OpenInAppLink`,
   `ui/importPayload`. Metro
   picks one file per platform, so web code is never in a phone bundle. Never
   add a `Platform.OS === "web"` branch to a shared file instead - that ships

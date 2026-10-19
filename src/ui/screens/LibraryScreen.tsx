@@ -55,6 +55,10 @@ import {
 } from "@/ui/components/OverflowMenu";
 import { SetlistRow } from "@/ui/components/SetlistRow";
 import { SongRow } from "@/ui/components/SongRow";
+import {
+  SEND_TO_PHONE_SUPPORTED,
+  SendToPhoneDialog,
+} from "@/ui/components/SendToPhoneDialog";
 import { SortSetlistModal } from "@/ui/components/SortSetlistModal";
 import { TextField } from "@/ui/components/TextField";
 import {
@@ -106,6 +110,8 @@ export function LibraryScreen() {
     null,
   );
   const [sortingSetlistId, setSortingSetlistId] = useState<string | null>(null);
+  // The song whose QR code is showing (web only - see SendToPhoneDialog).
+  const [sendingSongId, setSendingSongId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -455,6 +461,17 @@ export function LibraryScreen() {
         onPress: () =>
           handleExportChordPro([song], song.name, t.setlist.exportChordPro),
       },
+      // Only in the web version: getting a song from there onto the phone.
+      ...(SEND_TO_PHONE_SUPPORTED
+        ? [
+            {
+              key: "send-to-phone",
+              label: t.sendToPhone.menuItem,
+              icon: <ExportIcon />,
+              onPress: () => setSendingSongId(song.id),
+            },
+          ]
+        : []),
       {
         key: "delete",
         label: t.setlist.deleteSong,
@@ -804,6 +821,10 @@ export function LibraryScreen() {
           })
         )}
       </ScrollView>
+      <SendToPhoneDialog
+        song={songs.find((song) => song.id === sendingSongId) ?? null}
+        onClose={() => setSendingSongId(null)}
+      />
     </SafeAreaView>
   );
 }

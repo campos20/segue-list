@@ -209,11 +209,9 @@ export const ptBR: TranslationDictionary = {
     themeDark: "Escuro",
   },
   sendToPhone: {
-    button: "Enviar para o celular",
+    menuItem: "Enviar para o celular (QR code)",
     title: "Escaneie com o celular",
     hint: "Aponte a câmera do celular para este código. Ele abre a música no navegador - toque em “Abrir no app Segue List” lá para salvá-la no app.",
-    unsavedWarning:
-      "Este código tem a última versão salva. Salve antes para incluir suas alterações mais recentes.",
     tooLong:
       "Esta música é longa demais para caber em um QR code. Use “Exportar como ChordPro” ou “Exportar biblioteca completa”.",
     close: "Fechar",

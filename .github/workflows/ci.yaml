@@ -73,7 +73,7 @@ jobs:
             exit 1
           fi
           # "code length overflow" is qrcode-generator's own error text: the QR
-          # library is a web-only dependency (SendToPhoneButton.web.tsx).
+          # library is a web-only dependency (SendToPhoneDialog.web.tsx).
           for marker in "segue-list:v1:" "Reload the page before making more changes" "allow-scripts" "send-to-phone-qr" "code length overflow"; do
             if grep -a -q -- "$marker" "$BUNDLE"; then
               echo "::error::Web-only code (\"$marker\") found in the Android bundle."

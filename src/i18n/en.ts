@@ -202,11 +202,9 @@ export const en = {
     themeDark: "Dark",
   },
   sendToPhone: {
-    button: "Send to phone",
+    menuItem: "Send to phone (QR code)",
     title: "Scan with your phone",
     hint: "Point your phone's camera at this code. It opens the song in the browser - tap “Open in Segue List app” there to save it in the app.",
-    unsavedWarning:
-      "This code has the last saved version. Save first to include your latest changes.",
     tooLong:
       "This song is too long to fit in a QR code. Use “Export as ChordPro” or “Export full library” instead.",
     close: "Close",
