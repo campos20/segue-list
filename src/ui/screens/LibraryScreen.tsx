@@ -63,6 +63,7 @@ import {
   type LibraryItem,
 } from "@/ui/libraryTree";
 import { moveItem } from "@/ui/reorder";
+import { readableColumn } from "@/ui/layout";
 import { songsToChordPro } from "@/ui/chordPro";
 import { confirmDestructive } from "@/ui/dialogs";
 import { setlistToText } from "@/ui/setlistText";
@@ -516,7 +517,7 @@ export function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, readableColumn]}>
         <View>
           <Text style={styles.eyebrow}>{t.library.eyebrow}</Text>
           <Text style={styles.header}>{t.library.title}</Text>
@@ -551,7 +552,7 @@ export function LibraryScreen() {
         </View>
       </View>
 
-      <View style={styles.searchRow}>
+      <View style={[styles.searchRow, readableColumn]}>
         <TextField
           value={search}
           onChangeText={setSearch}
@@ -559,10 +560,10 @@ export function LibraryScreen() {
         />
       </View>
 
-      {status && <Text style={styles.status}>{status}</Text>}
-      {error && <Text style={styles.error}>{error}</Text>}
+      {status && <Text style={[styles.status, readableColumn]}>{status}</Text>}
+      {error && <Text style={[styles.error, readableColumn]}>{error}</Text>}
 
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView contentContainerStyle={[styles.list, readableColumn]}>
         {!hydrated ? (
           <ActivityIndicator color={colors.accent} style={styles.loading} />
         ) : items.length === 0 ? (

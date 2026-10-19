@@ -5,6 +5,7 @@ import { openBrowserAsync } from "expo-web-browser";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "@/i18n";
+import { readableColumn } from "@/ui/layout";
 import { radii, spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 
 const DEVELOPER = "campos20";
@@ -20,7 +21,7 @@ export function AboutScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.header}>
+      <View style={[styles.header, readableColumn]}>
         <Pressable
           onPress={() => router.back()}
           hitSlop={8}
@@ -30,7 +31,7 @@ export function AboutScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, readableColumn]}>
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>{t.library.eyebrow}</Text>
           <Text style={styles.title}>{t.about.title}</Text>

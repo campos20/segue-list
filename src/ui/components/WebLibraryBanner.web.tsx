@@ -6,6 +6,7 @@ import {
   onChangedElsewhere,
 } from "@/storage/browserStorage";
 import { Button } from "@/ui/components/Button";
+import { readableColumn } from "@/ui/layout";
 import { spacing, useThemeColors, type ThemeColors } from "@/ui/theme";
 import { usePathname } from "expo-router";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
@@ -62,10 +63,14 @@ export function WebLibraryBanner() {
   if (changedElsewhere) {
     return (
       <View style={[styles.banner, styles.warning]} accessibilityRole="alert">
-        <Text style={[styles.text, styles.warningText]}>
-          {t.web.changedElsewhere}
-        </Text>
-        <Button onPress={() => window.location.reload()}>{t.web.reload}</Button>
+        <View style={[styles.row, readableColumn]}>
+          <Text style={[styles.text, styles.warningText]}>
+            {t.web.changedElsewhere}
+          </Text>
+          <Button onPress={() => window.location.reload()}>
+            {t.web.reload}
+          </Button>
+        </View>
       </View>
     );
   }
@@ -75,25 +80,31 @@ export function WebLibraryBanner() {
 
   return (
     <View style={styles.banner}>
-      <Text style={styles.text}>{t.web.storageNotice}</Text>
-      <Button variant="secondary" onPress={() => setNoticeDismissed(true)}>
-        {t.web.dismiss}
-      </Button>
+      <View style={[styles.row, readableColumn]}>
+        <Text style={styles.text}>{t.web.storageNotice}</Text>
+        <Button variant="secondary" onPress={() => setNoticeDismissed(true)}>
+          {t.web.dismiss}
+        </Button>
+      </View>
     </View>
   );
 }
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
+    // Full-width strip; its content lines up with the screens' readable
+    // column below it (ui/layout.web.ts).
     banner: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.md,
-      paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
       backgroundColor: colors.panelRaised,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      paddingHorizontal: spacing.lg,
     },
     warning: {
       borderBottomColor: colors.danger,

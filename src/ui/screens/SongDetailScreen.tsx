@@ -20,6 +20,7 @@ import { PasteChordsModal } from "@/ui/components/PasteChordsModal";
 import { SendToPhoneButton } from "@/ui/components/SendToPhoneButton";
 import { TextField } from "@/ui/components/TextField";
 import { confirmDestructive, showMessage } from "@/ui/dialogs";
+import { readableColumn } from "@/ui/layout";
 import {
   digitsFromDuration,
   formatDurationDigits,
@@ -383,7 +384,7 @@ export function SongDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, readableColumn]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/*
